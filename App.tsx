@@ -1,109 +1,121 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ViewToken,
 } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
-import { PlayingCard } from './src/components/PlayingCard';
-import { createDeck, shuffleDeck } from './src/data/deck';
-import { Card } from './src/types/card';
+import { Act1BridgeScreen } from './src/screens/Act1BridgeScreen';
+import { EscapeScreen } from './src/screens/EscapeScreen';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { ReckoningScreen } from './src/screens/ReckoningScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { SneakInScreen } from './src/screens/SneakInScreen';
+import { useReckoningStore } from './src/store/reckoningStore';
+import { useSneakInStore } from './src/store/sneakInStore';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
-const SUIT_LABEL: Record<string, string> = {
-  spades: '♠ Spades',
-  hearts: '♥ Hearts',
-  diamonds: '♦ Diamonds',
-  clubs: '♣ Clubs',
-};
+type Tab = 'home' | 'settings';
+type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act3';
 
 export default function App() {
-  const [deck, setDeck] = useState<Card[]>(() => createDeck());
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList<Card>>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [gameFlow, setGameFlow] = useState<GameFlow>('home');
+  const [act1HandRemaining, setAct1HandRemaining] = useState(0);
+  const [act2Score, setAct2Score] = useState(0);
 
-  const currentCard = deck[currentIndex];
+  const act1Bonus = act1HandRemaining * 10;
+  const totalScore = act1Bonus + act2Score;
 
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        setCurrentIndex(viewableItems[0].index);
-      }
-    }
-  ).current;
-
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-  }).current;
-
-  const handleShuffle = () => {
-    const shuffled = shuffleDeck(deck);
-    setDeck(shuffled);
-    setCurrentIndex(0);
-    flatListRef.current?.scrollToIndex({ index: 0, animated: false });
+  const handleStartGame = () => {
+    useSneakInStore.getState().initGame();
+    setGameFlow('act1');
   };
 
-  const handleReset = () => {
-    setDeck(createDeck());
-    setCurrentIndex(0);
-    flatListRef.current?.scrollToIndex({ index: 0, animated: false });
+  const handleSneakInEnd = () => {
+    const remaining = useSneakInStore.getState().hand.length;
+    setAct1HandRemaining(remaining);
+    setGameFlow('act1-bridge');
+  };
+
+  const handleContinueToAct2 = () => {
+    useReckoningStore.getState().initGame();
+    setGameFlow('act2');
+  };
+
+  const handleCrackTheVaultsEnd = () => {
+    const score = useReckoningStore.getState().finalScore ?? 0;
+    setAct2Score(score);
+    setGameFlow('act3');
+  };
+
+  const handlePlayAgain = () => {
+    setAct1HandRemaining(0);
+    setAct2Score(0);
+    setGameFlow('home');
+  };
+
+  const handleReturnHome = () => {
+    setAct1HandRemaining(0);
+    setAct2Score(0);
+    setGameFlow('home');
+  };
+
+  const renderHomeTab = () => {
+    switch (gameFlow) {
+      case 'act1':
+        return <SneakInScreen onGameEnd={handleSneakInEnd} />;
+      case 'act1-bridge':
+        return (
+          <Act1BridgeScreen
+            handRemaining={act1HandRemaining}
+            onContinue={handleContinueToAct2}
+          />
+        );
+      case 'act2':
+        return <ReckoningScreen onGameEnd={handleCrackTheVaultsEnd} />;
+      case 'act3':
+        return (
+          <EscapeScreen
+            totalScore={totalScore}
+            onPlayAgain={handlePlayAgain}
+            onHome={handleReturnHome}
+          />
+        );
+      default:
+        return <HomeScreen onStartGame={handleStartGame} />;
+    }
+  };
+
+  const renderContent = () => {
+    if (activeTab === 'settings') return <SettingsScreen />;
+    return renderHomeTab();
   };
 
   return (
     <PaperProvider>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Card Deck</Text>
-
-          {/* Card info */}
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardName}>
-              {currentCard.rank} of {SUIT_LABEL[currentCard.suit]}
-            </Text>
-            <Text style={styles.counter}>
-              {currentIndex + 1} / {deck.length}
-            </Text>
-          </View>
-
-          {/* Swipeable card list */}
-          <FlatList
-            ref={flatListRef}
-            data={deck}
-            keyExtractor={(item) => item.id}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            getItemLayout={(_, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
-              index,
-            })}
-            renderItem={({ item }) => (
-              <View style={styles.cardPage}>
-                <PlayingCard card={item} />
-              </View>
-            )}
-            style={styles.flatList}
-          />
-
-          {/* Swipe hint */}
-          <Text style={styles.hint}>← swipe to browse →</Text>
-
-          {/* Actions */}
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.button} onPress={handleShuffle}>
-              <Text style={styles.buttonText}>Shuffle</Text>
+        <View style={styles.appShell}>
+          <View style={styles.contentArea}>{renderContent()}</View>
+          <View style={styles.tabBar}>
+            <TouchableOpacity
+              style={[styles.tabItem, activeTab === 'home' && styles.tabItemActive]}
+              onPress={() => setActiveTab('home')}
+            >
+              <Text style={[styles.tabLabel, activeTab === 'home' && styles.tabLabelActive]}>
+                Home
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={handleReset}>
-              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Reset Order</Text>
+            <TouchableOpacity
+              style={[styles.tabItem, activeTab === 'settings' && styles.tabItemActive]}
+              onPress={() => setActiveTab('settings')}
+            >
+              <Text
+                style={[styles.tabLabel, activeTab === 'settings' && styles.tabLabelActive]}
+              >
+                Settings
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -117,75 +129,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#2d6a4f',
   },
-  container: {
+  appShell: {
     flex: 1,
     backgroundColor: '#2d6a4f',
   },
-  title: {
-    color: '#ffffff',
-    fontSize: 26,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginTop: 16,
-    letterSpacing: 1,
-  },
-  cardInfo: {
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  cardName: {
-    color: '#d8f3dc',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  counter: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  flatList: {
+  contentArea: {
     flex: 1,
   },
-  cardPage: {
-    width: SCREEN_WIDTH,
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#1b4332',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.14)',
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  tabItem: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hint: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-    letterSpacing: 0.5,
+  tabItemActive: {
+    backgroundColor: '#40916c',
   },
-  actions: {
-    flexDirection: 'row',
-    marginHorizontal: 24,
-    marginBottom: 16,
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    backgroundColor: '#1b4332',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  buttonSecondary: {
-    backgroundColor: 'transparent',
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
+  tabLabel: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 13,
     fontWeight: '700',
   },
-  buttonTextSecondary: {
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '500',
+  tabLabelActive: {
+    color: '#ffffff',
+    fontWeight: '900',
   },
 });

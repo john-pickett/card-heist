@@ -1,0 +1,202 @@
+import { create } from 'zustand';
+import { createDeck, shuffleDeck } from '../data/deck';
+import { Card, Rank } from '../types/card';
+import {
+  AceValue,
+  PendingAce,
+  ReckoningActions,
+  ReckoningPhase,
+  ReckoningState,
+  Vault,
+  VaultCard,
+  VaultTarget,
+} from '../types/reckoning';
+
+function cardValue(rank: Rank, aceValue?: AceValue): number {
+  if (rank === 'A') return aceValue ?? 11;
+  if (rank === 'J' || rank === 'Q' || rank === 'K') return 10;
+  return parseInt(rank, 10);
+}
+
+function computeSum(cards: VaultCard[]): number {
+  return cards.reduce((total, vc) => total + cardValue(vc.card.rank, vc.aceValue), 0);
+}
+
+function vaultScore(vault: Vault): number {
+  if (vault.isBusted) return 0;
+  if (vault.sum === vault.target) return vault.sum * 2;
+  return vault.sum;
+}
+
+function isTerminal(vault: Vault): boolean {
+  return vault.isBusted || vault.isStood;
+}
+
+const FIXED_TARGETS: VaultTarget[] = [13, 18, 21];
+
+function makeVaults(): Vault[] {
+  return [0, 1, 2].map((i) => ({
+    id: i as 0 | 1 | 2,
+    target: FIXED_TARGETS[i],
+    cards: [],
+    sum: 0,
+    isStood: false,
+    isBusted: false,
+    targetRevealed: true,
+  }));
+}
+
+let instanceCounter = 0;
+function nextInstanceId(): string {
+  return `rec-${++instanceCounter}`;
+}
+
+type ReckoningStore = ReckoningState & ReckoningActions;
+
+export const useReckoningStore = create<ReckoningStore>((set, get) => ({
+  phase: 'idle' as ReckoningPhase,
+  deck: [],
+  currentCard: null,
+  currentInstanceId: null,
+  vaults: makeVaults(),
+  pendingAce: null,
+  finalScore: null,
+
+  initGame: () => {
+    const shuffled = shuffleDeck(createDeck());
+    set({
+      phase: 'dealing',
+      deck: shuffled,
+      currentCard: null,
+      currentInstanceId: null,
+      vaults: makeVaults(),
+      pendingAce: null,
+      finalScore: null,
+    });
+  },
+
+  flipCard: () => {
+    const { deck, phase } = get();
+    if (phase !== 'dealing' || deck.length === 0) return;
+
+    const [card, ...rest] = deck;
+    const instanceId = nextInstanceId();
+    set({
+      deck: rest,
+      currentCard: card,
+      currentInstanceId: instanceId,
+      phase: 'assigning',
+    });
+  },
+
+  assignCard: (vaultId: 0 | 1 | 2) => {
+    const { currentCard, currentInstanceId, vaults, phase } = get();
+    if (phase !== 'assigning' || !currentCard || !currentInstanceId) return;
+
+    const vault = vaults[vaultId];
+    if (vault.isBusted || vault.isStood) return;
+
+    if (currentCard.rank === 'A') {
+      const pending: PendingAce = {
+        card: currentCard,
+        instanceId: currentInstanceId,
+        targetVaultId: vaultId,
+      };
+      set({ pendingAce: pending, phase: 'ace' });
+      return;
+    }
+
+    const vaultCard: VaultCard = {
+      card: currentCard,
+      instanceId: currentInstanceId,
+    };
+
+    const newCards = [...vault.cards, vaultCard];
+    const newSum = computeSum(newCards);
+    const isBusted = newSum > vault.target;
+    const isExactHit = !isBusted && newSum === vault.target;
+
+    const updatedVault: Vault = {
+      ...vault,
+      cards: newCards,
+      sum: newSum,
+      isBusted,
+      isStood: vault.isStood || isExactHit,
+    };
+
+    const newVaults = vaults.map((v) => (v.id === vaultId ? updatedVault : v));
+    set({
+      vaults: newVaults,
+      currentCard: null,
+      currentInstanceId: null,
+      phase: 'dealing',
+    });
+
+    checkGameEnd(get, set, newVaults);
+  },
+
+  chooseAceValue: (value: AceValue) => {
+    const { pendingAce, vaults } = get();
+    if (!pendingAce) return;
+
+    const { card, instanceId, targetVaultId } = pendingAce;
+    const vault = vaults[targetVaultId];
+
+    const vaultCard: VaultCard = {
+      card,
+      instanceId,
+      aceValue: value,
+    };
+
+    const newCards = [...vault.cards, vaultCard];
+    const newSum = computeSum(newCards);
+    const isBusted = newSum > vault.target;
+    const isExactHit = !isBusted && newSum === vault.target;
+
+    const updatedVault: Vault = {
+      ...vault,
+      cards: newCards,
+      sum: newSum,
+      isBusted,
+      isStood: vault.isStood || isExactHit,
+    };
+
+    const newVaults = vaults.map((v) => (v.id === targetVaultId ? updatedVault : v));
+    set({
+      vaults: newVaults,
+      currentCard: null,
+      currentInstanceId: null,
+      pendingAce: null,
+      phase: 'dealing',
+    });
+
+    checkGameEnd(get, set, newVaults);
+  },
+
+  standVault: (vaultId: 0 | 1 | 2) => {
+    const { vaults } = get();
+    const vault = vaults[vaultId];
+    if (vault.isBusted || vault.isStood) return;
+
+    const updatedVault: Vault = { ...vault, isStood: true };
+    const newVaults = vaults.map((v) => (v.id === vaultId ? updatedVault : v));
+    set({ vaults: newVaults });
+
+    checkGameEnd(get, set, newVaults);
+  },
+}));
+
+function checkGameEnd(
+  get: () => ReckoningStore,
+  set: (partial: Partial<ReckoningStore>) => void,
+  vaults: Vault[]
+) {
+  const { deck } = get();
+  const allTerminal = vaults.every(isTerminal);
+  const deckEmpty = deck.length === 0;
+
+  if (allTerminal || deckEmpty) {
+    const finalScore = vaults.reduce((sum, v) => sum + vaultScore(v), 0);
+    set({ phase: 'done', finalScore });
+  }
+}
