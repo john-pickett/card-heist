@@ -19,96 +19,101 @@ const RED_SUITS = new Set(['hearts', 'diamonds']);
 interface VaultColumnProps {
   vault: Vault;
   isAssignable: boolean;
+  isDragTarget: boolean;
   onAssign: () => void;
   onStand: () => void;
 }
 
-export function VaultColumn({ vault, isAssignable, onAssign, onStand }: VaultColumnProps) {
-  const isTerminal = vault.isBusted || vault.isStood;
-  const isExact = !vault.isBusted && vault.sum === vault.target;
+export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
+  ({ vault, isAssignable, isDragTarget, onAssign, onStand }, ref) => {
+    const isTerminal = vault.isBusted || vault.isStood;
+    const isExact = !vault.isBusted && vault.sum === vault.target;
 
-  const sumColor = vault.isBusted
-    ? '#e74c3c'
-    : isExact
-    ? '#f4d03f'
-    : vault.sum >= vault.target - 2
-    ? '#e67e22'
-    : '#ffffff';
+    const sumColor = vault.isBusted
+      ? '#e74c3c'
+      : isExact
+      ? '#f4d03f'
+      : vault.sum >= vault.target - 2
+      ? '#e67e22'
+      : '#ffffff';
 
-  return (
-    <TouchableOpacity
-      style={[
-        styles.column,
-        isAssignable && styles.columnAssignable,
-        isExact && styles.columnExact,
-        isTerminal && !isExact && styles.columnTerminal,
-      ]}
-      onPress={isAssignable ? onAssign : undefined}
-      activeOpacity={isAssignable ? 0.75 : 1}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.vaultLabel}>Vault {vault.id + 1}</Text>
-        <View style={styles.targetBadge}>
-          <Text style={styles.targetText}>{vault.target}</Text>
+    return (
+      <TouchableOpacity
+        ref={ref as any}
+        style={[
+          styles.column,
+          isAssignable && styles.columnAssignable,
+          isDragTarget && styles.columnDragTarget,
+          isExact && styles.columnExact,
+          isTerminal && !isExact && styles.columnTerminal,
+        ]}
+        onPress={isAssignable ? onAssign : undefined}
+        activeOpacity={isAssignable ? 0.75 : 1}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.vaultLabel}>Vault {vault.id + 1}</Text>
+          <View style={styles.targetBadge}>
+            <Text style={styles.targetText}>{vault.target}</Text>
+          </View>
         </View>
-      </View>
 
-      {/* Sum badge */}
-      <View style={styles.sumRow}>
-        <Text style={[styles.sumText, { color: sumColor }]}>{vault.sum}</Text>
-        {isExact && <Text style={styles.exactBadge}>×2</Text>}
-      </View>
-
-      {/* Cards */}
-      <ScrollView style={styles.cardsScroll} showsVerticalScrollIndicator={false}>
-        {vault.cards.map((vc) => {
-          const isRed = RED_SUITS.has(vc.card.suit);
-          const symbol = SUIT_SYMBOL[vc.card.suit] ?? '';
-          const displayRank =
-            vc.card.rank === 'A' && vc.aceValue != null
-              ? `A(${vc.aceValue})`
-              : vc.card.rank;
-          return (
-            <View key={vc.instanceId} style={styles.cardTile}>
-              <Text style={[styles.cardRank, isRed && styles.red]}>{displayRank}</Text>
-              <Text style={[styles.cardSuit, isRed && styles.red]}>{symbol}</Text>
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      {/* Stand button */}
-      {!isTerminal && (
-        <TouchableOpacity
-          style={styles.standBtn}
-          onPress={onStand}
-          hitSlop={4}
-        >
-          <Text style={styles.standBtnText}>STAND</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Terminal overlays */}
-      {vault.isBusted && (
-        <View style={[styles.overlay, styles.bustedOverlay]}>
-          <Text style={styles.overlayText}>BUST</Text>
+        {/* Sum badge */}
+        <View style={styles.sumRow}>
+          <Text style={[styles.sumText, { color: sumColor }]}>{vault.sum}</Text>
+          {isExact && <Text style={styles.exactBadge}>×2</Text>}
         </View>
-      )}
-      {vault.isStood && !vault.isBusted && isExact && (
-        <View style={[styles.overlay, styles.exactOverlay]}>
-          <Text style={styles.exactOverlayLabel}>EXACT ×2</Text>
-          <Text style={styles.exactOverlayScore}>{vault.sum * 2}</Text>
-        </View>
-      )}
-      {vault.isStood && !vault.isBusted && !isExact && (
-        <View style={[styles.overlay, styles.stoodOverlay]}>
-          <Text style={styles.overlayText}>STOOD</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-}
+
+        {/* Cards */}
+        <ScrollView style={styles.cardsScroll} showsVerticalScrollIndicator={false}>
+          {vault.cards.map((vc) => {
+            const isRed = RED_SUITS.has(vc.card.suit);
+            const symbol = SUIT_SYMBOL[vc.card.suit] ?? '';
+            const displayRank =
+              vc.card.rank === 'A' && vc.aceValue != null
+                ? `A(${vc.aceValue})`
+                : vc.card.rank;
+            return (
+              <View key={vc.instanceId} style={styles.cardTile}>
+                <Text style={[styles.cardRank, isRed && styles.red]}>{displayRank}</Text>
+                <Text style={[styles.cardSuit, isRed && styles.red]}>{symbol}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        {/* Stand button */}
+        {!isTerminal && (
+          <TouchableOpacity
+            style={styles.standBtn}
+            onPress={onStand}
+            hitSlop={4}
+          >
+            <Text style={styles.standBtnText}>STAND</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Terminal overlays */}
+        {vault.isBusted && (
+          <View style={[styles.overlay, styles.bustedOverlay]}>
+            <Text style={styles.overlayText}>BUST</Text>
+          </View>
+        )}
+        {vault.isStood && !vault.isBusted && isExact && (
+          <View style={[styles.overlay, styles.exactOverlay]}>
+            <Text style={styles.exactOverlayLabel}>EXACT ×2</Text>
+            <Text style={styles.exactOverlayScore}>{vault.sum * 2}</Text>
+          </View>
+        )}
+        {vault.isStood && !vault.isBusted && !isExact && (
+          <View style={[styles.overlay, styles.stoodOverlay]}>
+            <Text style={styles.overlayText}>STOOD</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   column: {
@@ -129,6 +134,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 6,
     elevation: 4,
+  },
+  columnDragTarget: {
+    borderColor: 'rgba(255,255,255,0.65)',
+    borderWidth: 2.5,
   },
   columnExact: {
     borderColor: '#f4d03f',

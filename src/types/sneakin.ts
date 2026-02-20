@@ -31,7 +31,7 @@ export interface SneakInArea {
 
 export type CardSource = 'hand' | AreaId;
 
-export type SneakInPhase = 'idle' | 'playing' | 'done';
+export type SneakInPhase = 'idle' | 'playing' | 'done' | 'timeout';
 
 export interface SneakInState {
   phase: SneakInPhase;
@@ -45,8 +45,10 @@ export interface SneakInState {
 
 export interface SneakInActions {
   initGame: () => void;
+  moveCard: (card: SneakInCard, from: CardSource, to: CardSource) => void;
   selectCard: (card: SneakInCard, source: CardSource) => void;
   deselect: () => void;
   placeOnArea: (areaId: AreaId) => void;
   returnToHand: () => void;
+  timeoutGame: () => void;
 }

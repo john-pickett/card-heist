@@ -155,6 +155,74 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
     });
   },
 
+  moveCard: (card: SneakInCard, from: CardSource, to: CardSource) => {
+    if (from === to) return;
+
+    const { hand, areas, phase, startTime } = get();
+    const newHand = [...hand];
+    const newAreas = areas.map(a => ({ ...a, cards: [...a.cards] }));
+
+    let movingCard: SneakInCard | null = null;
+
+    if (from === 'hand') {
+      const idx = newHand.findIndex(c => c.instanceId === card.instanceId);
+      if (idx === -1) return;
+      [movingCard] = newHand.splice(idx, 1);
+    } else {
+      const src = newAreas[from as number];
+      const idx = src.cards.findIndex(c => c.instanceId === card.instanceId);
+      if (idx === -1) return;
+      [movingCard] = src.cards.splice(idx, 1);
+      src.isSolved = checkSolved(src.cards, src.target);
+    }
+
+    if (!movingCard) return;
+
+    if (to === 'hand') {
+      newHand.push(movingCard);
+    } else {
+      const target = newAreas[to as number];
+      if (!target.isUnlocked || target.cards.length >= 3) {
+        // Invalid drop: restore to original source.
+        if (from === 'hand') {
+          newHand.push(movingCard);
+        } else {
+          const src = newAreas[from as number];
+          src.cards.push(movingCard);
+          src.isSolved = checkSolved(src.cards, src.target);
+        }
+        return;
+      }
+
+      target.cards.push(movingCard);
+      target.isSolved = checkSolved(target.cards, target.target);
+
+      // Unlock the next area the moment this one is solved (monotonic — never re-locks).
+      if (target.isSolved && to < 3) {
+        newAreas[to + 1].isUnlocked = true;
+      }
+    }
+
+    const now = Date.now();
+    const allSolved = newAreas.every(a => a.isSolved);
+    const movedToArea = to !== 'hand';
+    const newPhase: SneakInPhase = allSolved
+      ? 'done'
+      : movedToArea && phase === 'idle'
+      ? 'playing'
+      : phase;
+
+    set({
+      hand: newHand,
+      areas: newAreas,
+      selectedCard: null,
+      selectedSource: null,
+      startTime: movedToArea ? startTime ?? now : startTime,
+      phase: newPhase,
+      ...(allSolved ? { endTime: now } : {}),
+    });
+  },
+
   // Tap a card anywhere to lift it. The card is removed from its source
   // immediately. If another card was already lifted, that one is returned
   // to its original location first.
@@ -256,5 +324,11 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
     const { selectedCard, hand } = get();
     if (!selectedCard) return;
     set({ hand: [...hand, selectedCard], selectedCard: null, selectedSource: null });
+  },
+
+  // Called when the 60-second countdown expires.
+  timeoutGame: () => {
+    const { startTime } = get();
+    set({ phase: 'timeout', endTime: startTime ? startTime + 60000 : Date.now() });
   },
 }));

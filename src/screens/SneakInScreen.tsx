@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
+  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +16,7 @@ import {
   CardSource,
   SneakInCard,
 } from '../types/sneakin';
+import { SneakInHelpModal } from '../components/SneakInHelpModal';
 
 const SUIT_SYMBOL: Record<string, string> = {
   spades: '♠',
@@ -22,6 +25,20 @@ const SUIT_SYMBOL: Record<string, string> = {
   clubs: '♣',
 };
 const RED_SUITS = new Set(['hearts', 'diamonds']);
+const AREA_IDS: AreaId[] = [0, 1, 2, 3];
+
+type DropRect = { x: number; y: number; width: number; height: number };
+
+type ActiveDrag = {
+  card: SneakInCard;
+  source: CardSource;
+  startX: number; // card top-left in screen-container local coords
+  startY: number;
+  width: number;
+  height: number;
+};
+
+const TOTAL_TIME_MS = 60_000;
 
 function formatTime(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -31,6 +48,105 @@ function formatTime(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}.${t}`;
 }
 
+type TimingGrade = 'great' | 'good' | 'ok' | 'bad';
+type TimingRating = { grade: TimingGrade; label: string; bonus: number };
+
+function getTimingRating(elapsedMs: number, timedOut: boolean): TimingRating {
+  if (timedOut) return { grade: 'bad', label: 'Oof, Bad', bonus: 0 };
+  const s = Math.floor(elapsedMs / 1000);
+  if (s <= 15) return { grade: 'great', label: 'Great', bonus: 20 };
+  if (s <= 35) return { grade: 'good', label: 'Good', bonus: 10 };
+  return { grade: 'ok', label: 'Not Great', bonus: 0 };
+}
+
+function pointInRect(x: number, y: number, rect: DropRect): boolean {
+  return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
+}
+
+// ---------------------------------------------------------------------------
+// DraggableCard — writes directly to a screen-level dragPan ValueXY so the
+// ghost card (rendered at the screen root) can float above everything.
+// ---------------------------------------------------------------------------
+
+interface DraggableCardProps {
+  card: SneakInCard;
+  source: CardSource;
+  style: object;
+  isDragging: boolean; // true → hide this card (ghost is shown instead)
+  dragPan: Animated.ValueXY; // screen-level pan shared with ghost
+  onDragStart: (
+    card: SneakInCard,
+    source: CardSource,
+    screenX: number,
+    screenY: number,
+    w: number,
+    h: number,
+  ) => void;
+  onDragEnd: (dropX: number, dropY: number) => void;
+  children: React.ReactNode;
+}
+
+function DraggableCard({
+  card,
+  source,
+  style,
+  isDragging,
+  dragPan,
+  onDragStart,
+  onDragEnd,
+  children,
+}: DraggableCardProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cardRef = useRef<any>(null);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
+        onPanResponderGrant: () => {
+          cardRef.current?.measureInWindow(
+            (x: number, y: number, w: number, h: number) => {
+              dragPan.setValue({ x: 0, y: 0 });
+              onDragStart(card, source, x, y, w, h);
+            },
+          );
+        },
+        onPanResponderMove: Animated.event([null, { dx: dragPan.x, dy: dragPan.y }], {
+          useNativeDriver: false,
+        }),
+        onPanResponderRelease: (_: unknown, g: { moveX: number; moveY: number }) => {
+          onDragEnd(g.moveX, g.moveY);
+        },
+        onPanResponderTerminate: () => {
+          onDragEnd(-1, -1); // -1 signals a cancelled drag
+        },
+        onPanResponderTerminationRequest: () => false, // never yield the gesture
+      }),
+    // dragPan is a stable ref — intentionally omitted from deps.
+    // onDragStart is stable (empty useCallback deps).
+    // onDragEnd is stable (only depends on dragPan + zustand stable fns).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [card.instanceId, source, onDragStart, onDragEnd],
+  );
+
+  return (
+    <Animated.View
+      ref={cardRef}
+      {...panResponder.panHandlers}
+      style={[style, isDragging && { opacity: 0 }]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
 interface Props {
   onGameEnd: () => void;
 }
@@ -39,65 +155,225 @@ export function SneakInScreen({ onGameEnd }: Props) {
   const phase = useSneakInStore(s => s.phase);
   const hand = useSneakInStore(s => s.hand);
   const areas = useSneakInStore(s => s.areas);
-  const selectedCard = useSneakInStore(s => s.selectedCard);
-  const selectedSource = useSneakInStore(s => s.selectedSource);
   const startTime = useSneakInStore(s => s.startTime);
   const endTime = useSneakInStore(s => s.endTime);
+  const moveCard = useSneakInStore(s => s.moveCard);
+  const timeoutGame = useSneakInStore(s => s.timeoutGame);
+  const [helpVisible, setHelpVisible] = useState(false);
 
-  const initGame = useSneakInStore(s => s.initGame);
-  const selectCard = useSneakInStore(s => s.selectCard);
-  const deselect = useSneakInStore(s => s.deselect);
-  const placeOnArea = useSneakInStore(s => s.placeOnArea);
-  const returnToHand = useSneakInStore(s => s.returnToHand);
+  // --- Screen-level drag state ---
+  const dragPan = useRef(new Animated.ValueXY()).current;
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+  // Ref so onDragEnd callback (inside useMemo) always sees the latest value
+  const activeDragRef = useRef<ActiveDrag | null>(null);
+  useEffect(() => {
+    activeDragRef.current = activeDrag;
+  }, [activeDrag]);
 
-  // Force re-render every 100ms while the timer is running
+  // Offset of the screen root view in window coords — used to convert
+  // measureInWindow (window-relative) to local position for the ghost card.
+  const screenRef = useRef<View>(null);
+  const screenOffsetRef = useRef({ x: 0, y: 0 });
+
+  // --- Drop-target measurement ---
+  const areaRefs = useRef<Partial<Record<AreaId, View | null>>>({});
+  const handDropRef = useRef<View | null>(null);
+  const dockRef = useRef<View | null>(null);
+
+  const [areaRects, setAreaRects] = useState<Partial<Record<AreaId, DropRect>>>({});
+  const [handRect, setHandRect] = useState<DropRect | null>(null);
+  const [dockRect, setDockRect] = useState<DropRect | null>(null);
+
+  const measureDropTargets = useCallback(() => {
+    AREA_IDS.forEach(id => {
+      const ref = areaRefs.current[id];
+      if (!ref) return;
+      ref.measureInWindow((x, y, width, height) => {
+        if (width <= 0 || height <= 0) return;
+        setAreaRects(prev => ({ ...prev, [id]: { x, y, width, height } }));
+      });
+    });
+
+    if (handDropRef.current) {
+      handDropRef.current.measureInWindow((x, y, width, height) => {
+        if (width <= 0 || height <= 0) return;
+        setHandRect({ x, y, width, height });
+      });
+    }
+
+    if (dockRef.current) {
+      dockRef.current.measureInWindow((x, y, width, height) => {
+        if (width <= 0 || height <= 0) return;
+        setDockRect({ x, y, width, height });
+      });
+    }
+  }, []);
+
+  const scheduleMeasure = useCallback(() => {
+    requestAnimationFrame(() => {
+      measureDropTargets();
+    });
+  }, [measureDropTargets]);
+
+  // Force re-render every 100 ms while the timer is running; also check for timeout.
   const [, tick] = useState(0);
   useEffect(() => {
     if (phase !== 'playing') return;
-    const interval = setInterval(() => tick(n => n + 1), 100);
+    const interval = setInterval(() => {
+      tick(n => n + 1);
+      if (startTime && Date.now() - startTime >= TOTAL_TIME_MS) {
+        timeoutGame();
+      }
+    }, 100);
     return () => clearInterval(interval);
-  }, [phase]);
+  }, [phase, startTime, timeoutGame]);
 
   useEffect(() => {
-    if (phase === 'done') onGameEnd();
-  }, [phase]);
+    scheduleMeasure();
+  }, [areas, hand, scheduleMeasure]);
 
   const elapsedMs = startTime ? (endTime ?? Date.now()) - startTime : 0;
+  const remainingMs = Math.max(0, TOTAL_TIME_MS - elapsedMs);
   const solvedCount = areas.filter(a => a.isSolved).length;
 
-  const canPlaceOn = (areaId: AreaId): boolean => {
-    const area = areas[areaId];
-    return !!selectedCard && area.isUnlocked && area.cards.length < 3;
-  };
+  // Keep resolveDropTarget in a ref so handleDragEnd stays stable even when
+  // measured rects update mid-drag.
+  const resolveDropTarget = useCallback(
+    (dropX: number, dropY: number): CardSource | null => {
+      for (const id of AREA_IDS) {
+        const rect = areaRects[id];
+        const area = areas[id];
+        if (!rect) continue;
+        if (!area.isUnlocked || area.cards.length >= 3) continue;
+        if (pointInRect(dropX, dropY, rect)) return id;
+      }
+      if (dockRect && pointInRect(dropX, dropY, dockRect)) return 'hand';
+      if (handRect && pointInRect(dropX, dropY, handRect)) return 'hand';
+      return null;
+    },
+    [areaRects, areas, dockRect, handRect],
+  );
+  const resolveDropTargetRef = useRef(resolveDropTarget);
+  useEffect(() => {
+    resolveDropTargetRef.current = resolveDropTarget;
+  }, [resolveDropTarget]);
 
-  const handleCardTap = (card: SneakInCard, source: CardSource) => {
-    selectCard(card, source);
-  };
+  // Stable: only depends on dragPan (stable) and zustand's moveCard (stable)
+  const handleDragStart = useCallback(
+    (
+      card: SneakInCard,
+      source: CardSource,
+      screenX: number,
+      screenY: number,
+      w: number,
+      h: number,
+    ) => {
+      const { x: ox, y: oy } = screenOffsetRef.current;
+      setActiveDrag({
+        card,
+        source,
+        startX: screenX - ox,
+        startY: screenY - oy,
+        width: w,
+        height: h,
+      });
+    },
+    [],
+  );
 
-  const isSelected = (instanceId: string) =>
-    selectedCard?.instanceId === instanceId;
+  const handleDragEnd = useCallback(
+    (dropX: number, dropY: number) => {
+      const drag = activeDragRef.current;
+      if (!drag) return;
+      setActiveDrag(null);
+      dragPan.setValue({ x: 0, y: 0 });
+      if (dropX < 0) return; // terminated / cancelled
+      const target = resolveDropTargetRef.current(dropX, dropY);
+      if (target !== null && target !== drag.source) {
+        moveCard(drag.card, drag.source, target);
+      }
+    },
+    [dragPan, moveCard],
+  );
 
-  // Split areas into two rows of two
   const rows = [areas.slice(0, 2), areas.slice(2, 4)];
 
+  // ── Result screen — rendered after all hooks ─────────────────────────────────
+  if (phase === 'done' || phase === 'timeout') {
+    const timedOut = phase === 'timeout';
+    const rating = getTimingRating(elapsedMs, timedOut);
+    const gradeColors: Record<TimingGrade, string> = {
+      great: '#f4d03f',
+      good: '#95d5b2',
+      ok: 'rgba(255,255,255,0.55)',
+      bad: '#e74c3c',
+    };
+    return (
+      <View style={styles.resultScreen}>
+        <Text style={[styles.resultHeading, timedOut && styles.resultHeadingRed]}>
+          {timedOut ? "TIME'S UP!" : 'SNEAK IN COMPLETE!'}
+        </Text>
+
+        <View style={styles.resultTimeBlock}>
+          <Text style={styles.resultTimeLabel}>
+            {timedOut ? 'TIME LIMIT REACHED' : 'YOUR TIME'}
+          </Text>
+          <Text style={styles.resultTimeValue}>{formatTime(elapsedMs)}</Text>
+        </View>
+
+        <View style={styles.resultRatingBlock}>
+          <Text style={[styles.resultGrade, { color: gradeColors[rating.grade] }]}>
+            {rating.label}
+          </Text>
+          <Text style={styles.resultBonus}>
+            {rating.bonus > 0 ? `+${rating.bonus} point bonus` : 'No time bonus'}
+          </Text>
+        </View>
+
+        <TouchableOpacity style={styles.resultContinueBtn} onPress={onGameEnd}>
+          <Text style={styles.resultContinueBtnText}>CONTINUE →</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.screen}>
-      {/* ── Header ───────────────────────────────────────── */}
+    <View
+      ref={screenRef}
+      style={styles.screen}
+      onLayout={() => {
+        screenRef.current?.measureInWindow((x, y) => {
+          screenOffsetRef.current = { x, y };
+        });
+        scheduleMeasure();
+      }}
+    >
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>SNEAK IN</Text>
-        <View style={styles.timerBadge}>
-          <Text style={styles.timerText}>{formatTime(elapsedMs)}</Text>
+        <View style={[
+          styles.timerBadge,
+          remainingMs <= 15000 && styles.timerBadgeWarning,
+          remainingMs <= 5000  && styles.timerBadgeDanger,
+        ]}>
+          <Text style={[
+            styles.timerText,
+            remainingMs <= 15000 && styles.timerTextWarning,
+            remainingMs <= 5000  && styles.timerTextDanger,
+          ]}>
+            {formatTime(remainingMs)}
+          </Text>
         </View>
         <View style={styles.progressBadge}>
           <Text style={styles.progressText}>{solvedCount}/4</Text>
         </View>
-        <TouchableOpacity style={styles.newGameBtn} onPress={() => initGame()}>
-          <Text style={styles.newGameText}>New</Text>
+        <TouchableOpacity style={styles.helpBtn} onPress={() => setHelpVisible(true)}>
+          <Text style={styles.helpBtnText}>Help</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Areas 2×2 grid ───────────────────────────────── */}
-      <View style={styles.areasGrid}>
+      {/* Areas grid */}
+      <View style={styles.areasGrid} onLayout={scheduleMeasure}>
         {rows.map((row, rowIdx) => (
           <View key={rowIdx} style={styles.areasRow}>
             {row.map(area => {
@@ -105,56 +381,63 @@ export function SneakInScreen({ onGameEnd }: Props) {
               const active = area.isUnlocked && !area.isSolved;
               const cardSum = area.cards.reduce(
                 (s, sc) => s + parseInt(sc.card.rank, 10),
-                0
+                0,
               );
-              const dropping = canPlaceOn(area.id);
+              const isDragTarget =
+                activeDrag !== null &&
+                area.isUnlocked &&
+                !area.isSolved &&
+                area.cards.length < 3 &&
+                activeDrag.source !== area.id;
 
               return (
                 <View
                   key={area.id}
+                  ref={node => {
+                    areaRefs.current[area.id] = node;
+                  }}
+                  onLayout={scheduleMeasure}
                   style={[
                     styles.areaCard,
                     active && styles.areaCardActive,
                     area.isSolved && styles.areaCardSolved,
                     locked && styles.areaCardLocked,
-                    dropping && !area.isSolved && styles.areaCardDropTarget,
+                    isDragTarget && styles.areaCardDropTarget,
                   ]}
                 >
-                  {/* Icon — big and centered */}
                   <Text style={[styles.areaIcon, locked && styles.dimmed]}>
                     {AREA_ICONS[area.id]}
                   </Text>
 
-                  {/* Label */}
                   <Text style={[styles.areaLabel, locked && styles.dimmed]}>
                     {AREA_LABELS[area.id].toUpperCase()}
                   </Text>
 
-                  {/* Target / locked / solved badge */}
                   {locked ? (
                     <Text style={styles.lockedLabel}>LOCKED</Text>
                   ) : area.isSolved ? (
                     <Text style={styles.solvedBadge}>✓ DONE</Text>
                   ) : (
                     <View style={styles.targetRow}>
-                      <Text style={styles.targetLabel}>≤ </Text>
                       <Text style={styles.targetValue}>{area.target}</Text>
                     </View>
                   )}
 
-                  {/* Cards + drop zone */}
                   {!locked && (
                     <View style={styles.cardsZone}>
                       <View style={styles.cardsRow}>
                         {area.cards.map(sc => {
                           const red = RED_SUITS.has(sc.card.suit);
-                          const sel = isSelected(sc.instanceId);
                           return (
-                            <TouchableOpacity
+                            <DraggableCard
                               key={sc.instanceId}
-                              style={[styles.chip, sel && styles.chipSelected]}
-                              onPress={() => handleCardTap(sc, area.id)}
-                              activeOpacity={0.7}
+                              card={sc}
+                              source={area.id}
+                              style={styles.chip}
+                              isDragging={activeDrag?.card.instanceId === sc.instanceId}
+                              dragPan={dragPan}
+                              onDragStart={handleDragStart}
+                              onDragEnd={handleDragEnd}
                             >
                               <Text style={[styles.chipRank, red && styles.red]}>
                                 {sc.card.rank}
@@ -162,19 +445,9 @@ export function SneakInScreen({ onGameEnd }: Props) {
                               <Text style={[styles.chipSuit, red && styles.red]}>
                                 {SUIT_SYMBOL[sc.card.suit]}
                               </Text>
-                            </TouchableOpacity>
+                            </DraggableCard>
                           );
                         })}
-
-                        {dropping && (
-                          <TouchableOpacity
-                            style={styles.dropZone}
-                            onPress={() => placeOnArea(area.id)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={styles.dropZoneText}>+</Text>
-                          </TouchableOpacity>
-                        )}
                       </View>
 
                       {area.cards.length > 0 && (
@@ -196,90 +469,81 @@ export function SneakInScreen({ onGameEnd }: Props) {
         ))}
       </View>
 
-      {/* ── Bottom dock: lifted card indicator + hand ─────── */}
-      <View style={styles.dock}>
-        {selectedCard ? (
-          <View style={styles.liftedRow}>
-            {/* The card being carried */}
-            <View
+      {/* Dock / hand */}
+      <View ref={dockRef} style={styles.dock} onLayout={scheduleMeasure}>
+        <Text style={styles.dockHint}>
+          {phase === 'idle'
+            ? 'Drag a card into an unlocked area to start the clock'
+            : 'Drag cards between areas or back to your hand'}
+        </Text>
+
+        <View ref={handDropRef} onLayout={scheduleMeasure} style={styles.handDropZone}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.handContent}
+          >
+            {hand.map(sc => {
+              const red = RED_SUITS.has(sc.card.suit);
+              return (
+                <DraggableCard
+                  key={sc.instanceId}
+                  card={sc}
+                  source="hand"
+                  style={styles.handCard}
+                  isDragging={activeDrag?.card.instanceId === sc.instanceId}
+                  dragPan={dragPan}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Text style={[styles.handRank, red && styles.red]}>
+                    {sc.card.rank}
+                  </Text>
+                  <Text style={[styles.handSuit, red && styles.red]}>
+                    {SUIT_SYMBOL[sc.card.suit]}
+                  </Text>
+                </DraggableCard>
+              );
+            })}
+            {hand.length === 0 && (
+              <Text style={styles.emptyHand}>All cards placed</Text>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+
+      <SneakInHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+
+      {/* Ghost card — rendered last so it paints above everything */}
+      {activeDrag &&
+        (() => {
+          const { card, startX, startY, width, height } = activeDrag;
+          const red = RED_SUITS.has(card.card.suit);
+          const isHandCard = activeDrag.source === 'hand';
+          return (
+            <Animated.View
+              pointerEvents="none"
               style={[
-                styles.liftedChip,
-                RED_SUITS.has(selectedCard.card.suit) && styles.liftedChipRed,
+                styles.ghostCard,
+                isHandCard ? styles.ghostHandCard : styles.ghostChip,
+                {
+                  left: startX,
+                  top: startY,
+                  width,
+                  height,
+                  transform: dragPan.getTranslateTransform(),
+                },
               ]}
             >
-              <Text
-                style={[
-                  styles.liftedRank,
-                  RED_SUITS.has(selectedCard.card.suit) && styles.red,
-                ]}
-              >
-                {selectedCard.card.rank}
+              <Text style={[isHandCard ? styles.handRank : styles.chipRank, red && styles.red]}>
+                {card.card.rank}
               </Text>
-              <Text
-                style={[
-                  styles.liftedSuit,
-                  RED_SUITS.has(selectedCard.card.suit) && styles.red,
-                ]}
-              >
-                {SUIT_SYMBOL[selectedCard.card.suit]}
+              <Text style={[isHandCard ? styles.handSuit : styles.chipSuit, red && styles.red]}>
+                {SUIT_SYMBOL[card.card.suit]}
               </Text>
-            </View>
-
-            <Text style={styles.liftedHint}>Tap an unlocked area to place</Text>
-
-            {/* Return to source */}
-            <TouchableOpacity style={styles.returnBtn} onPress={deselect}>
-              <Text style={styles.returnBtnText}>↩</Text>
-            </TouchableOpacity>
-
-            {/* "To Hand" — only shown when card came from an area */}
-            {selectedSource !== 'hand' && (
-              <TouchableOpacity style={styles.toHandBtn} onPress={returnToHand}>
-                <Text style={styles.toHandBtnText}>Hand</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          <Text style={styles.dockHint}>
-            {phase === 'idle'
-              ? 'Pick a card to start the clock'
-              : 'Tap a card to pick it up'}
-          </Text>
-        )}
-
-        {/* Hand of cards */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.handContent}
-        >
-          {hand.map(sc => {
-            const red = RED_SUITS.has(sc.card.suit);
-            const sel = isSelected(sc.instanceId);
-            return (
-              <TouchableOpacity
-                key={sc.instanceId}
-                style={[
-                  styles.handCard,
-                  sel && styles.handCardSelected,
-                ]}
-                onPress={() => handleCardTap(sc, 'hand')}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.handRank, red && styles.red]}>
-                  {sc.card.rank}
-                </Text>
-                <Text style={[styles.handSuit, red && styles.red]}>
-                  {SUIT_SYMBOL[sc.card.suit]}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-          {hand.length === 0 && (
-            <Text style={styles.emptyHand}>All cards placed</Text>
-          )}
-        </ScrollView>
-      </View>
+            </Animated.View>
+          );
+        })()}
     </View>
   );
 }
@@ -288,9 +552,8 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#2d6a4f',
+    overflow: 'visible',
   },
-
-  // ── Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -314,11 +577,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
   },
+  timerBadgeWarning: {
+    backgroundColor: '#7b4a00',
+    borderColor: '#f4d03f',
+  },
+  timerBadgeDanger: {
+    backgroundColor: '#6b1a1a',
+    borderColor: '#e74c3c',
+  },
   timerText: {
     color: '#d8f3dc',
     fontSize: 15,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
+  },
+  timerTextWarning: {
+    color: '#f4d03f',
+  },
+  timerTextDanger: {
+    color: '#e74c3c',
   },
   progressBadge: {
     backgroundColor: '#1b4332',
@@ -331,28 +608,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  newGameBtn: {
+  helpBtn: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  newGameText: {
+  helpBtnText: {
     color: 'rgba(255,255,255,0.75)',
     fontSize: 12,
     fontWeight: '700',
   },
-
-  // ── 2×2 Areas grid
   areasGrid: {
     flex: 1,
     padding: 8,
     gap: 8,
+    overflow: 'visible',
   },
   areasRow: {
     flex: 1,
     flexDirection: 'row',
     gap: 8,
+    overflow: 'visible',
   },
   areaCard: {
     flex: 1,
@@ -368,8 +645,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
+    overflow: 'visible',
   },
-  // Spotlight: unlocked and unsolved
   areaCardActive: {
     borderColor: 'rgba(116,198,157,0.45)',
     shadowColor: '#b7e4c7',
@@ -378,7 +655,6 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
     elevation: 18,
   },
-  // Solved: gold border, spotlight off
   areaCardSolved: {
     borderColor: '#f4d03f',
     shadowColor: '#000',
@@ -387,19 +663,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  // Locked: very dimmed
   areaCardLocked: {
     opacity: 0.3,
     shadowOpacity: 0,
     elevation: 0,
   },
-  // Drop target
   areaCardDropTarget: {
-    borderColor: '#74c69d',
-    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.55)',
+    borderWidth: 2,
   },
-
-  // Icon — large, centered
   areaIcon: {
     fontSize: 52,
     textAlign: 'center',
@@ -432,29 +704,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
   },
-  targetLabel: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    fontWeight: '700',
-  },
   targetValue: {
     color: '#ffffff',
     fontSize: 26,
     fontWeight: '900',
     lineHeight: 30,
   },
-
-  // Cards zone
   cardsZone: {
     marginTop: 8,
     alignItems: 'center',
     gap: 4,
+    overflow: 'visible',
   },
   cardsRow: {
     flexDirection: 'row',
     gap: 5,
     flexWrap: 'wrap',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   chip: {
     backgroundColor: '#ffffff',
@@ -469,11 +736,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  chipSelected: {
-    borderWidth: 2.5,
-    borderColor: '#f4d03f',
-    transform: [{ translateY: -3 }],
-  },
   chipRank: {
     fontSize: 15,
     fontWeight: '900',
@@ -483,22 +745,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#111111',
     marginTop: -2,
-  },
-  dropZone: {
-    width: 40,
-    height: 50,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: '#74c69d',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dropZoneText: {
-    color: '#74c69d',
-    fontSize: 22,
-    fontWeight: '300',
-    lineHeight: 26,
   },
   sumText: {
     color: 'rgba(255,255,255,0.55)',
@@ -514,8 +760,6 @@ const styles = StyleSheet.create({
   red: {
     color: '#c0392b',
   },
-
-  // ── Dock
   dock: {
     backgroundColor: '#1b4332',
     borderTopWidth: 1,
@@ -523,81 +767,25 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
     gap: 8,
-  },
-
-  // Lifted card row
-  liftedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  liftedChip: {
-    backgroundColor: '#ffffff',
-    borderRadius: 9,
-    width: 50,
-    height: 62,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2.5,
-    borderColor: '#f4d03f',
-    shadowColor: '#f4d03f',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  liftedChipRed: {},
-  liftedRank: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#111111',
-  },
-  liftedSuit: {
-    fontSize: 15,
-    color: '#111111',
-    marginTop: -2,
-  },
-  liftedHint: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    flex: 1,
-    fontStyle: 'italic',
-  },
-  returnBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  returnBtnText: {
-    color: '#ffffff',
-    fontSize: 17,
-  },
-  toHandBtn: {
-    backgroundColor: '#40916c',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  toHandBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
+    overflow: 'visible',
+    zIndex: 5,
   },
   dockHint: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.45)',
     fontSize: 11,
     textAlign: 'center',
     paddingHorizontal: 12,
     fontStyle: 'italic',
   },
-
-  // Hand
+  handDropZone: {
+    minHeight: 76,
+    overflow: 'visible',
+  },
   handContent: {
     paddingHorizontal: 12,
     gap: 8,
     alignItems: 'center',
+    overflow: 'visible',
   },
   handCard: {
     backgroundColor: '#ffffff',
@@ -611,11 +799,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 3,
-  },
-  handCardSelected: {
-    borderWidth: 3,
-    borderColor: '#f4d03f',
-    transform: [{ translateY: -5 }],
   },
   handRank: {
     fontSize: 19,
@@ -632,5 +815,102 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     alignSelf: 'center',
+  },
+  // Ghost card — absolute overlay, always on top
+  ghostCard: {
+    position: 'absolute',
+    zIndex: 9999,
+    elevation: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  ghostHandCard: {
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  ghostChip: {
+    borderRadius: 7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+  },
+
+  // ── Result overlay ──────────────────────────────────────────────────────────
+  resultScreen: {
+    flex: 1,
+    backgroundColor: '#2d6a4f',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 0,
+  },
+  resultHeading: {
+    color: '#f4d03f',
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: 2,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  resultHeadingRed: {
+    color: '#e74c3c',
+  },
+  resultTimeBlock: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  resultTimeLabel: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  resultTimeValue: {
+    color: '#ffffff',
+    fontSize: 52,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+    lineHeight: 58,
+  },
+  resultRatingBlock: {
+    alignItems: 'center',
+    backgroundColor: '#1b4332',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    width: '100%',
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  resultGrade: {
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  resultBonus: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  resultContinueBtn: {
+    backgroundColor: '#40916c',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+  },
+  resultContinueBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
 });

@@ -2,12 +2,12 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useReckoningStore } from '../store/reckoningStore';
 
-interface ReckoningResultScreenProps {
+interface VaultResultScreenProps {
   onPlayAgain: () => void;
   onHome: () => void;
 }
 
-export function ReckoningResultScreen({ onPlayAgain, onHome }: ReckoningResultScreenProps) {
+export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProps) {
   const vaults = useReckoningStore((s) => s.vaults);
   const finalScore = useReckoningStore((s) => s.finalScore) ?? 0;
   const initGame = useReckoningStore((s) => s.initGame);

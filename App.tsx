@@ -10,7 +10,7 @@ import { PaperProvider } from 'react-native-paper';
 import { Act1BridgeScreen } from './src/screens/Act1BridgeScreen';
 import { EscapeScreen } from './src/screens/EscapeScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
-import { ReckoningScreen } from './src/screens/ReckoningScreen';
+import { VaultScreen } from './src/screens/VaultScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SneakInScreen } from './src/screens/SneakInScreen';
 import { useReckoningStore } from './src/store/reckoningStore';
@@ -23,9 +23,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [gameFlow, setGameFlow] = useState<GameFlow>('home');
   const [act1HandRemaining, setAct1HandRemaining] = useState(0);
+  const [act1TimeBonus, setAct1TimeBonus] = useState(0);
   const [act2Score, setAct2Score] = useState(0);
 
-  const act1Bonus = act1HandRemaining * 10;
+  const act1Bonus = act1HandRemaining * 10 + act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
 
   const handleStartGame = () => {
@@ -34,8 +35,14 @@ export default function App() {
   };
 
   const handleSneakInEnd = () => {
-    const remaining = useSneakInStore.getState().hand.length;
-    setAct1HandRemaining(remaining);
+    const state = useSneakInStore.getState();
+    setAct1HandRemaining(state.hand.length);
+    if (state.phase === 'done' && state.startTime && state.endTime) {
+      const elapsedSec = Math.floor((state.endTime - state.startTime) / 1000);
+      setAct1TimeBonus(elapsedSec <= 15 ? 20 : elapsedSec <= 35 ? 10 : 0);
+    } else {
+      setAct1TimeBonus(0);
+    }
     setGameFlow('act1-bridge');
   };
 
@@ -52,12 +59,14 @@ export default function App() {
 
   const handlePlayAgain = () => {
     setAct1HandRemaining(0);
+    setAct1TimeBonus(0);
     setAct2Score(0);
     setGameFlow('home');
   };
 
   const handleReturnHome = () => {
     setAct1HandRemaining(0);
+    setAct1TimeBonus(0);
     setAct2Score(0);
     setGameFlow('home');
   };
@@ -74,7 +83,7 @@ export default function App() {
           />
         );
       case 'act2':
-        return <ReckoningScreen onGameEnd={handleCrackTheVaultsEnd} />;
+        return <VaultScreen onGameEnd={handleCrackTheVaultsEnd} />;
       case 'act3':
         return (
           <EscapeScreen
