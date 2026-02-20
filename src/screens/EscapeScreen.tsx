@@ -1,29 +1,19 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  ScrollView,
+  Image,
+  LayoutChangeEvent,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { createDeck, shuffleDeck } from '../data/deck';
-import { Card, Rank } from '../types/card';
-
-type EscapePhase =
-  | 'overview'
-  | 'draw_ready'
-  | 'revealing'
-  | 'draw_done'
-  | 'busted'
-  | 'cashed_out'
-  | 'won';
-
-const CHECKPOINTS = [
-  { name: 'LEAVE THE VAULT', target: 21, leavePct: 40 },
-  { name: 'CROSS THE LOBBY', target: 18, leavePct: 60 },
-  { name: 'EXIT THE BANK',   target: 13, leavePct: 80 },
-] as const;
+import { useAudioPlayer } from 'expo-audio';
+import { EscapeDiscardModal } from '../components/EscapeDiscardModal';
+import { EscapeHelpModal } from '../components/EscapeHelpModal';
+import { useEscapeStore } from '../store/escapeStore';
+import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 
 const SUIT_SYMBOL: Record<string, string> = {
   spades: '♠',
@@ -33,320 +23,172 @@ const SUIT_SYMBOL: Record<string, string> = {
 };
 const RED_SUITS = new Set(['hearts', 'diamonds']);
 
-function cardValue(rank: Rank): number {
-  if (rank === 'A') return 11;
-  if (rank === 'J' || rank === 'Q' || rank === 'K') return 10;
-  return parseInt(rank, 10);
-}
-
 interface Props {
   totalScore: number;
   onPlayAgain: () => void;
   onHome: () => void;
+  showTutorial: boolean;
+  onDismissTutorial: () => void;
 }
 
-export function EscapeScreen({ totalScore, onPlayAgain, onHome }: Props) {
-  const [phase, setPhase] = useState<EscapePhase>('overview');
-  const [deck, setDeck] = useState<Card[]>(() => shuffleDeck(createDeck()));
-  const [checkpointIndex, setCheckpointIndex] = useState<0 | 1 | 2>(0);
-  const [card1, setCard1] = useState<Card | null>(null);
-  const [card2, setCard2] = useState<Card | null>(null);
+export function EscapeScreen({
+  totalScore,
+  onPlayAgain,
+  onHome,
+  showTutorial,
+  onDismissTutorial,
+}: Props) {
+  const {
+    phase,
+    deck,
+    playerHand,
+    playerPosition,
+    policePosition,
+    selectedIds,
+    errorMessage,
+    policeMessage,
+    policeLastPlay,
+    outOfPlay,
+    infoMessage,
+    initGame,
+    toggleSelect,
+    layMeld,
+    discard,
+    runPoliceTurn,
+    endPoliceTurn,
+    clearError,
+    clearInfo,
+  } = useEscapeStore();
 
-  const card1Scale = useRef(new Animated.Value(0)).current;
-  const card2Scale = useRef(new Animated.Value(0)).current;
-  const card1Flip  = useRef(new Animated.Value(0)).current;
-  const card2Flip  = useRef(new Animated.Value(0)).current;
+  const fanfarePlayer  = useAudioPlayer(require('../../assets/sounds/fanfare.wav'));
+  const stingPlayer    = useAudioPlayer(require('../../assets/sounds/police-sting.wav'));
+  const winPlayer      = useAudioPlayer(require('../../assets/sounds/win-fanfare.wav'));
+  const losePlayer     = useAudioPlayer(require('../../assets/sounds/lose-fanfare.wav'));
 
-  const checkpoint = CHECKPOINTS[checkpointIndex];
-  const goldFor = (pct: number) => Math.round(totalScore * pct / 100);
-
-  // Flip interpolations — back disappears at 90deg, front appears from -90deg
-  const back1Rotate = card1Flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '90deg', '90deg'] });
-  const face1Rotate = card1Flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['-90deg', '-90deg', '0deg'] });
-  const back2Rotate = card2Flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '90deg', '90deg'] });
-  const face2Rotate = card2Flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['-90deg', '-90deg', '0deg'] });
-
-  function handleLeaveNow() {
-    setPhase('cashed_out');
-  }
-
-  function handleKeepLooting() {
-    card1Scale.setValue(0);
-    card2Scale.setValue(0);
-    card1Flip.setValue(0);
-    card2Flip.setValue(0);
-    setCard1(null);
-    setCard2(null);
-    setPhase('draw_ready');
-  }
-
-  function handleDraw() {
-    const [c1, c2, ...rest] = deck;
-    card1Scale.setValue(0);
-    card2Scale.setValue(0);
-    card1Flip.setValue(0);
-    card2Flip.setValue(0);
-    setCard1(c1);
-    setCard2(c2);
-    setDeck(rest);
-    setPhase('revealing');
-
-    Animated.sequence([
-      // Both cards grow in face-down simultaneously
-      Animated.parallel([
-        Animated.spring(card1Scale, { toValue: 1, friction: 6, useNativeDriver: true }),
-        Animated.spring(card2Scale, { toValue: 1, friction: 6, useNativeDriver: true }),
-      ]),
-      Animated.delay(200),
-      // Card 1 flips to reveal face
-      Animated.timing(card1Flip, { toValue: 1, duration: 440, useNativeDriver: true }),
-      Animated.delay(150),
-      // Card 2 flips to reveal face
-      Animated.timing(card2Flip, { toValue: 1, duration: 440, useNativeDriver: true }),
-    ]).start(() => {
-      setPhase('draw_done');
-    });
-  }
-
-  function handleContinue() {
-    if (!card1 || !card2) return;
-    const sum = cardValue(card1.rank) + cardValue(card2.rank);
-    if (sum > checkpoint.target) {
-      setPhase('busted');
-    } else if (checkpointIndex === 2) {
-      setPhase('won');
-    } else {
-      setCard1(null);
-      setCard2(null);
-      setCheckpointIndex((checkpointIndex + 1) as 1 | 2);
-      setPhase('overview');
+  // Play fanfare on successful meld; Zustand set() is synchronous so
+  // lastMeldType is already updated by the time layMeld() returns.
+  const handleLayMeld = useCallback(() => {
+    layMeld();
+    if (useEscapeStore.getState().lastMeldType !== null) {
+      fanfarePlayer.seekTo(0);
+      fanfarePlayer.play();
     }
+  }, [layMeld, fanfarePlayer]);
+
+  // Police sting: fires when police reveal a mid-game meld (phase goes to
+  // police_reveal, not directly to lost — that path gets the lose fanfare).
+  useEffect(() => {
+    if (phase === 'police_reveal' && policeLastPlay && policeLastPlay.length >= 3) {
+      stingPlayer.seekTo(0);
+      stingPlayer.play();
+    }
+  }, [phase, policeLastPlay]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Win / lose fanfares
+  useEffect(() => {
+    if (phase === 'won') {
+      winPlayer.seekTo(0);
+      winPlayer.play();
+    } else if (phase === 'lost') {
+      losePlayer.seekTo(0);
+      losePlayer.play();
+    }
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [helpVisible, setHelpVisible] = useState(false);
+  const [discardModalVisible, setDiscardModalVisible] = useState(false);
+
+  const { width: screenWidth } = useWindowDimensions();
+  // 4 cards per row, 3 gaps of 8px, 16px padding each side
+  const cardW = Math.floor((screenWidth - 32 - 24) / 4);
+  const cardH = Math.floor(cardW * 1.2);
+
+  // Track path track width for token positioning
+  const [trackWidth, setTrackWidth] = useState(0);
+  const playerAnim = useRef(new Animated.Value(playerPosition)).current;
+  const policeAnim  = useRef(new Animated.Value(policePosition)).current;
+
+  // Initialize on mount
+  useEffect(() => { initGame(); }, []);
+
+  // Police turn driver
+  useEffect(() => {
+    if (phase === 'police_thinking') {
+      const t = setTimeout(runPoliceTurn, 900);
+      return () => clearTimeout(t);
+    }
+    if (phase === 'police_reveal') {
+      const t = setTimeout(endPoliceTurn, 1400);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
+
+  // Auto-clear error
+  useEffect(() => {
+    if (!errorMessage) return;
+    const t = setTimeout(clearError, 2000);
+    return () => clearTimeout(t);
+  }, [errorMessage]);
+
+  // Auto-clear infoMessage
+  useEffect(() => {
+    if (!infoMessage) return;
+    const t = setTimeout(clearInfo, 3000);
+    return () => clearTimeout(t);
+  }, [infoMessage]);
+
+  // Animate player token
+  useEffect(() => {
+    Animated.timing(playerAnim, {
+      toValue: playerPosition,
+      duration: 350,
+      useNativeDriver: false,
+    }).start();
+  }, [playerPosition]);
+
+  // Animate police token
+  useEffect(() => {
+    Animated.timing(policeAnim, {
+      toValue: policePosition,
+      duration: 350,
+      useNativeDriver: false,
+    }).start();
+  }, [policePosition]);
+
+  // Step X positions: step 1 = left (0), step 6 = right (trackWidth)
+  // stepLeft(step) = ((step - 1) / 5) * trackWidth, then flip: ((6 - step) / 5) * trackWidth
+  function stepLeft(step: number): number {
+    if (trackWidth === 0) return 0;
+    return ((6 - step) / 5) * trackWidth;
   }
 
-  // ── Overview ────────────────────────────────────────────────────────────────
-  if (phase === 'overview') {
-    return (
-      <ScrollView style={styles.scrollBg} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.heading}>ACT 3: ESCAPE</Text>
+  const stepPositions = [1, 2, 3, 4, 5, 6].map(stepLeft);
 
-        <View style={styles.panel}>
-          <Text style={styles.panelLabel}>Campaign Score</Text>
-          <Text style={styles.panelValue}>{totalScore}</Text>
-          <View style={styles.divider} />
-          <Text style={styles.panelLabel}>Current Payout if You Leave</Text>
-          <Text style={styles.leaveAmount}>{goldFor(checkpoint.leavePct)} gold ({checkpoint.leavePct}%)</Text>
-        </View>
+  const playerTokenLeft = playerAnim.interpolate({
+    inputRange: [1, 2, 3, 4, 5, 6],
+    outputRange: stepPositions,
+  });
+  const policeTokenLeft = policeAnim.interpolate({
+    inputRange: [1, 2, 3, 4, 5, 6],
+    outputRange: stepPositions,
+  });
 
-        {CHECKPOINTS.map((cp, i) => {
-          const isCompleted = checkpointIndex > i;
-          const isCurrent   = checkpointIndex === i;
+  const isPlayerTurn = phase === 'player_turn';
+  const buttonsDisabled = !isPlayerTurn;
 
-          if (isCompleted) {
-            return (
-              <View key={i} style={[styles.cpCard, styles.cpCompleted]}>
-                <View style={styles.cpRow}>
-                  <Text style={styles.cpCheckmark}>✓</Text>
-                  <View style={styles.cpInfo}>
-                    <Text style={styles.cpName}>{cp.name}</Text>
-                    <Text style={styles.cpSub}>Draw ≤ {cp.target}</Text>
-                  </View>
-                  <View style={styles.cpBadge}>
-                    <Text style={styles.cpBadgeText}>PASSED</Text>
-                  </View>
-                </View>
-                <Text style={styles.cpEarned}>{goldFor(cp.leavePct)} gold payout passed</Text>
-              </View>
-            );
-          }
-
-          if (isCurrent) {
-            return (
-              <View key={i} style={[styles.cpCard, styles.cpCurrent]}>
-                <Text style={styles.cpCurrentLabel}>CHECKPOINT {i + 1}</Text>
-                <Text style={styles.cpCurrentName}>{cp.name}</Text>
-                <Text style={styles.cpCurrentTarget}>Draw ≤ {cp.target} to survive</Text>
-                <View style={styles.cpCurrentPayout}>
-                  <Text style={styles.cpPayoutLabel}>Leave now:</Text>
-                  <Text style={styles.cpPayoutValue}>{goldFor(cp.leavePct)} gold ({cp.leavePct}%)</Text>
-                </View>
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.btn, styles.btnLeave]} onPress={handleLeaveNow}>
-                    <Text style={styles.btnText}>LEAVE NOW ({cp.leavePct}%)</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.btn, styles.btnLoot]} onPress={handleKeepLooting}>
-                    <Text style={styles.btnText}>KEEP LOOTING →</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          }
-
-          // Upcoming
-          return (
-            <View key={i} style={[styles.cpCard, styles.cpUpcoming]}>
-              <View style={styles.cpRow}>
-                <Text style={styles.cpLock}>🔒</Text>
-                <View style={styles.cpInfo}>
-                  <Text style={styles.cpNameDim}>{cp.name}</Text>
-                  <Text style={styles.cpSubDim}>Draw ≤ {cp.target} · {cp.leavePct}% payout</Text>
-                </View>
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-  }
-
-  // ── Drawing Sub-Screen ──────────────────────────────────────────────────────
-  if (phase === 'draw_ready' || phase === 'revealing' || phase === 'draw_done') {
-    const sum = card1 && card2 ? cardValue(card1.rank) + cardValue(card2.rank) : null;
-    const safe = sum !== null && sum <= checkpoint.target;
-    const isAnimating = phase === 'revealing';
-
-    return (
-      <View style={styles.screen}>
-        <View style={styles.drawHeader}>
-          {phase === 'draw_ready' && (
-            <TouchableOpacity onPress={() => setPhase('overview')} style={styles.backBtn}>
-              <Text style={styles.backBtnText}>← BACK</Text>
-            </TouchableOpacity>
-          )}
-          <Text style={styles.drawHeaderTitle}>
-            CHECKPOINT {checkpointIndex + 1} — {checkpoint.name}
-          </Text>
-          <Text style={styles.drawHeaderTarget}>Draw ≤ {checkpoint.target}</Text>
-        </View>
-
-        <Text style={styles.rulesBlurb}>
-          Draw two cards. If their combined value exceeds {checkpoint.target}, you're caught.
-        </Text>
-
-        <View style={styles.cardRow}>
-          {phase === 'draw_ready' ? (
-            <>
-              <View style={styles.cardBack}><Text style={styles.cardBackText}>?</Text></View>
-              <View style={styles.cardBack}><Text style={styles.cardBackText}>?</Text></View>
-            </>
-          ) : (
-            <>
-              {/* Card 1 */}
-              <Animated.View style={[styles.cardContainer, { transform: [{ scale: card1Scale }] }]}>
-                <Animated.View
-                  style={[
-                    styles.cardBack, styles.cardAbsolute,
-                    { backfaceVisibility: 'hidden', transform: [{ perspective: 1000 }, { rotateY: back1Rotate }] },
-                  ]}
-                >
-                  <Text style={styles.cardBackText}>?</Text>
-                </Animated.View>
-                <Animated.View
-                  style={[
-                    styles.cardFace, styles.cardAbsolute,
-                    { backfaceVisibility: 'hidden', transform: [{ perspective: 1000 }, { rotateY: face1Rotate }] },
-                  ]}
-                >
-                  {card1 && (
-                    <>
-                      <Text style={[styles.cardRank, RED_SUITS.has(card1.suit) && styles.redText]}>{card1.rank}</Text>
-                      <Text style={[styles.cardSuit, RED_SUITS.has(card1.suit) && styles.redText]}>{SUIT_SYMBOL[card1.suit]}</Text>
-                      <Text style={styles.cardValue}>{cardValue(card1.rank)}</Text>
-                    </>
-                  )}
-                </Animated.View>
-              </Animated.View>
-
-              {/* Card 2 */}
-              <Animated.View style={[styles.cardContainer, { transform: [{ scale: card2Scale }] }]}>
-                <Animated.View
-                  style={[
-                    styles.cardBack, styles.cardAbsolute,
-                    { backfaceVisibility: 'hidden', transform: [{ perspective: 1000 }, { rotateY: back2Rotate }] },
-                  ]}
-                >
-                  <Text style={styles.cardBackText}>?</Text>
-                </Animated.View>
-                <Animated.View
-                  style={[
-                    styles.cardFace, styles.cardAbsolute,
-                    { backfaceVisibility: 'hidden', transform: [{ perspective: 1000 }, { rotateY: face2Rotate }] },
-                  ]}
-                >
-                  {card2 && (
-                    <>
-                      <Text style={[styles.cardRank, RED_SUITS.has(card2.suit) && styles.redText]}>{card2.rank}</Text>
-                      <Text style={[styles.cardSuit, RED_SUITS.has(card2.suit) && styles.redText]}>{SUIT_SYMBOL[card2.suit]}</Text>
-                      <Text style={styles.cardValue}>{cardValue(card2.rank)}</Text>
-                    </>
-                  )}
-                </Animated.View>
-              </Animated.View>
-            </>
-          )}
-        </View>
-
-        {phase === 'draw_done' && sum !== null && (
-          <View style={styles.resultBlock}>
-            <Text style={styles.sumText}>Total: {sum}</Text>
-            <Text style={[styles.resultLabel, safe ? styles.resultSafe : styles.resultBust]}>
-              {safe ? `✓ SAFE (≤ ${checkpoint.target})` : `✗ BUSTED (> ${checkpoint.target})`}
-            </Text>
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={[styles.btn, styles.btnLoot, styles.btnFull, (isAnimating || phase === 'draw_done') && styles.btnDisabled]}
-          onPress={phase === 'draw_ready' ? handleDraw : undefined}
-          disabled={isAnimating || phase === 'draw_done'}
-        >
-          <Text style={styles.btnText}>DRAW BOTH CARDS</Text>
-        </TouchableOpacity>
-
-        {phase === 'draw_done' && (
-          <TouchableOpacity style={[styles.btn, styles.btnLoot, styles.btnFull, styles.btnContinue]} onPress={handleContinue}>
-            <Text style={styles.btnText}>CONTINUE</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  }
-
-  // ── Busted ──────────────────────────────────────────────────────────────────
-  if (phase === 'busted') {
-    return (
-      <View style={styles.screen}>
-        <Text style={[styles.heading, styles.headingRed]}>BUSTED!</Text>
-        <Text style={styles.subheading}>The cops got you.</Text>
-        <View style={styles.panel}>
-          <Text style={styles.panelLabel}>You escape with:</Text>
-          <Text style={styles.goldAmount}>{goldFor(20)} gold</Text>
-          <Text style={styles.pctLabel}>(20% of campaign score)</Text>
-        </View>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, styles.btnLoot]} onPress={onPlayAgain}>
-            <Text style={styles.btnText}>Play Again</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
-            <Text style={[styles.btnText, styles.btnTextSecondary]}>Home</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // ── Cashed Out ──────────────────────────────────────────────────────────────
-  if (phase === 'cashed_out') {
+  // ── Won ────────────────────────────────────────────────────────────────────
+  if (phase === 'won') {
     return (
       <View style={styles.screen}>
         <Text style={[styles.heading, styles.headingGold]}>ESCAPED!</Text>
-        <Text style={styles.subheading}>{checkpoint.name}</Text>
+        <Text style={styles.subheading}>You slipped past the police.</Text>
         <View style={styles.panel}>
           <Text style={styles.panelLabel}>You escape with:</Text>
-          <Text style={styles.goldAmount}>{goldFor(checkpoint.leavePct)} gold</Text>
-          <Text style={styles.pctLabel}>({checkpoint.leavePct}% of campaign score)</Text>
+          <Text style={styles.goldAmount}>{totalScore} gold</Text>
+          <Text style={styles.pctLabel}>(100% of campaign score)</Text>
         </View>
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, styles.btnLoot]} onPress={onPlayAgain}>
+          <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
             <Text style={styles.btnText}>Play Again</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
@@ -357,49 +199,525 @@ export function EscapeScreen({ totalScore, onPlayAgain, onHome }: Props) {
     );
   }
 
-  // ── Won ─────────────────────────────────────────────────────────────────────
+  // ── Lost ───────────────────────────────────────────────────────────────────
+  if (phase === 'lost') {
+    return (
+      <View style={styles.screen}>
+        <Text style={[styles.heading, styles.headingRed]}>CAUGHT!</Text>
+        <Text style={styles.subheading}>Dropped the bags. You keep 33%.</Text>
+        <View style={styles.panel}>
+          <Text style={styles.panelLabel}>You escape with:</Text>
+          <Text style={[styles.goldAmount, styles.goldAmountRed]}>{Math.round(totalScore * 0.33)} gold</Text>
+          <Text style={styles.pctLabel}>(33% of campaign score)</Text>
+        </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
+            <Text style={styles.btnText}>Play Again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
+            <Text style={[styles.btnText, styles.btnTextSecondary]}>Home</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Status message ─────────────────────────────────────────────────────────
+  const statusText = infoMessage
+    ? infoMessage
+    : policeMessage
+    ? policeMessage
+    : errorMessage
+    ? errorMessage
+    : isPlayerTurn
+    ? `Step ${playerPosition} of 6 — reach EXIT (step 1) to escape`
+    : 'Police are thinking...';
+
+  const statusColor = infoMessage
+    ? '#1abc9c'
+    : policeMessage
+    ? '#f4d03f'
+    : errorMessage
+    ? '#e74c3c'
+    : 'rgba(255,255,255,0.65)';
+  const tutorialParagraph =
+    'In Escape, you are racing to the exit while police pressure builds every turn. ' +
+    'Select cards to lay melds or discard strategically to move your position and protect your total gold, because getting caught means losing most of the haul.';
+
+  // ── Game Board ─────────────────────────────────────────────────────────────
   return (
     <View style={styles.screen}>
-      <Text style={[styles.heading, styles.headingGold]}>CLEAN ESCAPE!</Text>
-      <Text style={styles.subheading}>You made it out with everything.</Text>
-      <View style={styles.panel}>
-        <Text style={styles.panelLabel}>You escape with:</Text>
-        <Text style={styles.goldAmount}>{goldFor(120)} gold</Text>
-        <Text style={styles.pctLabel}>(120% of campaign score)</Text>
-      </View>
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={[styles.btn, styles.btnLoot]} onPress={onPlayAgain}>
-          <Text style={styles.btnText}>Play Again</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>ACT 3: ESCAPE</Text>
+        <View style={[styles.turnBadge, isPlayerTurn ? styles.turnBadgePlayer : styles.turnBadgePolice]}>
+          <Text style={styles.turnBadgeText}>{isPlayerTurn ? 'YOUR TURN' : 'POLICE TURN'}</Text>
+        </View>
+        <Text style={styles.headerScore}>{totalScore} gold</Text>
+        <TouchableOpacity style={styles.helpBtn} onPress={() => setHelpVisible(true)} hitSlop={8}>
+          <Text style={styles.helpBtnText}>?</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
-          <Text style={[styles.btnText, styles.btnTextSecondary]}>Home</Text>
+      </View>
+
+      {/* Path Track */}
+      <View style={styles.trackContainer}>
+        <View
+          style={styles.track}
+          onLayout={(e: LayoutChangeEvent) => {
+            const w = e.nativeEvent.layout.width;
+            setTrackWidth(w - TOKEN_SIZE);
+          }}
+        >
+          {/* Connecting line */}
+          <View style={styles.trackLine} />
+
+          {/* Step circles */}
+          {[1, 2, 3, 4, 5, 6].map(step => {
+            const left = stepLeft(step) - CIRCLE_SIZE / 2 + TOKEN_SIZE / 2;
+            const isExit = step === 1;
+            return (
+              <View
+                key={step}
+                style={[
+                  styles.stepCircle,
+                  isExit && styles.stepCircleExit,
+                  { left },
+                ]}
+              >
+                <Text style={[styles.stepLabel, isExit && styles.stepLabelExit]}>
+                  {isExit ? 'EXIT' : step === 6 ? 'START' : `${step}`}
+                </Text>
+              </View>
+            );
+          })}
+
+          {/* Police token */}
+          <Animated.View style={[styles.token, styles.policeToken, { left: policeTokenLeft }]}>
+            <Text style={styles.tokenText}>👮</Text>
+          </Animated.View>
+
+          {/* Player token */}
+          <Animated.View style={[styles.token, styles.playerToken, { left: playerTokenLeft }]}>
+            <Text style={styles.tokenText}>🏃</Text>
+          </Animated.View>
+        </View>
+      </View>
+
+      {/* Police play area */}
+      {policeLastPlay && (
+        <View style={styles.policePlayArea}>
+          <Text style={styles.policePlayLabel}>
+            {policeLastPlay.length >= 3 ? 'Police melded:' : 'Police discarded:'}
+          </Text>
+          <View style={styles.fanContainer}>
+            {policeLastPlay.map((ec, i) => {
+              const isRed = RED_SUITS.has(ec.card.suit);
+              return (
+                <View
+                  key={ec.instanceId}
+                  style={[styles.fanCard, { left: i * 18, zIndex: i }]}
+                >
+                  <Text style={[styles.fanRank, isRed && styles.redText]}>{ec.card.rank}</Text>
+                  <Text style={[styles.fanSuit, isRed && styles.redText]}>{SUIT_SYMBOL[ec.card.suit]}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* Status area */}
+      <View style={styles.statusArea}>
+        <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
+      </View>
+
+      {/* Hand label row */}
+      <View style={styles.handLabelRow}>
+        <Text style={styles.handLabel}>MY HAND</Text>
+        <TouchableOpacity onPress={() => setDiscardModalVisible(true)}>
+          <Text style={styles.deckBtn}>DECK: {deck.length} →</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 2×4 card grid */}
+      <View style={styles.handGrid}>
+        {playerHand.map(ec => {
+          const selected = selectedIds.includes(ec.instanceId);
+          const isRed = RED_SUITS.has(ec.card.suit);
+          return (
+            <TouchableOpacity
+              key={ec.instanceId}
+              onPress={() => toggleSelect(ec.instanceId)}
+              disabled={buttonsDisabled}
+              activeOpacity={0.75}
+            >
+              <View style={[
+                styles.miniCard,
+                selected && styles.miniCardSelected,
+                { width: cardW, height: cardH },
+              ]}>
+                <Text style={[styles.miniRank, isRed && styles.redText]}>
+                  {ec.card.rank}
+                </Text>
+                <Text style={[styles.miniSuit, isRed && styles.redText]}>
+                  {SUIT_SYMBOL[ec.card.suit]}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <EscapeHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      <EscapeDiscardModal
+        visible={discardModalVisible}
+        onClose={() => setDiscardModalVisible(false)}
+        outOfPlay={outOfPlay}
+        deckCount={deck.length}
+      />
+      {showTutorial && (
+        <ActTutorialOverlay
+          title="Act 3 Tutorial: Escape"
+          paragraph={tutorialParagraph}
+          onDismiss={onDismissTutorial}
+        >
+          <Image
+            source={require('../../assets/images/escape.png')}
+            style={styles.tutorialImage}
+            resizeMode="contain"
+          />
+        </ActTutorialOverlay>
+      )}
+
+      {/* Action buttons */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[
+            styles.btn,
+            styles.btnMeld,
+            (buttonsDisabled || selectedIds.length < 3) && styles.btnDisabled,
+          ]}
+          onPress={handleLayMeld}
+          disabled={buttonsDisabled || selectedIds.length < 3}
+        >
+          <Text style={styles.btnText}>LAY MELD</Text>
+          {selectedIds.length >= 3 && (
+            <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.btn,
+            styles.btnDiscard,
+            (buttonsDisabled || selectedIds.length === 0) && styles.btnDisabled,
+          ]}
+          onPress={discard}
+          disabled={buttonsDisabled || selectedIds.length === 0}
+        >
+          <Text style={styles.btnText}>DISCARD</Text>
+          {selectedIds.length > 0 && (
+            <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
+const TOKEN_SIZE = 36;
+const CIRCLE_SIZE = 28;
+
 const styles = StyleSheet.create({
-  // ── Layout ──────────────────────────────────────────────────────────────────
   screen: {
     flex: 1,
     backgroundColor: '#2d6a4f',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 24,
-  },
-  scrollBg: {
-    flex: 1,
-    backgroundColor: '#2d6a4f',
-  },
-  scrollContent: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingTop: 52,
+    paddingHorizontal: 16,
   },
 
-  // ── Typography ──────────────────────────────────────────────────────────────
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  headerTitle: {
+    color: '#f4d03f',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    flex: 1,
+  },
+  turnBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  turnBadgePlayer: {
+    backgroundColor: '#40916c',
+  },
+  turnBadgePolice: {
+    backgroundColor: '#c0392b',
+  },
+  turnBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  headerScore: {
+    color: '#f4d03f',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  // Help button
+  helpBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  helpBtnText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  // Path track
+  trackContainer: {
+    marginBottom: 12,
+  },
+  track: {
+    height: 80,
+    marginHorizontal: TOKEN_SIZE / 2,
+    position: 'relative',
+  },
+  trackLine: {
+    position: 'absolute',
+    top: 40 - 1,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  stepCircle: {
+    position: 'absolute',
+    top: 40 - CIRCLE_SIZE / 2,
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    backgroundColor: '#1b4332',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCircleExit: {
+    backgroundColor: '#f4d03f',
+    borderColor: '#f4d03f',
+  },
+  stepLabel: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
+  stepLabelExit: {
+    color: '#1b4332',
+    fontSize: 6,
+    fontWeight: '900',
+  },
+  token: {
+    position: 'absolute',
+    width: TOKEN_SIZE,
+    height: TOKEN_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playerToken: {
+    top: 40 - TOKEN_SIZE / 2 - 14,
+  },
+  policeToken: {
+    top: 40 + TOKEN_SIZE / 2 - 14,
+  },
+  tokenText: {
+    fontSize: 22,
+  },
+
+  // Police play area
+  policePlayArea: {
+    marginBottom: 6,
+  },
+  policePlayLabel: {
+    color: '#f4d03f',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  fanContainer: {
+    height: 62,
+    position: 'relative',
+  },
+  fanCard: {
+    position: 'absolute',
+    top: 0,
+    width: 42,
+    height: 60,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 4,
+    paddingVertical: 3,
+    justifyContent: 'space-between',
+  },
+  fanRank: {
+    color: '#1a1a1a',
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 15,
+  },
+  fanSuit: {
+    color: '#1a1a1a',
+    fontSize: 12,
+    lineHeight: 14,
+    textAlign: 'right',
+  },
+
+  // Status
+  statusArea: {
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    paddingHorizontal: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+
+  // Hand label row
+  handLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 28,
+    marginBottom: 8,
+  },
+  handLabel: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  deckBtn: {
+    color: '#f4d03f',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+
+  // 2×4 card grid
+  handGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  miniCard: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  miniCardSelected: {
+    borderColor: '#f4d03f',
+    transform: [{ translateY: -6 }],
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  miniRank: {
+    color: '#1a1a1a',
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  miniSuit: {
+    color: '#1a1a1a',
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  redText: { color: '#c0392b' },
+
+  // Action buttons
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingBottom: 24,
+  },
+  btn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    minHeight: 56,
+  },
+  btnMeld: {
+    backgroundColor: '#40916c',
+  },
+  btnDiscard: {
+    backgroundColor: '#2d6a4f',
+    borderColor: '#40916c',
+  },
+  btnDisabled: {
+    opacity: 0.35,
+  },
+  btnGreen: {
+    backgroundColor: '#40916c',
+  },
+  btnSecondary: {
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  btnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  btnTextSecondary: {
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '600',
+  },
+  btnSub: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 10,
+    marginTop: 2,
+  },
+
+  // Result screens
   heading: {
     color: '#f4d03f',
     fontSize: 26,
@@ -414,12 +732,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
     fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: 1,
     marginBottom: 6,
     textAlign: 'center',
   },
-
-  // ── Score Panel ─────────────────────────────────────────────────────────────
   panel: {
     backgroundColor: '#1b4332',
     borderRadius: 16,
@@ -439,317 +755,104 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textTransform: 'uppercase',
   },
-  panelValue: {
-    color: '#f4d03f',
-    fontSize: 48,
-    fontWeight: '900',
-  },
-  divider: {
-    width: '60%',
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 16,
-  },
-  leaveAmount: {
-    color: '#95d5b2',
-    fontSize: 22,
-    fontWeight: '800',
-  },
   goldAmount: {
     color: '#f4d03f',
     fontSize: 36,
     fontWeight: '900',
     marginBottom: 4,
   },
+  goldAmountRed: {
+    color: '#e74c3c',
+  },
   pctLabel: {
     color: 'rgba(255,255,255,0.45)',
     fontSize: 12,
     fontStyle: 'italic',
   },
-
-  // ── Checkpoint Cards ─────────────────────────────────────────────────────────
-  cpCard: {
-    width: '100%',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  cpCompleted: {
-    backgroundColor: '#1b4332',
-    borderColor: '#40916c',
-  },
-  cpCurrent: {
-    backgroundColor: '#1b4332',
-    borderColor: '#f4d03f',
-    borderWidth: 2,
-  },
-  cpUpcoming: {
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    borderColor: 'rgba(255,255,255,0.08)',
-    opacity: 0.35,
-  },
-  cpRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  cpInfo: {
-    flex: 1,
-  },
-  cpCheckmark: {
-    color: '#95d5b2',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  cpLock: {
-    fontSize: 18,
-  },
-  cpName: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  cpSub: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  cpNameDim: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  cpSubDim: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  cpBadge: {
-    backgroundColor: '#40916c',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  cpBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  cpEarned: {
-    color: 'rgba(149,213,178,0.6)',
-    fontSize: 11,
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  cpCurrentLabel: {
-    color: '#f4d03f',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-    marginBottom: 4,
-  },
-  cpCurrentName: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  cpCurrentTarget: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    fontStyle: 'italic',
-    marginBottom: 12,
-  },
-  cpCurrentPayout: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  cpPayoutLabel: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  cpPayoutValue: {
-    color: '#95d5b2',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  // ── Drawing Sub-Screen ───────────────────────────────────────────────────────
-  drawHeader: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  backBtn: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  backBtnText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  drawHeaderTitle: {
-    color: '#f4d03f',
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-  },
-  drawHeaderTarget: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    marginTop: 4,
-    letterSpacing: 0.5,
-  },
-  rulesBlurb: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 13,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginBottom: 28,
-    lineHeight: 19,
-    paddingHorizontal: 8,
-  },
-
-  // ── Cards ────────────────────────────────────────────────────────────────────
-  cardRow: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 24,
-  },
-  cardContainer: {
-    width: 110,
-    height: 160,
-  },
-  cardAbsolute: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 110,
-    height: 160,
-  },
-  cardFace: {
-    width: 110,
-    height: 160,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  cardBack: {
-    width: 110,
-    height: 160,
-    backgroundColor: '#1b4332',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#40916c',
-  },
-  cardBackText: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 48,
-    fontWeight: '900',
-  },
-  cardRank: {
-    color: '#1a1a1a',
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  cardSuit: {
-    color: '#1a1a1a',
-    fontSize: 28,
-    marginTop: -4,
-  },
-  cardValue: {
-    color: 'rgba(0,0,0,0.35)',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 6,
-    letterSpacing: 0.5,
-  },
-  redText: { color: '#c0392b' },
-
-  // ── Result ───────────────────────────────────────────────────────────────────
-  resultBlock: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sumText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-  resultLabel: {
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  resultSafe: { color: '#95d5b2' },
-  resultBust: { color: '#e74c3c' },
-
-  // ── Buttons ──────────────────────────────────────────────────────────────────
   buttonRow: {
     flexDirection: 'row',
     gap: 12,
     width: '100%',
   },
-  btn: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 15,
+  snapTrack: {
+    height: 54,
+    position: 'relative',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  snapLine: {
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    marginHorizontal: 10,
+  },
+  snapNode: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
+    justifyContent: 'center',
+    top: 16,
+  },
+  snapNodeExit: {
+    left: 2,
+    backgroundColor: '#f4d03f',
+  },
+  snapNodeMiddle: {
+    left: '48%',
+    marginLeft: -11,
+    backgroundColor: '#1b4332',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  btnFull: {
-    width: '100%',
-    flex: 0,
-    marginTop: 16,
-  },
-  btnContinue: {
-    marginTop: 12,
-  },
-  btnLeave: {
-    backgroundColor: '#2d6a4f',
-    borderColor: '#40916c',
-  },
-  btnLoot: {
-    backgroundColor: '#40916c',
-  },
-  btnSecondary: {
-    backgroundColor: 'transparent',
     borderColor: 'rgba(255,255,255,0.3)',
   },
-  btnDisabled: {
-    backgroundColor: 'rgba(64,145,108,0.4)',
+  snapNodeStart: {
+    right: 2,
+    backgroundColor: '#1b4332',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  btnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+  snapNodeText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 7,
+    fontWeight: '900',
   },
-  btnTextSecondary: {
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '600',
+  snapNodeExitText: {
+    color: '#1b4332',
+    fontSize: 7,
+    fontWeight: '900',
+  },
+  snapPlayer: {
+    position: 'absolute',
+    left: '40%',
+    top: 2,
+    fontSize: 16,
+  },
+  snapPolice: {
+    position: 'absolute',
+    left: '58%',
+    top: 28,
+    fontSize: 16,
+  },
+  snapHand: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  snapHandCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    minWidth: 36,
+    alignItems: 'center',
+  },
+  snapHandRank: {
+    color: '#111111',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  tutorialImage: {
+    width: '100%',
+    height: '100%',
   },
 });

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Image,
   PanResponder,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,8 @@ import {
   SneakInCard,
 } from '../types/sneakin';
 import { SneakInHelpModal } from '../components/SneakInHelpModal';
+import { useCardSound } from '../hooks/useCardSound';
+import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 
 const SUIT_SYMBOL: Record<string, string> = {
   spades: '♠',
@@ -149,9 +152,11 @@ function DraggableCard({
 
 interface Props {
   onGameEnd: () => void;
+  showTutorial: boolean;
+  onDismissTutorial: () => void;
 }
 
-export function SneakInScreen({ onGameEnd }: Props) {
+export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Props) {
   const phase = useSneakInStore(s => s.phase);
   const hand = useSneakInStore(s => s.hand);
   const areas = useSneakInStore(s => s.areas);
@@ -160,6 +165,7 @@ export function SneakInScreen({ onGameEnd }: Props) {
   const moveCard = useSneakInStore(s => s.moveCard);
   const timeoutGame = useSneakInStore(s => s.timeoutGame);
   const [helpVisible, setHelpVisible] = useState(false);
+  const { playTap } = useCardSound();
 
   // --- Screen-level drag state ---
   const dragPan = useRef(new Animated.ValueXY()).current;
@@ -291,12 +297,16 @@ export function SneakInScreen({ onGameEnd }: Props) {
       const target = resolveDropTargetRef.current(dropX, dropY);
       if (target !== null && target !== drag.source) {
         moveCard(drag.card, drag.source, target);
+        if (typeof target === 'number') playTap();
       }
     },
-    [dragPan, moveCard],
+    [dragPan, moveCard, playTap],
   );
 
   const rows = [areas.slice(0, 2), areas.slice(2, 4)];
+  const tutorialParagraph =
+    'Drag cards from your hand into unlocked areas and match each target sum to crack every zone. Each zone requires two or three cards (no more and no less!).' +
+    ' You can move cards back and forth to fix mistakes, but the timer never stops, so solve all four quickly to lock in the best bonus.';
 
   // ── Result screen — rendered after all hooks ─────────────────────────────────
   if (phase === 'done' || phase === 'timeout') {
@@ -544,6 +554,20 @@ export function SneakInScreen({ onGameEnd }: Props) {
             </Animated.View>
           );
         })()}
+
+      {showTutorial && (
+        <ActTutorialOverlay
+          title="Act 1 Tutorial: Sneak In"
+          paragraph={tutorialParagraph}
+          onDismiss={onDismissTutorial}
+        >
+          <Image
+            source={require('../../assets/images/sneakin.png')}
+            style={styles.tutorialImage}
+            resizeMode="contain"
+          />
+        </ActTutorialOverlay>
+      )}
     </View>
   );
 }
@@ -838,6 +862,35 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.35,
     shadowRadius: 5,
+  },
+  snapGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+  },
+  snapArea: {
+    width: '47%',
+    backgroundColor: '#1b4332',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 2,
+  },
+  snapAreaIcon: {
+    fontSize: 18,
+  },
+  snapAreaTarget: {
+    color: '#f4d03f',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  tutorialImage: {
+    width: '100%',
+    height: '100%',
   },
 
   // ── Result overlay ──────────────────────────────────────────────────────────

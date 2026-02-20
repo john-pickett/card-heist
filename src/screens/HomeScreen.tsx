@@ -10,6 +10,15 @@ export function HomeScreen({ onStartGame }: Props) {
     <View style={styles.screen}>
       <Text style={styles.title}>BANK HEIST</Text>
 
+      <View style={styles.introBox}>
+        <Text style={styles.introTitle}>Welcome to the crew.</Text>
+        <Text style={styles.introText}>
+          Tonight is all precision and nerve: slip past security, crack the vaults, and race out
+          before the heat closes in. Each act raises the pressure, so expect smart card play,
+          tight decisions, and one final push to get away clean.
+        </Text>
+      </View>
+
       <View style={styles.panel}>
         <Text style={styles.actTitle}>ACT 1 — SNEAK IN</Text>
         <Text style={styles.actDesc}>
@@ -51,7 +60,28 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: 4,
-    marginBottom: 32,
+    marginBottom: 16,
+  },
+  introBox: {
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 18,
+  },
+  introTitle: {
+    color: '#f4d03f',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  introText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    lineHeight: 19,
   },
   panel: {
     backgroundColor: '#1b4332',

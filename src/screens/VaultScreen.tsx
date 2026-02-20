@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Image,
   PanResponder,
   StyleSheet,
   Text,
@@ -11,6 +12,8 @@ import { AceModal } from '../components/vault/AceModal';
 import { ReckoningHelpModal } from '../components/vault/VaultHelpModal';
 import { VaultColumn } from '../components/vault/VaultColumn';
 import { useReckoningStore } from '../store/reckoningStore';
+import { useCardSound } from '../hooks/useCardSound';
+import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 
 const SUIT_SYMBOL: Record<string, string> = {
   spades: '♠',
@@ -28,10 +31,13 @@ function pointInRect(x: number, y: number, r: DropRect): boolean {
 
 interface VaultScreenProps {
   onGameEnd: () => void;
+  showTutorial: boolean;
+  onDismissTutorial: () => void;
 }
 
-export function VaultScreen({ onGameEnd }: VaultScreenProps) {
+export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: VaultScreenProps) {
   const [helpVisible, setHelpVisible] = useState(false);
+  const { playTap } = useCardSound();
   const phase = useReckoningStore((s) => s.phase);
   const deck = useReckoningStore((s) => s.deck);
   const currentCard = useReckoningStore((s) => s.currentCard);
@@ -130,6 +136,9 @@ export function VaultScreen({ onGameEnd }: VaultScreenProps) {
 
   const isRed = currentCard ? RED_SUITS.has(currentCard.suit) : false;
   const symbol = currentCard ? (SUIT_SYMBOL[currentCard.suit] ?? '') : '';
+  const tutorialParagraph =
+    'Flip from the draw pile, then assign each card to one of the three vaults without busting its target. ' +
+    'Exact hits pay double and auto-lock that vault, so balance risk across all columns to maximize gold before the deck or vaults run out.';
 
   const measureVaultRects = useCallback(() => {
     requestAnimationFrame(() => {
@@ -150,10 +159,11 @@ export function VaultScreen({ onGameEnd }: VaultScreenProps) {
       if (!rect || vault.isBusted || vault.isStood) continue;
       if (pointInRect(dropX, dropY, rect)) {
         assignCard(vault.id);
+        playTap();
         return;
       }
     }
-  }, [vaultRects, vaults, assignCard]);
+  }, [vaultRects, vaults, assignCard, playTap]);
 
   const handleDragEndRef = useRef(handleDragEnd);
   useEffect(() => { handleDragEndRef.current = handleDragEnd; }, [handleDragEnd]);
@@ -222,7 +232,7 @@ export function VaultScreen({ onGameEnd }: VaultScreenProps) {
               vault={vault}
               isAssignable={isAssignable}
               isDragTarget={isDragging && !vaultTerminal}
-              onAssign={() => assignCard(vault.id)}
+              onAssign={() => { assignCard(vault.id); playTap(); }}
               onStand={() => standVault(vault.id)}
             />
           );
@@ -337,6 +347,19 @@ export function VaultScreen({ onGameEnd }: VaultScreenProps) {
 
       <AceModal />
       <ReckoningHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      {showTutorial && (
+        <ActTutorialOverlay
+          title="Act 2 Tutorial: Crack the Vaults"
+          paragraph={tutorialParagraph}
+          onDismiss={onDismissTutorial}
+        >
+          <Image
+            source={require('../../assets/images/vaults.png')}
+            style={styles.tutorialImage}
+            resizeMode="contain"
+          />
+        </ActTutorialOverlay>
+      )}
     </View>
   );
 }
@@ -530,5 +553,67 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
+  },
+  snapTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  snapPile: {
+    width: 34,
+    height: 46,
+    borderRadius: 7,
+    backgroundColor: '#9b1c1c',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  snapCard: {
+    width: 34,
+    height: 46,
+    borderRadius: 7,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  snapCardRank: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#111111',
+  },
+  snapCardSuit: {
+    fontSize: 10,
+    color: '#111111',
+    marginTop: -2,
+  },
+  snapVaultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  snapVault: {
+    flex: 1,
+    backgroundColor: '#1b4332',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  snapVaultLabel: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  snapVaultTarget: {
+    color: '#f4d03f',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  tutorialImage: {
+    width: '100%',
+    height: '100%',
   },
 });

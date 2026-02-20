@@ -2,39 +2,43 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
-  handRemaining: number;
+  act1Gold: number;
+  act2Gold: number;
   cumulativeGold: number;
   onContinue: () => void;
 }
 
-export function Act1BridgeScreen({ handRemaining, cumulativeGold, onContinue }: Props) {
-  const bonus = handRemaining * 10;
-
+export function Act2BridgeScreen({
+  act1Gold,
+  act2Gold,
+  cumulativeGold,
+  onContinue,
+}: Props) {
   return (
     <View style={styles.screen}>
-      <Text style={styles.heading}>ACT 1 COMPLETE</Text>
-      <Text style={styles.subheading}>SNEAK IN</Text>
+      <Text style={styles.heading}>ACT 2 COMPLETE</Text>
+      <Text style={styles.subheading}>CRACK THE VAULTS</Text>
 
       <View style={styles.storyBox}>
-        <Text style={styles.storyTitle}>You are inside the bank.</Text>
+        <Text style={styles.storyTitle}>The vaults are open.</Text>
         <Text style={styles.storyText}>
-          The outer security is down and the crew is moving deeper. You have banked{' '}
-          <Text style={styles.storyGold}>{cumulativeGold} gold</Text> so far, and every decision
-          from here carries more risk and bigger rewards.
+          Cash is in hand and alarms are waking up the city. You are carrying{' '}
+          <Text style={styles.storyGold}>{cumulativeGold} gold</Text> into the final stretch.
+          One clean getaway keeps the haul. One mistake leaves it behind.
         </Text>
       </View>
 
       <View style={styles.panel}>
         <View style={styles.row}>
-          <Text style={styles.label}>Cards in hand</Text>
-          <Text style={styles.value}>{handRemaining}</Text>
+          <Text style={styles.label}>Act 1 gold</Text>
+          <Text style={styles.value}>{act1Gold}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>Bonus (×10)</Text>
-          <Text style={styles.bonus}>+{bonus}pts</Text>
+          <Text style={styles.label}>Act 2 gold</Text>
+          <Text style={styles.value}>{act2Gold}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>Run gold so far</Text>
+          <Text style={styles.label}>Run total so far</Text>
           <Text style={styles.bonus}>{cumulativeGold} gold</Text>
         </View>
       </View>
@@ -42,17 +46,13 @@ export function Act1BridgeScreen({ handRemaining, cumulativeGold, onContinue }: 
       <View style={styles.expectBox}>
         <Text style={styles.expectTitle}>What comes next</Text>
         <Text style={styles.expectText}>
-          Act 2: Draw and assign cards across three vaults. Match each target exactly to maximize
-          your payout.
-        </Text>
-        <Text style={styles.expectText}>
-          Act 3: Escape with your combined gold. Pick your route and survive the fallout to keep
-          the haul.
+          Act 3 is all escape. Your total gold becomes your stake, and your route decisions
+          determine whether you keep the full payout or lose part of the take.
         </Text>
       </View>
 
       <TouchableOpacity style={styles.continueBtn} onPress={onContinue}>
-        <Text style={styles.continueBtnText}>Continue to Act 2 →</Text>
+        <Text style={styles.continueBtnText}>Continue to Act 3 →</Text>
       </TouchableOpacity>
     </View>
   );
@@ -144,12 +144,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     marginBottom: 22,
-    gap: 8,
   },
   expectTitle: {
     color: '#f4d03f',
     fontSize: 14,
     fontWeight: '800',
+    marginBottom: 8,
   },
   expectText: {
     color: 'rgba(255,255,255,0.76)',
