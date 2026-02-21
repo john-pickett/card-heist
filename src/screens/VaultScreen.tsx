@@ -38,7 +38,7 @@ interface VaultScreenProps {
 
 export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: VaultScreenProps) {
   const [helpVisible, setHelpVisible] = useState(false);
-  const { playTap } = useCardSound();
+  const { playTap, playLootGain, playLootLoss } = useCardSound();
   const phase = useReckoningStore((s) => s.phase);
   const deck = useReckoningStore((s) => s.deck);
   const currentCard = useReckoningStore((s) => s.currentCard);
@@ -131,6 +131,30 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
       onGameEnd();
     }
   }, [phase]);
+
+  const prevVaultsRef = useRef(vaults);
+  useEffect(() => {
+    const prevVaults = prevVaultsRef.current;
+    if (prevVaults !== vaults) {
+      for (const vault of vaults) {
+        const prev = prevVaults.find(v => v.id === vault.id);
+        if (!prev) continue;
+
+        const bustedNow = !prev.isBusted && vault.isBusted;
+        if (bustedNow) {
+          playLootLoss();
+          continue;
+        }
+
+        const hitExactNow = prev.sum !== prev.target && vault.sum === vault.target;
+        const stoodNow = !prev.isStood && vault.isStood;
+        if (hitExactNow || stoodNow) {
+          playLootGain();
+        }
+      }
+    }
+    prevVaultsRef.current = vaults;
+  }, [vaults, playLootGain, playLootLoss]);
 
   const canFlip = phase === 'dealing' && currentCard === null;
   const hasCard = currentCard !== null && phase === 'assigning';
