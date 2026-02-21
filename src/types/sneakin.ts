@@ -27,6 +27,7 @@ export interface SneakInArea {
   cards: SneakInCard[];
   isSolved: boolean;
   isUnlocked: boolean;
+  failedCombos: SneakInCard[][];
 }
 
 export type CardSource = 'hand' | AreaId;
@@ -41,6 +42,7 @@ export interface SneakInState {
   selectedSource: CardSource | null;
   startTime: number | null;
   endTime: number | null;
+  totalMoves: number;
 }
 
 export interface SneakInActions {
@@ -50,5 +52,7 @@ export interface SneakInActions {
   deselect: () => void;
   placeOnArea: (areaId: AreaId) => void;
   returnToHand: () => void;
+  returnAreaToHand: (areaId: AreaId) => void;
+  returnAllToHand: () => void;
   timeoutGame: () => void;
 }

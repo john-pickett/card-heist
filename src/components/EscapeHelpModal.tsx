@@ -17,7 +17,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'Move your token from step 3 to step 1 (EXIT) before the police catch up. The police start at step 6 and close in each turn.',
+        body: 'Move your token from step 4 to step 1 (EXIT) before the police catch up. The police start at step 6 and close in each turn.',
       },
     ],
   },
@@ -25,8 +25,8 @@ const SECTIONS: Section[] = [
     heading: 'Your Turn',
     rows: [
       {
-        label: 'Lay a Meld',
-        body: 'Select 3 or 4 cards from your hand that form a valid meld, then tap LAY MELD. Your token advances 1 step toward EXIT.',
+        label: 'Lay a Match',
+        body: 'Select 3 or 4 cards from your hand that form a valid match, then tap LAY MATCH. Your token advances 1 step toward EXIT.',
       },
       {
         label: 'Discard',
@@ -35,7 +35,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    heading: 'Valid Melds',
+    heading: 'Valid Matches',
     rows: [
       {
         label: 'Set',
@@ -43,7 +43,7 @@ const SECTIONS: Section[] = [
       },
       {
         label: 'Run',
-        body: '3 or 4 cards of the same suit in consecutive rank order. Ace is low only. Example: A♣ 2♣ 3♣ or 9♦ 10♦ J♦.',
+        body: '3 or 4 consecutive ranks (any suit). Ace is low only. Example: A♣ 2♥ 3♦ or 9♦ 10♠ J♥.',
       },
     ],
   },
@@ -52,7 +52,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'After every action you take, the police play automatically. If they can meld, they advance 1 step toward you. If they cannot meld, they discard their lowest card and draw.',
+        body: 'After every action you take, the police play automatically. If they can match, they advance 1 step toward you. If they cannot match, they discard their lowest card and draw.',
       },
     ],
   },
@@ -74,7 +74,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'Melds are the only way to advance — prioritize building them. Discarding burns a turn and lets the police gain ground, so only discard when you have no playable meld.',
+        body: 'Matches are the only way to advance — prioritize building them. Every 2nd discard you make draws the police 1 step closer, on top of their normal turn. A 4-card set advances you 2 steps.',
       },
     ],
   },

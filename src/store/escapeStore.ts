@@ -24,13 +24,10 @@ function validateMeld(cards: Card[]): MeldValidation {
   if (cards.every(c => c.rank === cards[0].rank))
     return { valid: true, type: 'set' };
 
-  // Run: all same suit, consecutive indices in RANK_ORDER
-  if (cards.every(c => c.suit === cards[0].suit)) {
-    const indices = cards.map(c => RANK_ORDER.indexOf(c.rank)).sort((a, b) => a - b);
-    const consecutive = indices.every((idx, i) => i === 0 || idx === indices[i - 1] + 1);
-    if (consecutive) return { valid: true, type: 'run' };
-    return { valid: false, reason: 'Suit cards must be in sequence (A is low)' };
-  }
+  // Run: consecutive ranks (any suit)
+  const indices = cards.map(c => RANK_ORDER.indexOf(c.rank)).sort((a, b) => a - b);
+  const consecutive = indices.every((idx, i) => i === 0 || idx === indices[i - 1] + 1);
+  if (consecutive) return { valid: true, type: 'run' };
   return { valid: false, reason: 'Not a valid set or run' };
 }
 
@@ -130,7 +127,7 @@ const INITIAL_STATE: EscapeState = {
   deck: [],
   playerHand: [],
   policeHand: [],
-  playerPosition: 3,
+  playerPosition: 4,
   policePosition: 6,
   selectedIds: [],
   errorMessage: null,
@@ -139,6 +136,14 @@ const INITIAL_STATE: EscapeState = {
   outOfPlay: [],
   infoMessage: null,
   lastMeldType: null,
+  playerMelds: 0,
+  playerSets: 0,
+  playerRuns: 0,
+  playerCardsDrawn: 0,
+  playerDiscardCount: 0,
+  policeMelds: 0,
+  policeCardsDrawn: 0,
+  turnsPlayed: 0,
 };
 
 export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => ({
@@ -169,7 +174,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
   },
 
   layMeld: () => {
-    const { selectedIds, playerHand, deck, playerPosition, phase, outOfPlay } = get();
+    const { selectedIds, playerHand, deck, playerPosition, phase, outOfPlay, playerMelds, playerSets, playerRuns, playerCardsDrawn, turnsPlayed } = get();
     if (phase !== 'player_turn') return;
 
     const selectedCards = playerHand.filter(ec => selectedIds.includes(ec.instanceId));
@@ -184,7 +189,16 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const drawCount = 8 - remaining.length;
     const newOutOfPlayBeforeDraw = [...outOfPlay, ...selectedCards];
     const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
-    const newPosition = playerPosition - 1;
+    const advance = result.type === 'set' && selectedCards.length === 4 ? 2 : 1;
+    const newPosition = playerPosition - advance;
+
+    const meldCounters = {
+      playerMelds: playerMelds + 1,
+      playerSets: result.type === 'set' ? playerSets + 1 : playerSets,
+      playerRuns: result.type === 'run' ? playerRuns + 1 : playerRuns,
+      playerCardsDrawn: playerCardsDrawn + drawCount,
+      turnsPlayed: turnsPlayed + 1,
+    };
 
     if (newPosition <= 1) {
       set({
@@ -197,6 +211,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
         infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
         lastMeldType: result.type,
         phase: 'won',
+        ...meldCounters,
       });
     } else {
       set({
@@ -209,12 +224,13 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
         infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
         lastMeldType: result.type,
         phase: 'police_thinking',
+        ...meldCounters,
       });
     }
   },
 
   discard: () => {
-    const { selectedIds, playerHand, deck, phase, outOfPlay } = get();
+    const { selectedIds, playerHand, deck, phase, outOfPlay, playerCardsDrawn, playerDiscardCount, policePosition, playerPosition, turnsPlayed } = get();
     if (phase !== 'player_turn') return;
     if (selectedIds.length === 0) return;
 
@@ -224,19 +240,46 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const newOutOfPlayBeforeDraw = [...outOfPlay, ...discarded];
     const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
 
+    const newDiscardCount = playerDiscardCount + 1;
+    const policeAdvance = newDiscardCount % 2 === 0;
+    const newPolicePos = policeAdvance ? policePosition - 1 : policePosition;
+
+    if (policeAdvance && newPolicePos <= playerPosition) {
+      set({
+        playerHand: newHand,
+        deck: newDeck,
+        outOfPlay: newOutOfPlay,
+        selectedIds: [],
+        errorMessage: null,
+        infoMessage: null,
+        policePosition: newPolicePos,
+        phase: 'lost',
+        playerDiscardCount: newDiscardCount,
+        playerCardsDrawn: playerCardsDrawn + drawCount,
+        turnsPlayed: turnsPlayed + 1,
+      });
+      return;
+    }
+
     set({
       playerHand: newHand,
       deck: newDeck,
       outOfPlay: newOutOfPlay,
       selectedIds: [],
       errorMessage: null,
-      infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
+      infoMessage: policeAdvance
+        ? 'Police heard the noise — they moved closer!'
+        : (reshuffled ? 'Deck empty — reshuffling discards...' : null),
+      policePosition: newPolicePos,
       phase: 'police_thinking',
+      playerDiscardCount: newDiscardCount,
+      playerCardsDrawn: playerCardsDrawn + drawCount,
+      turnsPlayed: turnsPlayed + 1,
     });
   },
 
   runPoliceTurn: () => {
-    const { policeHand, deck, policePosition, playerPosition, outOfPlay } = get();
+    const { policeHand, deck, policePosition, playerPosition, outOfPlay, policeMelds, policeCardsDrawn } = get();
 
     const meld = findPoliceMeld(policeHand);
     if (meld) {
@@ -256,6 +299,8 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
           policeMessage: policeMsg,
           policeLastPlay: meld,
           phase: 'lost',
+          policeMelds: policeMelds + 1,
+          policeCardsDrawn: policeCardsDrawn + meld.length,
         });
       } else {
         set({
@@ -266,6 +311,8 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
           policeMessage: policeMsg,
           policeLastPlay: meld,
           phase: 'police_reveal',
+          policeMelds: policeMelds + 1,
+          policeCardsDrawn: policeCardsDrawn + meld.length,
         });
       }
     } else {
@@ -280,6 +327,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
         policeMessage: policeMsg,
         policeLastPlay: [worst],
         phase: 'police_reveal',
+        policeCardsDrawn: policeCardsDrawn + 1,
       });
     }
   },

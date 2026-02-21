@@ -23,7 +23,7 @@ export interface EscapeState {
   deck: EscapeCard[];
   playerHand: EscapeCard[];   // always 8 during play
   policeHand: EscapeCard[];   // always 7, never shown to player
-  playerPosition: number;     // 1–6, starts 3
+  playerPosition: number;     // 1–6, starts 4
   policePosition: number;     // 1–6, starts 6
   selectedIds: string[];      // instanceIds of selected player cards
   errorMessage: string | null;  // auto-clears after 2 s
@@ -32,6 +32,14 @@ export interface EscapeState {
   outOfPlay: EscapeCard[];    // all cards no longer in deck
   infoMessage: string | null; // reshuffle notice, auto-clears after 3 s
   lastMeldType: MeldType | null;
+  playerMelds: number;
+  playerSets: number;
+  playerRuns: number;
+  playerCardsDrawn: number;
+  playerDiscardCount: number;
+  policeMelds: number;
+  policeCardsDrawn: number;
+  turnsPlayed: number;
 }
 
 export interface EscapeActions {

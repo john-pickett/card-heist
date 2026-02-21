@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useSettingsStore } from '../store/settingsStore';
 
 interface Props {
   onResetTutorials: () => Promise<void>;
@@ -7,6 +8,8 @@ interface Props {
 
 export function SettingsScreen({ onResetTutorials }: Props) {
   const [message, setMessage] = useState<string | null>(null);
+  const soundEnabled = useSettingsStore(s => s.soundEnabled);
+  const setSoundEnabled = useSettingsStore(s => s.setSoundEnabled);
 
   const handleReset = async () => {
     try {
@@ -22,6 +25,21 @@ export function SettingsScreen({ onResetTutorials }: Props) {
       <Text style={styles.title}>SETTINGS</Text>
 
       <View style={styles.panel}>
+        <Text style={styles.settingTitle}>Sound Effects</Text>
+        <View style={styles.toggleRow}>
+          <Text style={styles.settingDesc}>
+            Play sounds during gameplay.
+          </Text>
+          <Switch
+            value={soundEnabled}
+            onValueChange={setSoundEnabled}
+            trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#40916c' }}
+            thumbColor="#ffffff"
+          />
+        </View>
+      </View>
+
+      <View style={[styles.panel, styles.panelSpaced]}>
         <Text style={styles.settingTitle}>Tutorials</Text>
         <Text style={styles.settingDesc}>
           Show all act tutorial screens again for this device.
@@ -60,12 +78,22 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+  panelSpaced: {
+    marginTop: 12,
+  },
   settingTitle: {
     color: '#f4d03f',
     fontSize: 15,
     fontWeight: '800',
   },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   settingDesc: {
+    flex: 1,
     color: 'rgba(255,255,255,0.72)',
     fontSize: 13,
     lineHeight: 18,

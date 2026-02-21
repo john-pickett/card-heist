@@ -41,7 +41,7 @@ type ActiveDrag = {
   height: number;
 };
 
-const TOTAL_TIME_MS = 60_000;
+const TOTAL_TIME_MS = 120_000;
 
 function formatTime(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -49,17 +49,6 @@ function formatTime(ms: number): string {
   const s = totalSec % 60;
   const t = Math.floor((ms % 1000) / 100);
   return `${m}:${String(s).padStart(2, '0')}.${t}`;
-}
-
-type TimingGrade = 'great' | 'good' | 'ok' | 'bad';
-type TimingRating = { grade: TimingGrade; label: string; bonus: number };
-
-function getTimingRating(elapsedMs: number, timedOut: boolean): TimingRating {
-  if (timedOut) return { grade: 'bad', label: 'Oof, Bad', bonus: 0 };
-  const s = Math.floor(elapsedMs / 1000);
-  if (s <= 15) return { grade: 'great', label: 'Great', bonus: 20 };
-  if (s <= 35) return { grade: 'good', label: 'Good', bonus: 10 };
-  return { grade: 'ok', label: 'Not Great', bonus: 0 };
 }
 
 function pointInRect(x: number, y: number, rect: DropRect): boolean {
@@ -163,6 +152,8 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const startTime = useSneakInStore(s => s.startTime);
   const endTime = useSneakInStore(s => s.endTime);
   const moveCard = useSneakInStore(s => s.moveCard);
+  const returnAreaToHand = useSneakInStore(s => s.returnAreaToHand);
+  const returnAllToHand = useSneakInStore(s => s.returnAllToHand);
   const timeoutGame = useSneakInStore(s => s.timeoutGame);
   const [helpVisible, setHelpVisible] = useState(false);
   const { playTap } = useCardSound();
@@ -303,49 +294,18 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
     [dragPan, moveCard, playTap],
   );
 
+  const hasAnyReturnable = areas.some(
+    a => a.isUnlocked && !a.isSolved && a.cards.length > 0,
+  );
+
   const rows = [areas.slice(0, 2), areas.slice(2, 4)];
   const tutorialParagraph =
     'Drag cards from your hand into unlocked areas and match each target sum to crack every zone. Each zone requires two or three cards (no more and no less!).' +
     ' You can move cards back and forth to fix mistakes, but the timer never stops, so solve all four quickly to lock in the best bonus.';
 
-  // ── Result screen — rendered after all hooks ─────────────────────────────────
-  if (phase === 'done' || phase === 'timeout') {
-    const timedOut = phase === 'timeout';
-    const rating = getTimingRating(elapsedMs, timedOut);
-    const gradeColors: Record<TimingGrade, string> = {
-      great: '#f4d03f',
-      good: '#95d5b2',
-      ok: 'rgba(255,255,255,0.55)',
-      bad: '#e74c3c',
-    };
-    return (
-      <View style={styles.resultScreen}>
-        <Text style={[styles.resultHeading, timedOut && styles.resultHeadingRed]}>
-          {timedOut ? "TIME'S UP!" : 'SNEAK IN COMPLETE!'}
-        </Text>
-
-        <View style={styles.resultTimeBlock}>
-          <Text style={styles.resultTimeLabel}>
-            {timedOut ? 'TIME LIMIT REACHED' : 'YOUR TIME'}
-          </Text>
-          <Text style={styles.resultTimeValue}>{formatTime(elapsedMs)}</Text>
-        </View>
-
-        <View style={styles.resultRatingBlock}>
-          <Text style={[styles.resultGrade, { color: gradeColors[rating.grade] }]}>
-            {rating.label}
-          </Text>
-          <Text style={styles.resultBonus}>
-            {rating.bonus > 0 ? `+${rating.bonus} point bonus` : 'No time bonus'}
-          </Text>
-        </View>
-
-        <TouchableOpacity style={styles.resultContinueBtn} onPress={onGameEnd}>
-          <Text style={styles.resultContinueBtnText}>CONTINUE →</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (phase === 'done' || phase === 'timeout') onGameEnd();
+  }, [phase, onGameEnd]);
 
   return (
     <View
@@ -363,13 +323,13 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
         <Text style={styles.title}>SNEAK IN</Text>
         <View style={[
           styles.timerBadge,
-          remainingMs <= 15000 && styles.timerBadgeWarning,
-          remainingMs <= 5000  && styles.timerBadgeDanger,
+          remainingMs <= 30000 && styles.timerBadgeWarning,
+          remainingMs <= 10000 && styles.timerBadgeDanger,
         ]}>
           <Text style={[
             styles.timerText,
-            remainingMs <= 15000 && styles.timerTextWarning,
-            remainingMs <= 5000  && styles.timerTextDanger,
+            remainingMs <= 30000 && styles.timerTextWarning,
+            remainingMs <= 10000 && styles.timerTextDanger,
           ]}>
             {formatTime(remainingMs)}
           </Text>
@@ -415,6 +375,16 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                     isDragTarget && styles.areaCardDropTarget,
                   ]}
                 >
+                  {area.isUnlocked && !area.isSolved && area.cards.length > 0 && !activeDrag && (
+                    <TouchableOpacity
+                      style={styles.areaReturnBtn}
+                      onPress={() => returnAreaToHand(area.id)}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.areaReturnBtnText}>↩</Text>
+                    </TouchableOpacity>
+                  )}
+
                   <Text style={[styles.areaIcon, locked && styles.dimmed]}>
                     {AREA_ICONS[area.id]}
                   </Text>
@@ -434,43 +404,68 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                   )}
 
                   {!locked && (
-                    <View style={styles.cardsZone}>
-                      <View style={styles.cardsRow}>
-                        {area.cards.map(sc => {
-                          const red = RED_SUITS.has(sc.card.suit);
-                          return (
-                            <DraggableCard
-                              key={sc.instanceId}
-                              card={sc}
-                              source={area.id}
-                              style={styles.chip}
-                              isDragging={activeDrag?.card.instanceId === sc.instanceId}
-                              dragPan={dragPan}
-                              onDragStart={handleDragStart}
-                              onDragEnd={handleDragEnd}
-                            >
-                              <Text style={[styles.chipRank, red && styles.red]}>
-                                {sc.card.rank}
-                              </Text>
-                              <Text style={[styles.chipSuit, red && styles.red]}>
-                                {SUIT_SYMBOL[sc.card.suit]}
-                              </Text>
-                            </DraggableCard>
-                          );
-                        })}
+                    <>
+                      <View style={styles.cardsZone}>
+                        <View style={styles.cardsRow}>
+                          {area.cards.map(sc => {
+                            const red = RED_SUITS.has(sc.card.suit);
+                            return (
+                              <DraggableCard
+                                key={sc.instanceId}
+                                card={sc}
+                                source={area.id}
+                                style={styles.chip}
+                                isDragging={activeDrag?.card.instanceId === sc.instanceId}
+                                dragPan={dragPan}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
+                              >
+                                <Text style={[styles.chipRank, red && styles.red]}>
+                                  {sc.card.rank}
+                                </Text>
+                                <Text style={[styles.chipSuit, red && styles.red]}>
+                                  {SUIT_SYMBOL[sc.card.suit]}
+                                </Text>
+                              </DraggableCard>
+                            );
+                          })}
+                        </View>
+
+                        {area.cards.length > 0 && (
+                          <Text
+                            style={[
+                              styles.sumText,
+                              area.isSolved && styles.sumTextSolved,
+                            ]}
+                          >
+                            {area.isSolved ? `${cardSum} ✓` : `${cardSum} of ${area.target}`}
+                          </Text>
+                        )}
                       </View>
 
-                      {area.cards.length > 0 && (
-                        <Text
-                          style={[
-                            styles.sumText,
-                            area.isSolved && styles.sumTextSolved,
-                          ]}
-                        >
-                          {area.isSolved ? `${cardSum} ✓` : `${cardSum} of ${area.target}`}
-                        </Text>
+                      {area.failedCombos.length > 0 && (
+                        <View style={styles.failedCombosSection}>
+                          <Text style={styles.failedCombosLabel}>Tried</Text>
+                          {area.failedCombos.slice(-2).map((combo, idx) => (
+                            <View key={idx} style={styles.failedComboRow}>
+                              {combo.map(sc => {
+                                const red = RED_SUITS.has(sc.card.suit);
+                                return (
+                                  <View key={sc.instanceId} style={styles.failedChip}>
+                                    <Text style={[styles.failedChipText, red && styles.failedChipRed]}>
+                                      {sc.card.rank}
+                                    </Text>
+                                  </View>
+                                );
+                              })}
+                              <Text style={styles.failedComboSum}>
+                                ={combo.reduce((s, sc) => s + parseInt(sc.card.rank, 10), 0)}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
                       )}
-                    </View>
+                    </>
                   )}
                 </View>
               );
@@ -486,6 +481,20 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
             ? 'Drag a card into an unlocked area to start the clock'
             : 'Drag cards between areas or back to your hand'}
         </Text>
+
+        {(phase === 'playing' || phase === 'idle') && (
+          <View style={styles.toolbar}>
+            <TouchableOpacity
+              style={[styles.toolbarBtn, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnDisabled]}
+              disabled={!hasAnyReturnable || !!activeDrag}
+              onPress={returnAllToHand}
+            >
+              <Text style={[styles.toolbarBtnText, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnTextDisabled]}>
+                ↩ Return All
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View ref={handDropRef} onLayout={scheduleMeasure} style={styles.handDropZone}>
           <ScrollView
@@ -893,77 +902,78 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 
-  // ── Result overlay ──────────────────────────────────────────────────────────
-  resultScreen: {
-    flex: 1,
-    backgroundColor: '#2d6a4f',
+  // Dock toolbar
+  toolbar: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    justifyContent: 'flex-end',
+  },
+  toolbarBtn: {
+    backgroundColor: '#27ae60',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  toolbarBtnDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  toolbarBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  toolbarBtnTextDisabled: { color: 'rgba(255,255,255,0.3)' },
+
+  // Per-area return button
+  areaReturnBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 6,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 0,
   },
-  resultHeading: {
-    color: '#f4d03f',
-    fontSize: 26,
-    fontWeight: '900',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  resultHeadingRed: {
-    color: '#e74c3c',
-  },
-  resultTimeBlock: {
+  areaReturnBtnText: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+
+  // Failed combos history
+  failedCombosSection: {
+    marginTop: 6,
     alignItems: 'center',
-    marginBottom: 28,
+    gap: 3,
   },
-  resultTimeLabel: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 11,
+  failedCombosLabel: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 8,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: 6,
   },
-  resultTimeValue: {
-    color: '#ffffff',
-    fontSize: 52,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-    lineHeight: 58,
-  },
-  resultRatingBlock: {
+  failedComboRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1b4332',
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-    width: '100%',
-    marginBottom: 32,
+    gap: 3,
+  },
+  failedChip: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderStyle: 'dashed',
+    width: 26,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.5,
   },
-  resultGrade: {
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  resultBonus: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 14,
+  failedChipText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  failedChipRed: { color: '#e07070' },
+  failedComboSum: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 10,
     fontWeight: '600',
+    marginLeft: 2,
   },
-  resultContinueBtn: {
-    backgroundColor: '#40916c',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-  },
-  resultContinueBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
+
 });

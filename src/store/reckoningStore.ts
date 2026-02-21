@@ -61,6 +61,10 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   vaults: makeVaults(),
   pendingAce: null,
   finalScore: null,
+  exactHits: 0,
+  busts: 0,
+  aceOnes: 0,
+  aceElevens: 0,
 
   initGame: () => {
     const shuffled = shuffleDeck(createDeck());
@@ -72,6 +76,10 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       vaults: makeVaults(),
       pendingAce: null,
       finalScore: null,
+      exactHits: 0,
+      busts: 0,
+      aceOnes: 0,
+      aceElevens: 0,
     });
   },
 
@@ -90,7 +98,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   },
 
   assignCard: (vaultId: 0 | 1 | 2) => {
-    const { currentCard, currentInstanceId, vaults, phase } = get();
+    const { currentCard, currentInstanceId, vaults, phase, exactHits, busts } = get();
     if (phase !== 'assigning' || !currentCard || !currentInstanceId) return;
 
     const vault = vaults[vaultId];
@@ -130,13 +138,15 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       currentCard: null,
       currentInstanceId: null,
       phase: 'dealing',
+      exactHits: isExactHit ? exactHits + 1 : exactHits,
+      busts: isBusted ? busts + 1 : busts,
     });
 
     checkGameEnd(get, set, newVaults);
   },
 
   chooseAceValue: (value: AceValue) => {
-    const { pendingAce, vaults } = get();
+    const { pendingAce, vaults, exactHits, busts, aceOnes, aceElevens } = get();
     if (!pendingAce) return;
 
     const { card, instanceId, targetVaultId } = pendingAce;
@@ -168,6 +178,10 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       currentInstanceId: null,
       pendingAce: null,
       phase: 'dealing',
+      exactHits: isExactHit ? exactHits + 1 : exactHits,
+      busts: isBusted ? busts + 1 : busts,
+      aceOnes: value === 1 ? aceOnes + 1 : aceOnes,
+      aceElevens: value === 11 ? aceElevens + 1 : aceElevens,
     });
 
     checkGameEnd(get, set, newVaults);

@@ -35,6 +35,10 @@ export interface ReckoningState {
   vaults: Vault[];
   pendingAce: PendingAce | null;
   finalScore: number | null;
+  exactHits: number;
+  busts: number;
+  aceOnes: number;
+  aceElevens: number;
 }
 
 export interface ReckoningActions {

@@ -25,13 +25,25 @@ function checkSolved(cards: SneakInCard[], target: number): boolean {
   return cards.reduce((s, sc) => s + rankValue(sc.card.rank as Rank), 0) === target;
 }
 
-function shuffleArr<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+function combosOfSize(indices: number[], size: 2 | 3): number[][] {
+  const out: number[][] = [];
+  if (size === 2) {
+    for (let i = 0; i < indices.length; i++) {
+      for (let j = i + 1; j < indices.length; j++) {
+        out.push([indices[i], indices[j]]);
+      }
+    }
+    return out;
   }
-  return a;
+
+  for (let i = 0; i < indices.length; i++) {
+    for (let j = i + 1; j < indices.length; j++) {
+      for (let k = j + 1; k < indices.length; k++) {
+        out.push([indices[i], indices[j], indices[k]]);
+      }
+    }
+  }
+  return out;
 }
 
 // Generate 4 strictly ascending targets in [4, 20].
@@ -51,74 +63,50 @@ function generateTargets(): number[] {
   return targets;
 }
 
-// Find a pair of values (2-10) summing to target, respecting how many of
-// each rank are still available (max 4 per rank across the whole deck).
-function findPair(
-  target: number,
-  available: Record<number, number>
-): [number, number] | null {
-  const options: [number, number][] = [];
-  for (let a = 2; a <= Math.floor(target / 2); a++) {
-    const b = target - a;
-    if (b < 2 || b > 10) continue;
-    if (a === b) {
-      if (available[a] >= 2) options.push([a, b]);
-    } else {
-      if (available[a] >= 1 && available[b] >= 1) options.push([a, b]);
+function hasTwoOrThreeCardSolution(values: number[], targets: number[]): boolean {
+  const allIndices = values.map((_, i) => i);
+
+  function search(areaId: number, remaining: number[]): boolean {
+    if (areaId === 4) return true;
+    const target = targets[areaId];
+
+    for (const groupSize of [2, 3] as const) {
+      if (remaining.length < groupSize) continue;
+      const combos = combosOfSize(remaining, groupSize);
+      for (const combo of combos) {
+        const sum = combo.reduce((s, idx) => s + values[idx], 0);
+        if (sum !== target) continue;
+        const nextRemaining = remaining.filter(i => !combo.includes(i));
+        if (search(areaId + 1, nextRemaining)) return true;
+      }
     }
+    return false;
   }
-  if (options.length === 0) return null;
-  return options[Math.floor(Math.random() * options.length)];
+
+  return search(0, allIndices);
 }
 
-// Build a game: generate targets, find guaranteed pairs for each, then deal
-// a 10-card hand that contains all required cards plus 2 random extras.
-function buildGame(): { targets: number[]; hand: SneakInCard[] } {
-  const targets = generateTargets();
-
-  // Track how many of each rank (2-10) are still available (4 per rank = 4 suits).
-  const available: Record<number, number> = {};
-  for (let v = 2; v <= 10; v++) available[v] = 4;
-
-  const requiredValues: number[] = [];
-  for (const target of targets) {
-    const pair = findPair(target, available);
-    if (!pair) {
-      // Extremely rare: retry with fresh targets
-      return buildGame();
-    }
-    for (const v of pair) {
-      available[v]--;
-      requiredValues.push(v);
-    }
-  }
-  // requiredValues now has exactly 8 values (2 per area × 4 areas).
-
-  // Build shuffled pool of all 2-10 cards (36 total).
+function buildRandomHand(): SneakInCard[] {
   const numericDeck = shuffleDeck(
     createDeck().filter(c => {
       const n = parseInt(c.rank, 10);
       return !isNaN(n) && n >= 2 && n <= 10;
-    })
+    }),
   );
 
-  // Pick actual Card objects for each required value (first matching suit wins).
-  const pool = [...numericDeck];
-  const chosen: SneakInCard[] = [];
-  for (const val of requiredValues) {
-    const rank = String(val) as Rank;
-    const idx = pool.findIndex(c => c.rank === rank);
-    if (idx === -1) return buildGame(); // shouldn't happen
-    const [card] = pool.splice(idx, 1);
-    chosen.push({ card, instanceId: nextId() });
-  }
+  return numericDeck.slice(0, 10).map(card => ({ card, instanceId: nextId() }));
+}
 
-  // Pad to 10 cards with random remaining cards.
-  for (let i = 0; i < 2 && pool.length > 0; i++) {
-    chosen.push({ card: pool[i], instanceId: nextId() });
+// Build a game that guarantees at least one valid solution where each area
+// is solved with 2 or 3 cards (using any subset of the 10-card hand).
+function buildGame(): { targets: number[]; hand: SneakInCard[] } {
+  while (true) {
+    const targets = generateTargets();
+    const hand = buildRandomHand();
+    const values = hand.map(c => parseInt(c.card.rank, 10));
+    if (!hasTwoOrThreeCardSolution(values, targets)) continue;
+    return { targets, hand };
   }
-
-  return { targets, hand: shuffleArr(chosen) };
 }
 
 function makeAreas(targets: number[]): SneakInArea[] {
@@ -128,6 +116,7 @@ function makeAreas(targets: number[]): SneakInArea[] {
     cards: [],
     isSolved: false,
     isUnlocked: i === 0,
+    failedCombos: [],
   }));
 }
 
@@ -141,6 +130,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   selectedSource: null,
   startTime: null,
   endTime: null,
+  totalMoves: 0,
 
   initGame: () => {
     const { targets, hand } = buildGame();
@@ -152,13 +142,14 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       selectedSource: null,
       startTime: null,
       endTime: null,
+      totalMoves: 0,
     });
   },
 
   moveCard: (card: SneakInCard, from: CardSource, to: CardSource) => {
     if (from === to) return;
 
-    const { hand, areas, phase, startTime } = get();
+    const { hand, areas, phase, startTime, totalMoves } = get();
     const newHand = [...hand];
     const newAreas = areas.map(a => ({ ...a, cards: [...a.cards] }));
 
@@ -219,6 +210,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       selectedSource: null,
       startTime: movedToArea ? startTime ?? now : startTime,
       phase: newPhase,
+      totalMoves: totalMoves + 1,
       ...(allSolved ? { endTime: now } : {}),
     });
   },
@@ -285,7 +277,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   // Place the lifted card onto an area. Starts the timer on the first placement.
   // Unlocks the next area if this one just became solved.
   placeOnArea: (areaId: AreaId) => {
-    const { selectedCard, areas, startTime, phase } = get();
+    const { selectedCard, areas, startTime, phase, totalMoves } = get();
     if (!selectedCard) return;
 
     const area = areas[areaId];
@@ -315,20 +307,60 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       selectedSource: null,
       startTime: startTime ?? now,
       phase: newPhase,
+      totalMoves: totalMoves + 1,
       ...(allSolved ? { endTime: now } : {}),
     });
   },
 
   // Move the lifted card to hand (instead of returning it to its source).
   returnToHand: () => {
-    const { selectedCard, hand } = get();
+    const { selectedCard, hand, totalMoves } = get();
     if (!selectedCard) return;
-    set({ hand: [...hand, selectedCard], selectedCard: null, selectedSource: null });
+    set({ hand: [...hand, selectedCard], selectedCard: null, selectedSource: null, totalMoves: totalMoves + 1 });
   },
 
-  // Called when the 60-second countdown expires.
+  returnAreaToHand: (areaId: AreaId) => {
+    const { phase, areas, hand } = get();
+    if (phase !== 'playing' && phase !== 'idle') return;
+    const area = areas[areaId];
+    if (!area.isUnlocked || area.isSolved || area.cards.length === 0) return;
+
+    const returningCards = [...area.cards];
+    const newAreas = areas.map(a => {
+      if (a.id !== areaId) return a;
+      const updatedFailed =
+        returningCards.length >= 2
+          ? [...a.failedCombos, returningCards]
+          : a.failedCombos;
+      return { ...a, cards: [], failedCombos: updatedFailed };
+    });
+
+    set({ areas: newAreas, hand: [...hand, ...returningCards] });
+  },
+
+  returnAllToHand: () => {
+    const { phase, areas, hand } = get();
+    if (phase !== 'playing' && phase !== 'idle') return;
+
+    const allReturning: SneakInCard[] = [];
+    const newAreas = areas.map(a => {
+      if (!a.isUnlocked || a.isSolved || a.cards.length === 0) return a;
+      const returningCards = [...a.cards];
+      allReturning.push(...returningCards);
+      const updatedFailed =
+        returningCards.length >= 2
+          ? [...a.failedCombos, returningCards]
+          : a.failedCombos;
+      return { ...a, cards: [], failedCombos: updatedFailed };
+    });
+
+    if (allReturning.length === 0) return;
+    set({ areas: newAreas, hand: [...hand, ...allReturning] });
+  },
+
+  // Called when the 120-second countdown expires.
   timeoutGame: () => {
     const { startTime } = get();
-    set({ phase: 'timeout', endTime: startTime ? startTime + 60000 : Date.now() });
+    set({ phase: 'timeout', endTime: startTime ? startTime + 120000 : Date.now() });
   },
 }));

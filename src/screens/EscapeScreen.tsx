@@ -13,6 +13,7 @@ import { useAudioPlayer } from 'expo-audio';
 import { EscapeDiscardModal } from '../components/EscapeDiscardModal';
 import { EscapeHelpModal } from '../components/EscapeHelpModal';
 import { useEscapeStore } from '../store/escapeStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 
 const SUIT_SYMBOL: Record<string, string> = {
@@ -64,34 +65,45 @@ export function EscapeScreen({
   const stingPlayer    = useAudioPlayer(require('../../assets/sounds/police-sting.wav'));
   const winPlayer      = useAudioPlayer(require('../../assets/sounds/win-fanfare.wav'));
   const losePlayer     = useAudioPlayer(require('../../assets/sounds/lose-fanfare.wav'));
+  const notifyPlayer   = useAudioPlayer(require('../../assets/sounds/notify.wav'));
+  const soundEnabled   = useSettingsStore(s => s.soundEnabled);
 
   // Play fanfare on successful meld; Zustand set() is synchronous so
   // lastMeldType is already updated by the time layMeld() returns.
   const handleLayMeld = useCallback(() => {
     layMeld();
-    if (useEscapeStore.getState().lastMeldType !== null) {
+    if (soundEnabled && useEscapeStore.getState().lastMeldType !== null) {
       fanfarePlayer.seekTo(0);
       fanfarePlayer.play();
     }
-  }, [layMeld, fanfarePlayer]);
+  }, [layMeld, fanfarePlayer, soundEnabled]);
 
   // Police sting: fires when police reveal a mid-game meld (phase goes to
   // police_reveal, not directly to lost — that path gets the lose fanfare).
   useEffect(() => {
-    if (phase === 'police_reveal' && policeLastPlay && policeLastPlay.length >= 3) {
+    if (soundEnabled && phase === 'police_reveal' && policeLastPlay && policeLastPlay.length >= 3) {
       stingPlayer.seekTo(0);
       stingPlayer.play();
     }
   }, [phase, policeLastPlay]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Your-turn notification: play after the police finish their turn
+  const prevPhaseRef = useRef(phase);
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (soundEnabled && phase === 'player_turn' && (prev === 'police_reveal' || prev === 'police_thinking')) {
+      notifyPlayer.seekTo(0);
+      notifyPlayer.play();
+    }
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Win / lose fanfares
   useEffect(() => {
     if (phase === 'won') {
-      winPlayer.seekTo(0);
-      winPlayer.play();
+      if (soundEnabled) { winPlayer.seekTo(0); winPlayer.play(); }
     } else if (phase === 'lost') {
-      losePlayer.seekTo(0);
-      losePlayer.play();
+      if (soundEnabled) { losePlayer.seekTo(0); losePlayer.play(); }
     }
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -204,7 +216,7 @@ export function EscapeScreen({
     return (
       <View style={styles.screen}>
         <Text style={[styles.heading, styles.headingRed]}>CAUGHT!</Text>
-        <Text style={styles.subheading}>Dropped the bags. You keep 33%.</Text>
+        <Text style={styles.subheading}>The police got too close, and you had to drop two of your bags to run. You keep 33%.</Text>
         <View style={styles.panel}>
           <Text style={styles.panelLabel}>You escape with:</Text>
           <Text style={[styles.goldAmount, styles.goldAmountRed]}>{Math.round(totalScore * 0.33)} gold</Text>
@@ -298,7 +310,7 @@ export function EscapeScreen({
 
           {/* Player token */}
           <Animated.View style={[styles.token, styles.playerToken, { left: playerTokenLeft }]}>
-            <Text style={styles.tokenText}>🏃</Text>
+            <Text style={styles.tokenText}>💰</Text>
           </Animated.View>
         </View>
       </View>

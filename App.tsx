@@ -11,10 +11,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Act1BridgeScreen } from './src/screens/Act1BridgeScreen';
 import { Act2BridgeScreen } from './src/screens/Act2BridgeScreen';
 import { EscapeScreen } from './src/screens/EscapeScreen';
+import { HistoryScreen } from './src/screens/HistoryScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { MarketScreen } from './src/screens/MarketScreen';
 import { VaultScreen } from './src/screens/VaultScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SneakInScreen } from './src/screens/SneakInScreen';
+import { useEscapeStore } from './src/store/escapeStore';
+import { useHistoryStore } from './src/store/historyStore';
 import { useReckoningStore } from './src/store/reckoningStore';
 import { useSneakInStore } from './src/store/sneakInStore';
 import {
@@ -23,20 +27,23 @@ import {
   TutorialAct,
   TutorialSeen,
 } from './src/constants/tutorials';
+import { Act1Record, Act2Record, Act3Record, HeistRecord } from './src/types/history';
 
-type Tab = 'home' | 'settings';
+type Tab = 'home' | 'market' | 'history' | 'settings';
 type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [gameFlow, setGameFlow] = useState<GameFlow>('home');
-  const [act1HandRemaining, setAct1HandRemaining] = useState(0);
   const [act1TimeBonus, setAct1TimeBonus] = useState(0);
   const [act2Score, setAct2Score] = useState(0);
+  const [campaignStartTime, setCampaignStartTime] = useState<number | null>(null);
+  const [act1Record, setAct1Record] = useState<Act1Record | null>(null);
+  const [act2Record, setAct2Record] = useState<Act2Record | null>(null);
   const [tutorialsSeen, setTutorialsSeen] = useState<TutorialSeen>(DEFAULT_TUTORIALS);
   const [tutorialsReady, setTutorialsReady] = useState(false);
 
-  const act1Bonus = act1HandRemaining * 10 + act1TimeBonus;
+  const act1Bonus = act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
 
   useEffect(() => {
@@ -82,18 +89,27 @@ export default function App() {
 
   const handleStartGame = () => {
     useSneakInStore.getState().initGame();
+    setCampaignStartTime(Date.now());
     setGameFlow('act1');
   };
 
   const handleSneakInEnd = () => {
     const state = useSneakInStore.getState();
-    setAct1HandRemaining(state.hand.length);
-    if (state.phase === 'done' && state.startTime && state.endTime) {
-      const elapsedSec = Math.floor((state.endTime - state.startTime) / 1000);
-      setAct1TimeBonus(elapsedSec <= 15 ? 20 : elapsedSec <= 35 ? 10 : 0);
-    } else {
-      setAct1TimeBonus(0);
+    const timedOut = state.phase === 'timeout';
+    let elapsedMs: number | null = null;
+    let timingBonus = 0;
+    if (!timedOut && state.startTime && state.endTime) {
+      elapsedMs = state.endTime - state.startTime;
+      const elapsedSec = Math.floor(elapsedMs / 1000);
+      timingBonus =
+        elapsedSec <= 15 ? 50 :
+        elapsedSec <= 30 ? 40 :
+        elapsedSec <= 60 ? 25 :
+        elapsedSec <= 90 ? 15 :
+        elapsedSec <= 120 ? 10 : 0;
     }
+    setAct1TimeBonus(timingBonus);
+    setAct1Record({ elapsedMs, timedOut, timingBonus, totalMoves: state.totalMoves });
     setGameFlow('act1-bridge');
   };
 
@@ -103,8 +119,16 @@ export default function App() {
   };
 
   const handleCrackTheVaultsEnd = () => {
-    const score = useReckoningStore.getState().finalScore ?? 0;
+    const state = useReckoningStore.getState();
+    const score = state.finalScore ?? 0;
     setAct2Score(score);
+    setAct2Record({
+      score,
+      exactHits: state.exactHits,
+      busts: state.busts,
+      aceOnes: state.aceOnes,
+      aceElevens: state.aceElevens,
+    });
     setGameFlow('act2-bridge');
   };
 
@@ -112,17 +136,50 @@ export default function App() {
     setGameFlow('act3');
   };
 
-  const handlePlayAgain = () => {
-    setAct1HandRemaining(0);
+  const recordCurrentHeist = () => {
+    if (!campaignStartTime || !act1Record || !act2Record) return;
+    const escapeState = useEscapeStore.getState();
+    const won = escapeState.phase === 'won';
+    const act3: Act3Record = {
+      won,
+      playerMelds: escapeState.playerMelds,
+      playerSets: escapeState.playerSets,
+      playerRuns: escapeState.playerRuns,
+      playerCardsDrawn: escapeState.playerCardsDrawn,
+      policeMelds: escapeState.policeMelds,
+      policeCardsDrawn: escapeState.policeCardsDrawn,
+      turnsPlayed: escapeState.turnsPlayed,
+    };
+    const record: HeistRecord = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      won,
+      totalGold: won ? totalScore : 0,
+      act1: act1Record,
+      act2: act2Record,
+      act3,
+      durationMs: Date.now() - campaignStartTime,
+    };
+    useHistoryStore.getState().recordHeist(record);
+  };
+
+  const resetCampaignState = () => {
     setAct1TimeBonus(0);
     setAct2Score(0);
+    setCampaignStartTime(null);
+    setAct1Record(null);
+    setAct2Record(null);
+  };
+
+  const handlePlayAgain = () => {
+    recordCurrentHeist();
+    resetCampaignState();
     setGameFlow('home');
   };
 
   const handleReturnHome = () => {
-    setAct1HandRemaining(0);
-    setAct1TimeBonus(0);
-    setAct2Score(0);
+    recordCurrentHeist();
+    resetCampaignState();
     setGameFlow('home');
   };
 
@@ -139,7 +196,9 @@ export default function App() {
       case 'act1-bridge':
         return (
           <Act1BridgeScreen
-            handRemaining={act1HandRemaining}
+            elapsedMs={act1Record?.elapsedMs ?? null}
+            timedOut={act1Record?.timedOut ?? false}
+            timingBonus={act1Record?.timingBonus ?? 0}
             cumulativeGold={act1Bonus}
             onContinue={handleContinueToAct2}
           />
@@ -180,6 +239,8 @@ export default function App() {
 
   const renderContent = () => {
     if (activeTab === 'settings') return <SettingsScreen onResetTutorials={handleResetTutorials} />;
+    if (activeTab === 'market') return <MarketScreen />;
+    if (activeTab === 'history') return <HistoryScreen />;
     return renderHomeTab();
   };
 
@@ -195,6 +256,22 @@ export default function App() {
             >
               <Text style={[styles.tabLabel, activeTab === 'home' && styles.tabLabelActive]}>
                 Home
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabItem, activeTab === 'market' && styles.tabItemActive]}
+              onPress={() => setActiveTab('market')}
+            >
+              <Text style={[styles.tabLabel, activeTab === 'market' && styles.tabLabelActive]}>
+                Market
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabItem, activeTab === 'history' && styles.tabItemActive]}
+              onPress={() => setActiveTab('history')}
+            >
+              <Text style={[styles.tabLabel, activeTab === 'history' && styles.tabLabelActive]}>
+                History
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
