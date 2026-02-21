@@ -34,6 +34,12 @@ export type CardSource = 'hand' | AreaId;
 
 export type SneakInPhase = 'idle' | 'playing' | 'done' | 'timeout';
 
+export interface SneakInSolutionEntry {
+  areaName: string;
+  cards: number[];
+  target: number;
+}
+
 export interface SneakInState {
   phase: SneakInPhase;
   hand: SneakInCard[];
@@ -43,6 +49,7 @@ export interface SneakInState {
   startTime: number | null;
   endTime: number | null;
   totalMoves: number;
+  solution: SneakInSolutionEntry[] | null;
 }
 
 export interface SneakInActions {

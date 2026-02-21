@@ -10,7 +10,7 @@ import {
   Vault,
   VaultCard,
   VaultTarget,
-} from '../types/reckoning';
+} from '../types/vault';
 
 function cardValue(rank: Rank, aceValue?: AceValue): number {
   if (rank === 'A') return aceValue ?? 11;

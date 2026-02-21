@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GameCard, GameColumn as GameColumnType } from '../types/game';
 import { CARD_HEIGHT, CARD_WIDTH, MiniCard } from './MiniCard';
+import theme from '../theme';
 
 const CASCADE_OFFSET = 42;
 
@@ -91,7 +92,7 @@ export function GameColumn({
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: theme.spacing.xs,
     alignItems: 'center',
   },
   header: {
@@ -99,24 +100,24 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   columnId: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: theme.fontWeights.heavy,
     letterSpacing: 0.5,
   },
   budgetBadge: {
-    backgroundColor: '#1b4332',
+    backgroundColor: theme.colors.bgPanel,
     borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 2,
     marginTop: 2,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: theme.colors.borderStrong,
   },
   budgetText: {
-    color: '#d8f3dc',
-    fontSize: 11,
-    fontWeight: '700',
+    color: theme.colors.textGreen,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
   },
   scroll: {
     width: CARD_WIDTH + 8,
@@ -138,12 +139,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: theme.colors.textDisabled,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.3)',
+    color: theme.colors.textDisabled,
     fontSize: 12,
   },
   dimmed: {
@@ -151,17 +152,17 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     borderRadius: 6,
-    paddingHorizontal: 8,
+    paddingHorizontal: theme.spacing.sm,
     paddingVertical: 3,
     marginTop: 6,
   },
   clearedBadge: {
-    backgroundColor: '#27ae60',
+    backgroundColor: theme.colors.greenSuccess,
   },
   statusText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: theme.fontWeights.heavy,
     letterSpacing: 0.5,
   },
 });

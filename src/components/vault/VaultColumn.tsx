@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Vault } from '../../types/reckoning';
+import { Vault } from '../../types/vault';
+import theme from '../../theme';
 
 const SUIT_SYMBOL: Record<string, string> = {
   spades: '♠',
@@ -30,12 +31,12 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
     const isExact = !vault.isBusted && vault.sum === vault.target;
 
     const sumColor = vault.isBusted
-      ? '#e74c3c'
+      ? theme.colors.errorRed
       : isExact
-      ? '#f4d03f'
+      ? theme.colors.gold
       : vault.sum >= vault.target - 2
-      ? '#e67e22'
-      : '#ffffff';
+      ? theme.colors.orange
+      : theme.colors.textPrimary;
 
     return (
       <TouchableOpacity
@@ -118,16 +119,16 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
 const styles = StyleSheet.create({
   column: {
     flex: 1,
-    backgroundColor: '#1b4332',
-    borderRadius: 10,
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.md,
     marginHorizontal: 3,
-    padding: 8,
+    padding: theme.spacing.sm,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: theme.colors.borderFaint,
     overflow: 'hidden',
   },
   columnAssignable: {
-    borderColor: '#40916c',
+    borderColor: theme.colors.greenPrimary,
     borderWidth: 2,
     shadowColor: '#40916c',
     shadowOffset: { width: 0, height: 0 },
@@ -136,11 +137,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   columnDragTarget: {
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: theme.colors.textMuted,
     borderWidth: 2.5,
   },
   columnExact: {
-    borderColor: '#f4d03f',
+    borderColor: theme.colors.gold,
     borderWidth: 2,
     shadowColor: '#f4d03f',
     shadowOffset: { width: 0, height: 0 },
@@ -155,89 +156,89 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   vaultLabel: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
     letterSpacing: 0.5,
   },
   targetBadge: {
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: theme.colors.textDisabled,
   },
   targetText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
   },
   sumRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: theme.spacing.xs,
     marginBottom: 6,
   },
   sumText: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: theme.fontSizes.xl,
+    fontWeight: theme.fontWeights.black,
     fontVariant: ['tabular-nums'],
   },
   exactBadge: {
-    color: '#f4d03f',
-    fontSize: 13,
-    fontWeight: '800',
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
   },
   cardsScroll: {
     flex: 1,
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   cardTile: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.cardFace,
     borderRadius: 6,
-    marginBottom: 4,
-    paddingHorizontal: 8,
+    marginBottom: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
     paddingVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: theme.spacing.xs,
   },
   cardRank: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#111111',
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
+    color: theme.colors.cardText,
   },
   cardSuit: {
-    fontSize: 13,
-    color: '#111111',
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.cardText,
   },
   red: {
-    color: '#c0392b',
+    color: theme.colors.red,
   },
   standBtn: {
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
     borderRadius: 6,
     paddingVertical: 6,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: theme.colors.borderStrong,
     marginTop: 2,
   },
   standBtnText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.heavy,
     letterSpacing: 0.5,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: theme.radii.md,
   },
   bustedOverlay: {
     backgroundColor: 'rgba(231, 76, 60, 0.45)',
@@ -249,27 +250,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(244, 208, 63, 0.22)',
   },
   overlayText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.lg,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 2,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   exactOverlayLabel: {
-    color: '#f4d03f',
-    fontSize: 13,
-    fontWeight: '900',
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 1.5,
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   exactOverlayScore: {
-    color: '#f4d03f',
+    color: theme.colors.gold,
     fontSize: 38,
-    fontWeight: '900',
+    fontWeight: theme.fontWeights.black,
     fontVariant: ['tabular-nums'],
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },

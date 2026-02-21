@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GameCard } from '../types/game';
+import theme from '../theme';
 
 interface MiniCardProps {
   gameCard: GameCard;
@@ -59,10 +60,10 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.cardFace,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.15)',
+    borderColor: theme.colors.cardBorderSubtle,
     padding: 6,
     justifyContent: 'space-between',
     shadowColor: '#000',
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   selected: {
-    borderColor: '#f4d03f',
+    borderColor: theme.colors.gold,
     borderWidth: 3,
     transform: [{ scale: 1.04 }],
   },
@@ -82,21 +83,21 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   hotfix: {
-    borderColor: '#e67e22',
+    borderColor: theme.colors.orange,
     borderWidth: 2,
   },
   corner: {
     alignItems: 'flex-start',
   },
   cornerRank: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#111111',
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
+    color: theme.colors.cardText,
     lineHeight: 18,
   },
   cornerSuit: {
     fontSize: 12,
-    color: '#111111',
+    color: theme.colors.cardText,
     lineHeight: 14,
   },
   center: {
@@ -106,10 +107,10 @@ const styles = StyleSheet.create({
   },
   centerSuit: {
     fontSize: 30,
-    color: '#111111',
+    color: theme.colors.cardText,
   },
   red: {
-    color: '#c0392b',
+    color: theme.colors.red,
   },
   dimText: {
     opacity: 0.6,

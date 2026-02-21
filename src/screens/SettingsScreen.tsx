@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSettingsStore } from '../store/settingsStore';
+import theme from '../theme';
 
 interface Props {
   onResetTutorials: () => Promise<void>;
@@ -33,8 +34,8 @@ export function SettingsScreen({ onResetTutorials }: Props) {
           <Switch
             value={soundEnabled}
             onValueChange={setSoundEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#40916c' }}
-            thumbColor="#ffffff"
+            trackColor={{ false: theme.colors.borderMedium, true: theme.colors.greenPrimary }}
+            thumbColor={theme.colors.textPrimary}
           />
         </View>
       </View>
@@ -58,64 +59,64 @@ export function SettingsScreen({ onResetTutorials }: Props) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#2d6a4f',
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    backgroundColor: theme.colors.bgPrimary,
+    paddingTop: theme.spacing.sixty,
+    paddingHorizontal: theme.spacing.xl,
   },
   title: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.xl,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 3,
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
     textAlign: 'center',
   },
   panel: {
-    backgroundColor: '#1b4332',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    padding: 16,
-    gap: 10,
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.lg,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderLight,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.ten,
   },
   panelSpaced: {
-    marginTop: 12,
+    marginTop: theme.spacing.md,
   },
   settingTitle: {
-    color: '#f4d03f',
-    fontSize: 15,
-    fontWeight: '800',
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: theme.spacing.md,
   },
   settingDesc: {
     flex: 1,
-    color: 'rgba(255,255,255,0.72)',
-    fontSize: 13,
+    color: theme.colors.text72,
+    fontSize: theme.fontSizes.md,
     lineHeight: 18,
   },
   resetBtn: {
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
     alignSelf: 'flex-start',
-    backgroundColor: '#40916c',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: theme.colors.greenPrimary,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.fourteen,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderStrong,
   },
   resetBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
   },
   message: {
-    marginTop: 4,
-    color: 'rgba(255,255,255,0.78)',
-    fontSize: 12,
+    marginTop: theme.spacing.xs,
+    color: theme.colors.text78,
+    fontSize: theme.fontSizes.s,
   },
 });

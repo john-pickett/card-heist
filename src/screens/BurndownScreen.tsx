@@ -6,6 +6,7 @@ import { QueenModal } from '../components/QueenModal';
 import { useGameStore } from '../store/gameStore';
 import { ColumnId, GameCard } from '../types/game';
 import { bestAceResolution } from '../utils/subsetSum';
+import theme from '../theme';
 
 interface BurndownScreenProps {
   onGameEnd: () => void;
@@ -85,7 +86,7 @@ export function BurndownScreen({ onGameEnd }: BurndownScreenProps) {
     }
   };
 
-  const deltaColor = totalDelta === 0 ? '#2ecc71' : totalDelta > 0 ? '#e67e22' : '#e74c3c';
+  const deltaColor = totalDelta === 0 ? theme.colors.greenLight : totalDelta > 0 ? theme.colors.orange : theme.colors.errorRed;
 
   // Split 4 columns into two rows of two
   const row1 = columns.slice(0, 2);
@@ -144,7 +145,7 @@ export function BurndownScreen({ onGameEnd }: BurndownScreenProps) {
           <Text style={styles.playInfo}>
             {displaySum} pts
             {'  '}
-            <Text style={{ color: playDelta <= 0 ? '#2ecc71' : '#e67e22' }}>
+            <Text style={{ color: playDelta <= 0 ? theme.colors.greenLight : theme.colors.orange }}>
               (Δ {formatDelta(playDelta)} this play)
             </Text>
           </Text>
@@ -190,127 +191,127 @@ export function BurndownScreen({ onGameEnd }: BurndownScreenProps) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 8,
-    gap: 8,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.ten,
+    paddingBottom: theme.spacing.sm,
+    gap: theme.spacing.sm,
   },
   title: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.lg,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 2,
     flex: 1,
   },
   timer: {
-    color: '#d8f3dc',
-    fontSize: 16,
-    fontWeight: '700',
+    color: theme.colors.textGreen,
+    fontSize: theme.fontSizes.subtitle,
+    fontWeight: theme.fontWeights.bold,
     fontVariant: ['tabular-nums'],
   },
   deltaBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderWidth: 1.5,
+    borderRadius: theme.radii.r8,
+    paddingHorizontal: theme.spacing.seven,
+    paddingVertical: theme.spacing.three,
+    borderWidth: theme.borderWidths.medium,
   },
   deltaText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
     fontVariant: ['tabular-nums'],
   },
   drawPileInfo: {
-    backgroundColor: '#1b4332',
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.r8,
+    paddingHorizontal: theme.spacing.seven,
+    paddingVertical: theme.spacing.three,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderMedium,
   },
   drawPileText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    fontWeight: '600',
+    color: theme.colors.text70,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.medium,
   },
   helpBtn: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.borderMedium,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderBright,
   },
   helpBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
     lineHeight: 18,
   },
   gridArea: {
     flex: 1,
-    paddingHorizontal: 6,
-    paddingTop: 2,
+    paddingHorizontal: theme.spacing.six,
+    paddingTop: theme.spacing.two,
   },
   gridRow: {
     flex: 1,
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: theme.spacing.six,
   },
   bottomBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#1b4332',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.ten,
+    backgroundColor: theme.colors.bgPanel,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: theme.colors.borderFaint,
     minHeight: 64,
     justifyContent: 'center',
   },
   playInfo: {
-    color: '#d8f3dc',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.textGreen,
+    fontSize: theme.fontSizes.m,
+    fontWeight: theme.fontWeights.medium,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   bottomActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: theme.spacing.ten,
     justifyContent: 'center',
   },
   btn: {
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmBtn: {
-    backgroundColor: '#27ae60',
+    backgroundColor: theme.colors.greenSuccess,
   },
   hotfixBtn: {
-    backgroundColor: '#e67e22',
+    backgroundColor: theme.colors.orange,
   },
   cancelBtn: {
-    backgroundColor: '#7f8c8d',
+    backgroundColor: theme.colors.gray,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.m,
+    fontWeight: theme.fontWeights.heavy,
     letterSpacing: 0.5,
   },
   hotfixHint: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
+    color: theme.colors.text50,
+    fontSize: theme.fontSizes.sm,
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: theme.spacing.six,
     fontStyle: 'italic',
   },
 });

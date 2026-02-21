@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Card, Suit } from '../types/card';
+import theme from '../theme';
 
 const CARD_WIDTH = 220;
 const CARD_HEIGHT = 308;
@@ -58,7 +59,7 @@ function CardBack() {
 const backStyles = StyleSheet.create({
   back: {
     flex: 1,
-    backgroundColor: '#9B1C1C',
+    backgroundColor: theme.colors.cardBack,
     borderRadius: 13,
     padding: 10,
   },
@@ -73,7 +74,7 @@ const backStyles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
-    borderRadius: 4,
+    borderRadius: theme.radii.xs,
     overflow: 'hidden',
   },
   pattern: {
@@ -87,8 +88,8 @@ const backStyles = StyleSheet.create({
   diamond: {
     width: '20%',
     textAlign: 'center',
-    fontSize: 22,
-    color: '#ffffff',
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.textPrimary,
     lineHeight: 30,
   },
 });
@@ -174,10 +175,10 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
+    backgroundColor: theme.colors.cardFace,
+    borderRadius: theme.radii.lg,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.colors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
@@ -205,8 +206,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   cornerRank: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: theme.fontSizes.xl,
+    fontWeight: theme.fontWeights.heavy,
     lineHeight: 26,
   },
   cornerSuit: {
@@ -220,11 +221,11 @@ const styles = StyleSheet.create({
   },
   centerRank: {
     fontSize: 80,
-    fontWeight: '900',
+    fontWeight: theme.fontWeights.black,
     lineHeight: 84,
   },
   centerSuit: {
     fontSize: 48,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Rank, Suit } from '../types/card';
 import { EscapeCard } from '../types/escape';
+import theme from '../theme';
 
 interface Props {
   visible: boolean;
@@ -80,50 +81,50 @@ export function EscapeDiscardModal({ visible, onClose, outOfPlay, deckCount }: P
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: theme.colors.overlayModal,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#1b4332',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: theme.colors.bgPanel,
+    borderTopLeftRadius: theme.radii.xxl,
+    borderTopRightRadius: theme.radii.xxl,
     height: '75%',
-    paddingBottom: 24,
+    paddingBottom: theme.spacing.xxl,
     borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: theme.colors.borderLight,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: theme.colors.borderFaint,
   },
   title: {
     flex: 1,
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '800',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.lg,
+    fontWeight: theme.fontWeights.heavy,
     letterSpacing: 0.5,
   },
-  closeBtn: { padding: 4 },
+  closeBtn: { padding: theme.spacing.xs },
   closeBtnText: {
     color: 'rgba(255,255,255,0.5)',
-    fontSize: 18,
+    fontSize: theme.fontSizes.lg,
   },
   subheader: {
-    color: 'rgba(255,255,255,0.55)',
+    color: theme.colors.textSoft,
     fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: 20,
+    fontWeight: theme.fontWeights.medium,
+    paddingHorizontal: theme.spacing.xl,
     paddingVertical: 10,
   },
   scroll: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.sm,
     gap: 14,
   },
   suitRow: {
@@ -134,12 +135,12 @@ const styles = StyleSheet.create({
   suitLabel: {
     color: 'rgba(255,255,255,0.85)',
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: theme.fontWeights.black,
     width: 22,
     marginTop: 2,
   },
   redLabel: {
-    color: '#e74c3c',
+    color: theme.colors.errorRed,
   },
   chips: {
     flex: 1,
@@ -148,35 +149,35 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.cardFace,
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 3,
   },
   chipText: {
-    color: '#1a1a1a',
-    fontSize: 13,
-    fontWeight: '700',
+    color: theme.colors.cardTextDark,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.bold,
   },
-  redText: { color: '#c0392b' },
+  redText: { color: theme.colors.red },
   emptyDash: {
-    color: 'rgba(255,255,255,0.25)',
+    color: theme.colors.borderBright,
     fontSize: 16,
     marginTop: 2,
   },
   doneBtn: {
-    marginHorizontal: 20,
-    marginTop: 8,
-    backgroundColor: '#2d6a4f',
-    borderRadius: 10,
+    marginHorizontal: theme.spacing.xl,
+    marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.bgPrimary,
+    borderRadius: theme.radii.md,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: theme.colors.borderMedium,
   },
   doneBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
   },
 });

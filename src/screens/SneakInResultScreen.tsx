@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSneakInStore } from '../store/sneakInStore';
 import { AREA_LABELS } from '../types/sneakin';
+import theme from '../theme';
 
 const SUIT_SYMBOL: Record<string, string> = {
   spades: '♠',
@@ -29,6 +30,7 @@ export function SneakInResultScreen({ onPlayAgain, onHome }: Props) {
   const startTime = useSneakInStore(s => s.startTime);
   const endTime = useSneakInStore(s => s.endTime);
   const initGame = useSneakInStore(s => s.initGame);
+  const solution = useSneakInStore(s => s.solution);
 
   const elapsed = startTime && endTime ? endTime - startTime : 0;
 
@@ -39,6 +41,7 @@ export function SneakInResultScreen({ onPlayAgain, onHome }: Props) {
 
   return (
     <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <Text style={styles.heading}>HEIST COMPLETE!</Text>
       <Text style={styles.subheading}>All four areas cracked.</Text>
 
@@ -85,6 +88,22 @@ export function SneakInResultScreen({ onPlayAgain, onHome }: Props) {
         })}
       </View>
 
+      {/* One valid solution */}
+      {solution && (
+        <View style={styles.solutionBlock}>
+          <Text style={styles.solutionTitle}>ONE VALID SOLUTION</Text>
+          <View style={styles.solutionDivider} />
+          {solution.map((entry, i) => (
+            <View key={i} style={styles.solutionRow}>
+              <Text style={styles.solutionArea}>{entry.areaName}</Text>
+              <Text style={styles.solutionExpr}>
+                {entry.cards.join(' + ')} = {entry.target}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity
@@ -100,6 +119,7 @@ export function SneakInResultScreen({ onPlayAgain, onHome }: Props) {
           <Text style={[styles.btnText, styles.homeBtnText]}>Home</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </View>
   );
 }
@@ -107,43 +127,46 @@ export function SneakInResultScreen({ onPlayAgain, onHome }: Props) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#2d6a4f',
-    padding: 24,
+    backgroundColor: theme.colors.bgPrimary,
+  },
+  scroll: {
+    padding: theme.spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
+    flexGrow: 1,
   },
   heading: {
-    color: '#f4d03f',
-    fontSize: 26,
-    fontWeight: '900',
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.xxl,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 1.5,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: theme.spacing.six,
   },
   subheading: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 14,
-    marginBottom: 28,
+    color: theme.colors.textSoft,
+    fontSize: theme.fontSizes.m,
+    marginBottom: theme.spacing.twentyEight,
     textAlign: 'center',
   },
 
   // Time display
   timeBlock: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: theme.spacing.xxxl,
   },
   timeLabel: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 11,
-    fontWeight: '700',
+    color: theme.colors.textDim,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   timeValue: {
-    color: '#ffffff',
-    fontSize: 56,
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.giant,
+    fontWeight: theme.fontWeights.black,
     fontVariant: ['tabular-nums'],
     lineHeight: 62,
   },
@@ -151,100 +174,144 @@ const styles = StyleSheet.create({
   // Area breakdown table
   breakdown: {
     width: '100%',
-    backgroundColor: '#1b4332',
-    borderRadius: 14,
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.lg,
     overflow: 'hidden',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: theme.spacing.twentyEight,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderFaint,
   },
   areaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.fourteen,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
-    gap: 12,
+    borderTopColor: theme.colors.borderUltraSubtle,
+    gap: theme.spacing.md,
   },
   areaRowLeft: {
     flex: 1,
-    gap: 2,
+    gap: theme.spacing.two,
   },
   areaName: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.bold,
   },
   areaTarget: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 11,
+    color: theme.colors.text40,
+    fontSize: theme.fontSizes.sm,
   },
   areaRowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: theme.spacing.xs,
   },
   miniChip: {
-    backgroundColor: '#ffffff',
-    borderRadius: 5,
+    backgroundColor: theme.colors.cardFace,
+    borderRadius: theme.radii.r5,
     width: 34,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
   miniChipRank: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#111111',
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.black,
+    color: theme.colors.cardText,
   },
   miniChipSuit: {
-    fontSize: 10,
-    color: '#111111',
+    fontSize: theme.fontSizes.caption,
+    color: theme.colors.cardText,
     marginTop: -2,
   },
   plus: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    fontWeight: '600',
+    color: theme.colors.text40,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.medium,
   },
   equals: {
-    color: '#f4d03f',
-    fontSize: 13,
-    fontWeight: '800',
-    marginLeft: 2,
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
+    marginLeft: theme.spacing.two,
   },
   red: {
-    color: '#c0392b',
+    color: theme.colors.red,
+  },
+
+  // Solution block
+  solutionBlock: {
+    width: '100%',
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.lg,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.xl,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderFaint,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.fourteen,
+  },
+  solutionTitle: {
+    color: theme.colors.text40,
+    fontSize: theme.fontSizes.caption,
+    fontWeight: theme.fontWeights.heavy,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: theme.spacing.six,
+  },
+  solutionDivider: {
+    height: 1,
+    backgroundColor: theme.colors.borderSubtle,
+    marginBottom: theme.spacing.sm,
+  },
+  solutionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xs,
+  },
+  solutionArea: {
+    color: theme.colors.text60,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.medium,
+    flex: 1,
+  },
+  solutionExpr: {
+    color: theme.colors.text85,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.bold,
+    fontVariant: ['tabular-nums'],
   },
 
   // Actions
   actions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: theme.spacing.md,
     width: '100%',
   },
   btn: {
     flex: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: theme.radii.r12,
+    paddingVertical: theme.spacing.fourteen,
     alignItems: 'center',
   },
   playAgainBtn: {
-    backgroundColor: '#27ae60',
+    backgroundColor: theme.colors.greenSuccess,
   },
   homeBtn: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderBright,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
   },
   homeBtnText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
+    color: theme.colors.text70,
+    fontWeight: theme.fontWeights.normal,
   },
 });

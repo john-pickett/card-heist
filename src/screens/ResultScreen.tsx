@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useGameStore } from '../store/gameStore';
+import theme from '../theme';
 
 interface ResultScreenProps {
   onPlayAgain: () => void;
@@ -22,7 +23,7 @@ export function ResultScreen({ onPlayAgain, onHome }: ResultScreenProps) {
   const perfect = totalDelta === 0;
   const formattedDelta = totalDelta > 0 ? `+${totalDelta}` : `${totalDelta}`;
 
-  const deltaColor = perfect ? '#2ecc71' : Math.abs(totalDelta) <= 5 ? '#f4d03f' : '#e74c3c';
+  const deltaColor = perfect ? theme.colors.greenLight : Math.abs(totalDelta) <= 5 ? theme.colors.gold : theme.colors.errorRed;
 
   const handlePlayAgain = () => {
     initGame();
@@ -67,94 +68,94 @@ export function ResultScreen({ onPlayAgain, onHome }: ResultScreenProps) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: theme.spacing.xxl,
   },
   card: {
-    backgroundColor: '#1b4332',
-    borderRadius: 16,
-    padding: 32,
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.xl,
+    padding: theme.spacing.xxxl,
     width: '100%',
     maxWidth: 340,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderMedium,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   heading: {
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: theme.fontSizes.xxl2,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 1.5,
-    marginBottom: 24,
+    marginBottom: theme.spacing.xxl,
     textAlign: 'center',
   },
   perfect: {
-    color: '#2ecc71',
+    color: theme.colors.greenLight,
   },
   complete: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
   },
   label: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    fontWeight: '600',
+    color: theme.colors.text50,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.medium,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginTop: 16,
+    marginTop: theme.spacing.lg,
   },
   deltaValue: {
-    fontSize: 52,
-    fontWeight: '900',
-    marginTop: 4,
+    fontSize: theme.fontSizes.giant2,
+    fontWeight: theme.fontWeights.black,
+    marginTop: theme.spacing.xs,
     fontVariant: ['tabular-nums'],
   },
   deltaNote: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 12,
-    marginTop: 2,
+    color: theme.colors.textDim,
+    fontSize: theme.fontSizes.s,
+    marginTop: theme.spacing.two,
     fontStyle: 'italic',
   },
   timeValue: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '700',
-    marginTop: 4,
-    marginBottom: 8,
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.h1,
+    fontWeight: theme.fontWeights.bold,
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
     fontVariant: ['tabular-nums'],
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.xxl,
     width: '100%',
   },
   btn: {
     flex: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.fourteen,
     alignItems: 'center',
   },
   playAgainBtn: {
-    backgroundColor: '#27ae60',
+    backgroundColor: theme.colors.greenSuccess,
   },
   homeBtn: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.textDisabled,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
   },
   homeBtnText: {
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '500',
+    color: theme.colors.text75,
+    fontWeight: theme.fontWeights.normal,
   },
 });

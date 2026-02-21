@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { createDeck, shuffleDeck } from '../data/deck';
 import { Rank } from '../types/card';
 import {
+  AREA_LABELS,
   AreaId,
   CardSource,
   SneakInActions,
   SneakInArea,
   SneakInCard,
   SneakInPhase,
+  SneakInSolutionEntry,
   SneakInState,
 } from '../types/sneakin';
 
@@ -63,11 +65,12 @@ function generateTargets(): number[] {
   return targets;
 }
 
-function hasTwoOrThreeCardSolution(values: number[], targets: number[]): boolean {
+// Returns an array of 4 card-value arrays (one per area) or null if unsolvable.
+function findSolution(values: number[], targets: number[]): number[][] | null {
   const allIndices = values.map((_, i) => i);
 
-  function search(areaId: number, remaining: number[]): boolean {
-    if (areaId === 4) return true;
+  function search(areaId: number, remaining: number[]): number[][] | null {
+    if (areaId === 4) return [];
     const target = targets[areaId];
 
     for (const groupSize of [2, 3] as const) {
@@ -77,10 +80,11 @@ function hasTwoOrThreeCardSolution(values: number[], targets: number[]): boolean
         const sum = combo.reduce((s, idx) => s + values[idx], 0);
         if (sum !== target) continue;
         const nextRemaining = remaining.filter(i => !combo.includes(i));
-        if (search(areaId + 1, nextRemaining)) return true;
+        const rest = search(areaId + 1, nextRemaining);
+        if (rest !== null) return [combo.map(idx => values[idx]), ...rest];
       }
     }
-    return false;
+    return null;
   }
 
   return search(0, allIndices);
@@ -99,13 +103,19 @@ function buildRandomHand(): SneakInCard[] {
 
 // Build a game that guarantees at least one valid solution where each area
 // is solved with 2 or 3 cards (using any subset of the 10-card hand).
-function buildGame(): { targets: number[]; hand: SneakInCard[] } {
+function buildGame(): { targets: number[]; hand: SneakInCard[]; solution: SneakInSolutionEntry[] } {
   while (true) {
     const targets = generateTargets();
     const hand = buildRandomHand();
     const values = hand.map(c => parseInt(c.card.rank, 10));
-    if (!hasTwoOrThreeCardSolution(values, targets)) continue;
-    return { targets, hand };
+    const solutionIndices = findSolution(values, targets);
+    if (!solutionIndices) continue;
+    const solution: SneakInSolutionEntry[] = solutionIndices.map((cards, i) => ({
+      areaName: AREA_LABELS[i],
+      cards,
+      target: targets[i],
+    }));
+    return { targets, hand, solution };
   }
 }
 
@@ -131,9 +141,10 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   startTime: null,
   endTime: null,
   totalMoves: 0,
+  solution: null,
 
   initGame: () => {
-    const { targets, hand } = buildGame();
+    const { targets, hand, solution } = buildGame();
     set({
       phase: 'idle',
       hand,
@@ -143,6 +154,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       startTime: null,
       endTime: null,
       totalMoves: 0,
+      solution,
     });
   },
 
@@ -323,7 +335,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
     const { phase, areas, hand } = get();
     if (phase !== 'playing' && phase !== 'idle') return;
     const area = areas[areaId];
-    if (!area.isUnlocked || area.isSolved || area.cards.length === 0) return;
+    if (!area.isUnlocked || area.cards.length === 0) return;
 
     const returningCards = [...area.cards];
     const newAreas = areas.map(a => {
@@ -332,7 +344,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
         returningCards.length >= 2
           ? [...a.failedCombos, returningCards]
           : a.failedCombos;
-      return { ...a, cards: [], failedCombos: updatedFailed };
+      return { ...a, cards: [], isSolved: false, failedCombos: updatedFailed };
     });
 
     set({ areas: newAreas, hand: [...hand, ...returningCards] });
@@ -344,14 +356,14 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
 
     const allReturning: SneakInCard[] = [];
     const newAreas = areas.map(a => {
-      if (!a.isUnlocked || a.isSolved || a.cards.length === 0) return a;
+      if (!a.isUnlocked || a.cards.length === 0) return a;
       const returningCards = [...a.cards];
       allReturning.push(...returningCards);
       const updatedFailed =
         returningCards.length >= 2
           ? [...a.failedCombos, returningCards]
           : a.failedCombos;
-      return { ...a, cards: [], failedCombos: updatedFailed };
+      return { ...a, cards: [], isSolved: false, failedCombos: updatedFailed };
     });
 
     if (allReturning.length === 0) return;

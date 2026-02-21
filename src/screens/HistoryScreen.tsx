@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { computeStats, useHistoryStore } from '../store/historyStore';
+import theme from '../theme';
 
 function fmtMs(ms: number | null): string {
   if (ms === null) return '—';
@@ -127,11 +128,11 @@ export function HistoryScreen() {
   );
 }
 
-const BG = '#2d6a4f';
-const SECTION_BG = '#1b4332';
-const LABEL_COLOR = 'rgba(255,255,255,0.65)';
-const VALUE_COLOR = '#ffffff';
-const TITLE_COLOR = '#d4af37';
+const BG = theme.colors.bgPrimary;
+const SECTION_BG = theme.colors.bgPanel;
+const LABEL_COLOR = theme.colors.textMuted;
+const VALUE_COLOR = theme.colors.textPrimary;
+const TITLE_COLOR = theme.colors.goldDim;
 
 const styles = StyleSheet.create({
   scroll: {
@@ -139,57 +140,57 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
   },
   scrollContent: {
-    paddingTop: 52,
-    paddingBottom: 32,
-    paddingHorizontal: 16,
-    gap: 16,
+    paddingTop: theme.spacing.fiftyTwo,
+    paddingBottom: theme.spacing.xxxl,
+    paddingHorizontal: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
   headerTitle: {
     color: VALUE_COLOR,
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: theme.fontSizes.xl,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 3,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   headerSub: {
     color: LABEL_COLOR,
-    fontSize: 13,
+    fontSize: theme.fontSizes.md,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   emptyContainer: {
     flex: 1,
     backgroundColor: BG,
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    paddingTop: theme.spacing.sixty,
+    paddingHorizontal: theme.spacing.xl,
   },
   emptyText: {
     color: VALUE_COLOR,
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 24,
+    fontSize: theme.fontSizes.subtitle,
+    fontWeight: theme.fontWeights.bold,
+    marginTop: theme.spacing.xxl,
   },
   emptySubText: {
     color: LABEL_COLOR,
-    fontSize: 13,
-    marginTop: 8,
+    fontSize: theme.fontSizes.md,
+    marginTop: theme.spacing.sm,
     textAlign: 'center',
   },
   section: {
     backgroundColor: SECTION_BG,
-    borderRadius: 14,
-    padding: 16,
-    gap: 10,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.ten,
   },
   sectionTitle: {
     color: TITLE_COLOR,
-    fontSize: 12,
-    fontWeight: '900',
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   statRow: {
     flexDirection: 'row',
@@ -198,41 +199,41 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     color: LABEL_COLOR,
-    fontSize: 13,
+    fontSize: theme.fontSizes.md,
     flex: 1,
   },
   statValue: {
     color: VALUE_COLOR,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.bold,
     textAlign: 'right',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 2,
+    backgroundColor: theme.colors.borderFaint,
+    marginVertical: theme.spacing.two,
   },
   tierRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 2,
+    marginTop: theme.spacing.two,
   },
   tierItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: theme.spacing.two,
   },
   tierDot: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.subtitle,
   },
   tierLabel: {
     color: LABEL_COLOR,
-    fontSize: 10,
+    fontSize: theme.fontSizes.caption,
     textAlign: 'center',
   },
   tierCount: {
     color: VALUE_COLOR,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
   },
 });

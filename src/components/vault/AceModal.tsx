@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useReckoningStore } from '../../store/reckoningStore';
+import { useReckoningStore } from '../../store/vaultStore';
+import theme from '../../theme';
 
 const SUIT_SYMBOL: Record<string, string> = {
   spades: '♠',
@@ -69,39 +70,39 @@ export function AceModal() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: theme.colors.overlayTutorial,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#1b4332',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: theme.colors.bgPanel,
+    borderTopLeftRadius: theme.radii.xxl,
+    borderTopRightRadius: theme.radii.xxl,
     padding: 28,
     paddingBottom: 40,
     alignItems: 'center',
     borderTopWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: theme.colors.borderMedium,
   },
   title: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.xl,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 0.5,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.55)',
+    color: theme.colors.textSoft,
     fontSize: 14,
     marginTop: 4,
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
   },
   cardDisplay: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.cardFace,
     borderRadius: 12,
     width: 80,
     height: 110,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
@@ -110,40 +111,40 @@ const styles = StyleSheet.create({
   },
   cardRank: {
     fontSize: 32,
-    fontWeight: '900',
-    color: '#1b4332',
+    fontWeight: theme.fontWeights.black,
+    color: theme.colors.bgPanel,
   },
   cardSuit: {
     fontSize: 24,
-    color: '#1b4332',
+    color: theme.colors.bgPanel,
     marginTop: -4,
   },
   prompt: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   buttons: {
     flexDirection: 'row',
-    gap: 16,
+    gap: theme.spacing.lg,
   },
   btn: {
     width: 80,
-    paddingVertical: 16,
+    paddingVertical: theme.spacing.lg,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: theme.colors.borderStrong,
   },
   btnOne: {
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
   },
   btnEleven: {
-    backgroundColor: '#40916c',
+    backgroundColor: theme.colors.greenPrimary,
   },
   btnText: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: theme.fontWeights.black,
   },
 });

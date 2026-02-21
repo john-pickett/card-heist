@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ColumnId } from '../types/game';
+import theme from '../theme';
 
 const COLUMN_IDS: ColumnId[] = ['Mon', 'Tue', 'Wed', 'Thu'];
 
@@ -48,17 +49,17 @@ export function QueenModal({ visible, sourceColumnId, onKeep, onMove }: QueenMod
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: theme.colors.overlayDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modal: {
-    backgroundColor: '#1b4332',
-    borderRadius: 14,
-    padding: 24,
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.xxl,
     width: 300,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: theme.colors.borderMedium,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
@@ -66,54 +67,54 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   title: {
-    color: '#ffffff',
+    color: theme.colors.textPrimary,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: theme.fontWeights.heavy,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    color: '#d8f3dc',
-    fontSize: 13,
+    color: theme.colors.textGreen,
+    fontSize: theme.fontSizes.md,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   note: {
     color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
+    fontSize: theme.fontSizes.sm,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
     fontStyle: 'italic',
   },
   btn: {
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
     alignItems: 'center',
     marginBottom: 10,
   },
   keepBtn: {
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: theme.colors.borderStrong,
   },
   moveBtn: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: theme.colors.borderBright,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
   },
   moveBtnText: {
-    color: '#d8f3dc',
-    fontWeight: '500',
+    color: theme.colors.textGreen,
+    fontWeight: theme.fontWeights.normal,
   },
   divider: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 11,
+    color: theme.colors.textFaint,
+    fontSize: theme.fontSizes.sm,
     textAlign: 'center',
     marginBottom: 10,
   },

@@ -19,7 +19,7 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SneakInScreen } from './src/screens/SneakInScreen';
 import { useEscapeStore } from './src/store/escapeStore';
 import { useHistoryStore } from './src/store/historyStore';
-import { useReckoningStore } from './src/store/reckoningStore';
+import { useReckoningStore } from './src/store/vaultStore';
 import { useSneakInStore } from './src/store/sneakInStore';
 import {
   DEFAULT_TUTORIALS,
@@ -28,6 +28,7 @@ import {
   TutorialSeen,
 } from './src/constants/tutorials';
 import { Act1Record, Act2Record, Act3Record, HeistRecord } from './src/types/history';
+import theme from './src/theme';
 
 type Tab = 'home' | 'market' | 'history' | 'settings';
 type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3';
@@ -294,24 +295,24 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
   },
   appShell: {
     flex: 1,
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
   },
   contentArea: {
     flex: 1,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#1b4332',
+    backgroundColor: theme.colors.bgPanel,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.14)',
     paddingHorizontal: 10,
-    paddingTop: 8,
+    paddingTop: theme.spacing.sm,
     paddingBottom: 10,
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   tabItem: {
     flex: 1,
@@ -321,15 +322,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabItemActive: {
-    backgroundColor: '#40916c',
+    backgroundColor: theme.colors.greenPrimary,
   },
   tabLabel: {
     color: 'rgba(255,255,255,0.62)',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.bold,
   },
   tabLabelActive: {
-    color: '#ffffff',
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fontWeights.black,
   },
 });

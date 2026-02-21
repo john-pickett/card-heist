@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useReckoningStore } from '../store/reckoningStore';
+import { useReckoningStore } from '../store/vaultStore';
+import theme from '../theme';
 
 interface VaultResultScreenProps {
   onPlayAgain: () => void;
@@ -41,8 +42,8 @@ export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProp
             const score = isBusted ? 0 : isExact ? vault.sum * 2 : vault.sum;
 
             const statusLabel = isBusted ? 'BUSTED' : isExact ? 'EXACT ×2' : 'UNDER';
-            const statusColor = isBusted ? '#e74c3c' : isExact ? '#f4d03f' : '#d8f3dc';
-            const scoreColor = isBusted ? '#e74c3c' : isExact ? '#f4d03f' : '#ffffff';
+            const statusColor = isBusted ? theme.colors.errorRed : isExact ? theme.colors.gold : theme.colors.textGreen;
+            const scoreColor = isBusted ? theme.colors.errorRed : isExact ? theme.colors.gold : theme.colors.textPrimary;
 
             return (
               <View key={vault.id} style={styles.tableRow}>
@@ -95,48 +96,48 @@ export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProp
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#2d6a4f',
+    backgroundColor: theme.colors.bgPrimary,
   },
   scroll: {
-    padding: 24,
+    padding: theme.spacing.xxl,
     alignItems: 'center',
   },
   heading: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.xl,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 1.5,
-    marginBottom: 28,
+    marginBottom: theme.spacing.twentyEight,
     textAlign: 'center',
   },
   table: {
     width: '100%',
-    backgroundColor: '#1b4332',
-    borderRadius: 12,
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.r12,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginBottom: 24,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderFaint,
+    marginBottom: theme.spacing.xxl,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: theme.colors.bgDarkOverlay,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.md,
   },
   tableHeaderText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    fontWeight: '700',
+    color: theme.colors.text50,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
+    borderTopColor: theme.colors.borderUltraSubtle,
   },
   col: {
     textAlign: 'center',
@@ -157,70 +158,70 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cellText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.m,
+    fontWeight: theme.fontWeights.medium,
     fontVariant: ['tabular-nums'],
   },
   totalRow: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: theme.spacing.xxxl,
   },
   totalLabel: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    fontWeight: '700',
+    color: theme.colors.text50,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   totalScore: {
-    color: '#ffffff',
-    fontSize: 64,
-    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.massive,
+    fontWeight: theme.fontWeights.black,
     fontVariant: ['tabular-nums'],
     lineHeight: 72,
   },
   perfectScore: {
-    color: '#f4d03f',
+    color: theme.colors.gold,
   },
   perfectNote: {
-    color: '#f4d03f',
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 4,
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
+    marginTop: theme.spacing.xs,
   },
   maxNote: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 12,
-    marginTop: 6,
+    color: theme.colors.textFaint,
+    fontSize: theme.fontSizes.s,
+    marginTop: theme.spacing.six,
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: theme.spacing.md,
     width: '100%',
   },
   btn: {
     flex: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.fourteen,
     alignItems: 'center',
   },
   playAgainBtn: {
-    backgroundColor: '#27ae60',
+    backgroundColor: theme.colors.greenSuccess,
   },
   homeBtn: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderBright,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
   },
   homeBtnText: {
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '500',
+    color: theme.colors.text75,
+    fontWeight: theme.fontWeights.normal,
   },
 });
