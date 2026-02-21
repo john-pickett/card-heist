@@ -5,19 +5,30 @@ import theme from '../theme';
 
 interface Props {
   onResetTutorials: () => Promise<void>;
+  onResetHeistData: () => Promise<void>;
 }
 
-export function SettingsScreen({ onResetTutorials }: Props) {
-  const [message, setMessage] = useState<string | null>(null);
+export function SettingsScreen({ onResetTutorials, onResetHeistData }: Props) {
+  const [tutorialMessage, setTutorialMessage] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const soundEnabled = useSettingsStore(s => s.soundEnabled);
   const setSoundEnabled = useSettingsStore(s => s.setSoundEnabled);
 
   const handleReset = async () => {
     try {
       await onResetTutorials();
-      setMessage('Tutorials reset. They will show again on your next run.');
+      setTutorialMessage('Tutorials reset. They will show again on your next run.');
     } catch {
-      setMessage('Could not reset tutorials right now. Please try again.');
+      setTutorialMessage('Could not reset tutorials right now. Please try again.');
+    }
+  };
+
+  const handleResetHeistData = async () => {
+    try {
+      await onResetHeistData();
+      setResetMessage('All heist data cleared. Game state is now reset.');
+    } catch {
+      setResetMessage('Could not reset heist data right now. Please try again.');
     }
   };
 
@@ -50,7 +61,20 @@ export function SettingsScreen({ onResetTutorials }: Props) {
           <Text style={styles.resetBtnText}>Reset Tutorials</Text>
         </TouchableOpacity>
 
-        {message && <Text style={styles.message}>{message}</Text>}
+        {tutorialMessage && <Text style={styles.message}>{tutorialMessage}</Text>}
+      </View>
+
+      <View style={[styles.panel, styles.panelSpaced]}>
+        <Text style={styles.settingTitle}>Development</Text>
+        <Text style={styles.settingDesc}>
+          Clear all heist progression and inventory as if the game were freshly installed.
+        </Text>
+
+        <TouchableOpacity style={[styles.resetBtn, styles.dangerBtn]} onPress={handleResetHeistData}>
+          <Text style={styles.resetBtnText}>Reset All Heist Data</Text>
+        </TouchableOpacity>
+
+        {resetMessage && <Text style={styles.message}>{resetMessage}</Text>}
       </View>
     </View>
   );
@@ -108,6 +132,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.fourteen,
     borderWidth: theme.borderWidths.thin,
     borderColor: theme.colors.borderStrong,
+  },
+  dangerBtn: {
+    backgroundColor: theme.colors.red,
   },
   resetBtnText: {
     color: theme.colors.textPrimary,

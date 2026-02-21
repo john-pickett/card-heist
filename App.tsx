@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Modal,
+  Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,8 +22,10 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SneakInScreen } from './src/screens/SneakInScreen';
 import { useEscapeStore } from './src/store/escapeStore';
 import { useHistoryStore } from './src/store/historyStore';
+import { useInventoryStore } from './src/store/inventoryStore';
 import { useReckoningStore } from './src/store/vaultStore';
 import { useSneakInStore } from './src/store/sneakInStore';
+import { MARKET_ACT_ORDER, MARKET_ITEMS } from './src/data/marketItems';
 import {
   DEFAULT_TUTORIALS,
   TUTORIALS_STORAGE_KEY,
@@ -43,9 +48,27 @@ export default function App() {
   const [act2Record, setAct2Record] = useState<Act2Record | null>(null);
   const [tutorialsSeen, setTutorialsSeen] = useState<TutorialSeen>(DEFAULT_TUTORIALS);
   const [tutorialsReady, setTutorialsReady] = useState(false);
+  const [inventoryVisible, setInventoryVisible] = useState(false);
+
+  // lifetimeGold only updates after a finished heist is recorded.
+  const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
+  const inventoryItems = useInventoryStore(s => s.items);
 
   const act1Bonus = act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
+  const totalInventoryCount = inventoryItems.reduce((sum, entry) => sum + entry.quantity, 0);
+
+  const inventoryRows = inventoryItems
+    .map(entry => {
+      const item = MARKET_ITEMS.find(candidate => candidate.id === entry.itemId);
+      return item ? { item, quantity: entry.quantity } : null;
+    })
+    .filter((row): row is { item: (typeof MARKET_ITEMS)[number]; quantity: number } => row !== null)
+    .sort((a, b) => {
+      const actSort = MARKET_ACT_ORDER.indexOf(a.item.act) - MARKET_ACT_ORDER.indexOf(b.item.act);
+      if (actSort !== 0) return actSort;
+      return a.item.title.localeCompare(b.item.title);
+    });
 
   useEffect(() => {
     let mounted = true;
@@ -86,6 +109,17 @@ export default function App() {
   const handleResetTutorials = async () => {
     setTutorialsSeen(DEFAULT_TUTORIALS);
     await AsyncStorage.removeItem(TUTORIALS_STORAGE_KEY);
+  };
+
+  const handleResetHeistData = async () => {
+    useHistoryStore.getState().clearHistory();
+    useInventoryStore.getState().clearInventory();
+    useSneakInStore.getState().initGame();
+    useReckoningStore.getState().initGame();
+    useEscapeStore.getState().initGame();
+    resetCampaignState();
+    setGameFlow('home');
+    setActiveTab('settings');
   };
 
   const handleStartGame = () => {
@@ -239,7 +273,14 @@ export default function App() {
   const isInHeist = activeTab === 'home' && gameFlow !== 'home';
 
   const renderContent = () => {
-    if (activeTab === 'settings') return <SettingsScreen onResetTutorials={handleResetTutorials} />;
+    if (activeTab === 'settings') {
+      return (
+        <SettingsScreen
+          onResetTutorials={handleResetTutorials}
+          onResetHeistData={handleResetHeistData}
+        />
+      );
+    }
     if (activeTab === 'market') return <MarketScreen />;
     if (activeTab === 'history') return <HistoryScreen />;
     return renderHomeTab();
@@ -249,6 +290,22 @@ export default function App() {
     <PaperProvider>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.appShell}>
+          <View style={styles.topAppBar}>
+            <View style={styles.goldWrap}>
+              <Text style={styles.goldLabel}>Gold</Text>
+              <Text style={styles.goldValue}>{lifetimeGold}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.bagButton}
+              onPress={() => setInventoryVisible(true)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.bagIcon}>👜</Text>
+              <Text style={styles.bagCount}>{totalInventoryCount}</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.contentArea}>{renderContent()}</View>
           {!isInHeist && <View style={styles.tabBar}>
             <TouchableOpacity
@@ -287,6 +344,57 @@ export default function App() {
             </TouchableOpacity>
           </View>}
         </View>
+
+        <Modal
+          visible={inventoryVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setInventoryVisible(false)}
+        >
+          <View style={styles.inventoryOverlay}>
+            <Pressable
+              style={styles.inventoryBackdrop}
+              onPress={() => setInventoryVisible(false)}
+            />
+            <View style={styles.inventorySheet}>
+              <View style={styles.inventoryHandle} />
+              <Text style={styles.inventoryTitle}>Inventory</Text>
+              <Text style={styles.inventorySubtitle}>
+                Items on hand for your next heist.
+              </Text>
+
+              {inventoryRows.length === 0 ? (
+                <View style={styles.emptyInventoryCard}>
+                  <Text style={styles.emptyInventoryIcon}>🧳</Text>
+                  <Text style={styles.emptyInventoryTitle}>No items yet</Text>
+                  <Text style={styles.emptyInventoryText}>
+                    Buy tools from the market and they will appear here.
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  style={styles.inventoryList}
+                  contentContainerStyle={styles.inventoryListContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {inventoryRows.map(({ item, quantity }) => (
+                    <View key={item.id} style={styles.inventoryItemCard}>
+                      <View style={styles.inventoryItemHeader}>
+                        <Text style={styles.inventoryItemIcon}>{item.icon}</Text>
+                        <View style={styles.inventoryItemMain}>
+                          <Text style={styles.inventoryItemTitle}>{item.title}</Text>
+                          <Text style={styles.inventoryItemAct}>{item.act}</Text>
+                        </View>
+                        <Text style={styles.inventoryItemQuantity}>x{quantity}</Text>
+                      </View>
+                      <Text style={styles.inventoryItemEffect}>{item.effect}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </PaperProvider>
   );
@@ -300,6 +408,57 @@ const styles = StyleSheet.create({
   appShell: {
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
+  },
+  topAppBar: {
+    minHeight: 62,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: theme.borderWidths.thin,
+    borderBottomColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.bgDeep,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  goldWrap: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: theme.spacing.sm,
+  },
+  goldLabel: {
+    color: theme.colors.textSoft,
+    fontSize: theme.fontSizes.m,
+    fontWeight: theme.fontWeights.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
+  goldValue: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.xxl2,
+    fontWeight: theme.fontWeights.black,
+    fontVariant: ['tabular-nums'],
+  },
+  bagButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    borderRadius: theme.radii.xl,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderFaint,
+    backgroundColor: theme.colors.bgOverlaySoft,
+    paddingVertical: theme.spacing.seven,
+    paddingHorizontal: theme.spacing.md,
+  },
+  bagIcon: {
+    fontSize: theme.fontSizes.title,
+  },
+  bagCount: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
+    minWidth: 22,
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   contentArea: {
     flex: 1,
@@ -332,5 +491,119 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: theme.colors.textPrimary,
     fontWeight: theme.fontWeights.black,
+  },
+  inventoryOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: theme.colors.overlayModal,
+  },
+  inventoryBackdrop: {
+    flex: 1,
+  },
+  inventorySheet: {
+    backgroundColor: theme.colors.bgPanel,
+    borderTopLeftRadius: theme.radii.xxl,
+    borderTopRightRadius: theme.radii.xxl,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderLight,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.twentyEight,
+    paddingHorizontal: theme.spacing.xl,
+    maxHeight: '78%',
+    minHeight: 250,
+  },
+  inventoryHandle: {
+    alignSelf: 'center',
+    width: 44,
+    height: 4,
+    borderRadius: theme.radii.xs,
+    backgroundColor: theme.colors.borderStrong,
+    marginBottom: theme.spacing.lg,
+  },
+  inventoryTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.h1,
+    fontWeight: theme.fontWeights.black,
+    marginBottom: theme.spacing.two,
+  },
+  inventorySubtitle: {
+    color: theme.colors.textSoft,
+    fontSize: theme.fontSizes.m,
+    marginBottom: theme.spacing.lg,
+  },
+  emptyInventoryCard: {
+    marginTop: theme.spacing.md,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderSubtle,
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.bgOverlaySoft,
+    paddingVertical: theme.spacing.xxl,
+    paddingHorizontal: theme.spacing.xl,
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  emptyInventoryIcon: {
+    fontSize: theme.fontSizes.hero2,
+  },
+  emptyInventoryTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.basePlus,
+    fontWeight: theme.fontWeights.heavy,
+  },
+  emptyInventoryText: {
+    color: theme.colors.textDim,
+    fontSize: theme.fontSizes.m,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  inventoryList: {
+    flex: 1,
+  },
+  inventoryListContent: {
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.sm,
+  },
+  inventoryItemCard: {
+    borderRadius: theme.radii.lg,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.bgOverlaySoft,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.seven,
+  },
+  inventoryItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  inventoryItemIcon: {
+    fontSize: theme.fontSizes.xxl,
+  },
+  inventoryItemMain: {
+    flex: 1,
+    gap: theme.spacing.two,
+  },
+  inventoryItemTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
+  },
+  inventoryItemAct: {
+    color: theme.colors.textDim,
+    fontSize: theme.fontSizes.sm,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  inventoryItemQuantity: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.basePlus,
+    fontWeight: theme.fontWeights.black,
+    fontVariant: ['tabular-nums'],
+  },
+  inventoryItemEffect: {
+    color: theme.colors.text78,
+    fontSize: theme.fontSizes.m,
+    lineHeight: 19,
   },
 });

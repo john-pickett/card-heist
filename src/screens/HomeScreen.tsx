@@ -20,6 +20,10 @@ export function HomeScreen({ onStartGame }: Props) {
         </Text>
       </View>
 
+      <TouchableOpacity style={styles.startBtn} onPress={onStartGame}>
+        <Text style={styles.startBtnText}>START HEIST</Text>
+      </TouchableOpacity>
+
       <View style={styles.panel}>
         <Text style={styles.actTitle}>ACT 1 — SNEAK IN</Text>
         <Text style={styles.actDesc}>
@@ -40,10 +44,6 @@ export function HomeScreen({ onStartGame }: Props) {
           Combine your scores from both acts and make your getaway.
         </Text>
       </View>
-
-      <TouchableOpacity style={styles.startBtn} onPress={onStartGame}>
-        <Text style={styles.startBtnText}>START HEIST</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
     paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.forty,
+    paddingTop: theme.spacing.fourteen,
     alignItems: 'center',
   },
   title: {
@@ -114,9 +114,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.greenPrimary,
     borderRadius: theme.radii.lg,
     paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.fortyEight,
+    paddingHorizontal: theme.spacing.xl,
     borderWidth: theme.borderWidths.thin,
     borderColor: theme.colors.borderMedium,
+    marginBottom: theme.spacing.xl
   },
   startBtnText: {
     color: theme.colors.textPrimary,
