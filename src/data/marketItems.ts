@@ -46,7 +46,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     title: 'False Trail',
     flavor: 'Can this be right?',
     effect: 'Move police back one step.',
-    cost: null,
+    cost: 15,
   },
 ];
 

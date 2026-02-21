@@ -1,7 +1,8 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MARKET_ACT_ORDER, MARKET_ITEMS, MARKET_UNLOCK_HEISTS } from '../data/marketItems';
 import { useHistoryStore } from '../store/historyStore';
+import { useInventoryStore } from '../store/inventoryStore';
 import theme from '../theme';
 
 const itemsByAct = MARKET_ACT_ORDER.map(act => ({
@@ -11,9 +12,19 @@ const itemsByAct = MARKET_ACT_ORDER.map(act => ({
 
 export function MarketScreen() {
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
+  const spentGold = useHistoryStore(s => s.spentGold);
+  const spendGold = useHistoryStore(s => s.spendGold);
   const heistCount = useHistoryStore(s => s.records.length);
+  const addItem = useInventoryStore(s => s.addItem);
+
+  const availableGold = lifetimeGold - spentGold;
   const isUnlocked = heistCount >= MARKET_UNLOCK_HEISTS;
   const heistsRemaining = Math.max(0, MARKET_UNLOCK_HEISTS - heistCount);
+
+  function handleBuy(itemId: string, cost: number) {
+    spendGold(cost);
+    addItem(itemId);
+  }
 
   return (
     <View style={styles.screen}>
@@ -31,32 +42,48 @@ export function MarketScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView
-          style={styles.marketScroll}
-          contentContainerStyle={styles.marketScrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {itemsByAct.map(section => (
-            <View key={section.act} style={styles.section}>
-              <Text style={styles.sectionTitle}>{section.act}</Text>
-              {section.items.map(item => (
-                <View key={item.id} style={styles.itemCard}>
-                  <View style={styles.itemHeader}>
-                    <Text style={styles.itemIcon}>{item.icon}</Text>
-                    <View style={styles.itemTitleWrap}>
-                      <Text style={styles.itemTitle}>{item.title}</Text>
-                      <Text style={styles.itemCost}>
-                        {item.cost === null ? 'Cost: TBD' : `${item.cost} Gold`}
-                      </Text>
+        <>
+          <ScrollView
+            style={styles.marketScroll}
+            contentContainerStyle={styles.marketScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {itemsByAct.map(section => (
+              <View key={section.act} style={styles.section}>
+                <Text style={styles.sectionTitle}>{section.act}</Text>
+                {section.items.map(item => {
+                  const canAfford = item.cost !== null && availableGold >= item.cost;
+                  const disabled = item.cost === null || !canAfford;
+                  return (
+                    <View key={item.id} style={styles.itemCard}>
+                      <View style={styles.itemHeader}>
+                        <Text style={styles.itemIcon}>{item.icon}</Text>
+                        <View style={styles.itemTitleWrap}>
+                          <Text style={styles.itemTitle}>{item.title}</Text>
+                          <Text style={styles.itemCost}>
+                            {item.cost === null ? 'Cost: TBD' : `${item.cost} Gold`}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.buyButton, disabled && styles.buyButtonDisabled]}
+                          onPress={() => item.cost !== null && handleBuy(item.id, item.cost)}
+                          disabled={disabled}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.buyButtonText, disabled && styles.buyButtonTextDisabled]}>
+                            BUY
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.itemFlavor}>{item.flavor}</Text>
+                      <Text style={styles.itemEffect}>{item.effect}</Text>
                     </View>
-                  </View>
-                  <Text style={styles.itemFlavor}>{item.flavor}</Text>
-                  <Text style={styles.itemEffect}>{item.effect}</Text>
-                </View>
-              ))}
-            </View>
-          ))}
-        </ScrollView>
+                  );
+                })}
+              </View>
+            ))}
+          </ScrollView>
+        </>
       )}
     </View>
   );
@@ -165,5 +192,28 @@ const styles = StyleSheet.create({
     color: theme.colors.text85,
     fontSize: theme.fontSizes.m,
     lineHeight: 19,
+  },
+  buyButton: {
+    backgroundColor: theme.colors.gold,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.six,
+    paddingHorizontal: theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 52,
+  },
+  buyButtonDisabled: {
+    backgroundColor: theme.colors.bgOverlaySoft,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderSubtle,
+  },
+  buyButtonText: {
+    color: theme.colors.bgDeep,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 1,
+  },
+  buyButtonTextDisabled: {
+    color: theme.colors.textDisabled,
   },
 });

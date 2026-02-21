@@ -50,8 +50,9 @@ export default function App() {
   const [tutorialsReady, setTutorialsReady] = useState(false);
   const [inventoryVisible, setInventoryVisible] = useState(false);
 
-  // lifetimeGold only updates after a finished heist is recorded.
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
+  const spentGold = useHistoryStore(s => s.spentGold);
+  const availableGold = lifetimeGold - spentGold;
   const inventoryItems = useInventoryStore(s => s.items);
 
   const act1Bonus = act1TimeBonus;
@@ -293,7 +294,7 @@ export default function App() {
           <View style={styles.topAppBar}>
             <View style={styles.goldWrap}>
               <Text style={styles.goldLabel}>Gold</Text>
-              <Text style={styles.goldValue}>{lifetimeGold}</Text>
+              <Text style={styles.goldValue}>{availableGold}</Text>
             </View>
 
             <TouchableOpacity
@@ -509,8 +510,7 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.twentyEight,
     paddingHorizontal: theme.spacing.xl,
-    maxHeight: '78%',
-    minHeight: 250,
+    height: '65%',
   },
   inventoryHandle: {
     alignSelf: 'center',

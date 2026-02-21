@@ -6,7 +6,9 @@ import { HeistRecord } from '../types/history';
 interface HistoryStore {
   records: HeistRecord[];
   lifetimeGold: number;
+  spentGold: number;
   recordHeist: (record: HeistRecord) => void;
+  spendGold: (amount: number) => void;
   clearHistory: () => void;
 }
 
@@ -15,11 +17,13 @@ export const useHistoryStore = create(
     (set, get) => ({
       records: [],
       lifetimeGold: 0,
+      spentGold: 0,
       recordHeist: (record) => set({
         records: [...get().records, record],
         lifetimeGold: get().lifetimeGold + record.totalGold,
       }),
-      clearHistory: () => set({ records: [], lifetimeGold: 0 }),
+      spendGold: (amount) => set({ spentGold: get().spentGold + amount }),
+      clearHistory: () => set({ records: [], lifetimeGold: 0, spentGold: 0 }),
     }),
     {
       name: 'solitaire:history-v1',
