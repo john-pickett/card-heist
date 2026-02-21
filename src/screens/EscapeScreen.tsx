@@ -298,7 +298,7 @@ export function EscapeScreen({
                 ]}
               >
                 <Text style={[styles.stepLabel, isExit && styles.stepLabelExit]}>
-                  {isExit ? 'EXIT' : step === 6 ? 'START' : `${step}`}
+                  {isExit ? 'EXIT' : step === 6 ? '6' : `${step}`}
                 </Text>
               </View>
             );
