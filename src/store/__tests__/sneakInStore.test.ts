@@ -35,8 +35,17 @@ function resetSneakInStore(hand: SneakInCard[], areas: SneakInArea[]): void {
     endTime: null,
     totalMoves: 0,
     solution: null,
+    timeBonusMs: 0,
+    insideTipHint: null,
   });
 }
+
+const defaultAreas = (): SneakInArea[] => [
+  makeArea(0, 8, true),
+  makeArea(1, 10, false),
+  makeArea(2, 12, false),
+  makeArea(3, 14, false),
+];
 
 describe('sneakInStore', () => {
   beforeEach(() => {
@@ -157,6 +166,169 @@ describe('sneakInStore', () => {
     expect(state.areas[0].cards).toHaveLength(0);
     expect(state.areas[0].failedCombos).toHaveLength(1);
     expect(state.areas[1].failedCombos).toHaveLength(0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // False Alarm buff
+  // ---------------------------------------------------------------------------
+
+  test('activateFalseAlarm adds 60000 to timeBonusMs when playing', () => {
+    useSneakInStore.setState({ phase: 'playing' });
+    useSneakInStore.getState().activateFalseAlarm();
+    expect(useSneakInStore.getState().timeBonusMs).toBe(60_000);
+  });
+
+  test('activateFalseAlarm adds 60000 to timeBonusMs when idle', () => {
+    useSneakInStore.setState({ phase: 'idle' });
+    useSneakInStore.getState().activateFalseAlarm();
+    expect(useSneakInStore.getState().timeBonusMs).toBe(60_000);
+  });
+
+  test('activateFalseAlarm stacks (two calls = +120000)', () => {
+    useSneakInStore.setState({ phase: 'playing' });
+    useSneakInStore.getState().activateFalseAlarm();
+    useSneakInStore.getState().activateFalseAlarm();
+    expect(useSneakInStore.getState().timeBonusMs).toBe(120_000);
+  });
+
+  test('activateFalseAlarm is blocked when phase is done', () => {
+    useSneakInStore.setState({ phase: 'done' });
+    useSneakInStore.getState().activateFalseAlarm();
+    expect(useSneakInStore.getState().timeBonusMs).toBe(0);
+  });
+
+  test('activateFalseAlarm is blocked when phase is timeout', () => {
+    useSneakInStore.setState({ phase: 'timeout' });
+    useSneakInStore.getState().activateFalseAlarm();
+    expect(useSneakInStore.getState().timeBonusMs).toBe(0);
+  });
+
+  test('timeoutGame endTime accounts for timeBonusMs', () => {
+    useSneakInStore.setState({ phase: 'playing', startTime: 1000, timeBonusMs: 60_000 });
+    useSneakInStore.getState().timeoutGame();
+    expect(useSneakInStore.getState().phase).toBe('timeout');
+    expect(useSneakInStore.getState().endTime).toBe(181_000); // 1000 + 120000 + 60000
+  });
+
+  test('initGame resets timeBonusMs to 0', () => {
+    useSneakInStore.setState({ timeBonusMs: 60_000 });
+    useSneakInStore.getState().initGame();
+    expect(useSneakInStore.getState().timeBonusMs).toBe(0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Inside Tip buff
+  // ---------------------------------------------------------------------------
+
+  test('activateInsideTip sets hint when matching card is in hand', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({
+      phase: 'playing',
+      solution: [
+        { areaName: 'Outer Door', cards: [5, 3], target: 8 },
+        { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+        { areaName: 'Night Watchman', cards: [5, 7], target: 12 },
+        { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+      ],
+    });
+    useSneakInStore.getState().activateInsideTip(0);
+    const hint = useSneakInStore.getState().insideTipHint;
+    expect(hint).not.toBeNull();
+    expect(hint?.areaId).toBe(0);
+    expect(hint?.card.instanceId).toBe('c5'); // first rank in solution is 5
+  });
+
+  test('activateInsideTip uses first matching rank in solution order', () => {
+    const c3 = makeCard('3', 'c3'); // rank 5 not in hand, rank 3 is
+    resetSneakInStore([c3], defaultAreas());
+    useSneakInStore.setState({
+      phase: 'playing',
+      solution: [
+        { areaName: 'Outer Door', cards: [5, 3], target: 8 },
+        { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+        { areaName: 'Night Watchman', cards: [5, 7], target: 12 },
+        { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+      ],
+    });
+    useSneakInStore.getState().activateInsideTip(0);
+    expect(useSneakInStore.getState().insideTipHint?.card.instanceId).toBe('c3');
+  });
+
+  test('activateInsideTip does not set hint when no card in hand matches', () => {
+    const c9 = makeCard('9', 'c9');
+    resetSneakInStore([c9], defaultAreas());
+    useSneakInStore.setState({
+      phase: 'playing',
+      solution: [
+        { areaName: 'Outer Door', cards: [5, 3], target: 8 },
+        { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+        { areaName: 'Night Watchman', cards: [5, 7], target: 12 },
+        { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+      ],
+    });
+    useSneakInStore.getState().activateInsideTip(0);
+    expect(useSneakInStore.getState().insideTipHint).toBeNull();
+  });
+
+  test('activateInsideTip does nothing when solution is null', () => {
+    resetSneakInStore([], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: null });
+    useSneakInStore.getState().activateInsideTip(0);
+    expect(useSneakInStore.getState().insideTipHint).toBeNull();
+  });
+
+  test('clearInsideTipHint sets insideTipHint to null', () => {
+    const c5 = makeCard('5', 'c5');
+    useSneakInStore.setState({ insideTipHint: { areaId: 0, card: c5 } });
+    useSneakInStore.getState().clearInsideTipHint();
+    expect(useSneakInStore.getState().insideTipHint).toBeNull();
+  });
+
+  test('initGame resets insideTipHint to null', () => {
+    const c5 = makeCard('5', 'c5');
+    useSneakInStore.setState({ insideTipHint: { areaId: 0, card: c5 } });
+    useSneakInStore.getState().initGame();
+    expect(useSneakInStore.getState().insideTipHint).toBeNull();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Regression: buffs don't interfere with core mechanics
+  // ---------------------------------------------------------------------------
+
+  test('timeBonusMs does not affect area solving logic', () => {
+    const c4 = makeCard('4', 'c4');
+    const c6 = makeCard('6', 'c6');
+    resetSneakInStore([c4, c6], [
+      makeArea(0, 10, true),
+      makeArea(1, 12, false),
+      makeArea(2, 14, false),
+      makeArea(3, 16, false),
+    ]);
+    useSneakInStore.setState({ timeBonusMs: 60_000 });
+    useSneakInStore.getState().moveCard(c4, 'hand', 0);
+    useSneakInStore.getState().moveCard(c6, 'hand', 0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    expect(state.areas[1].isUnlocked).toBe(true);
+  });
+
+  test('insideTipHint does not prevent moveCard from working', () => {
+    const c4 = makeCard('4', 'c4');
+    const c6 = makeCard('6', 'c6');
+    resetSneakInStore([c4, c6], [
+      makeArea(0, 10, true),
+      makeArea(1, 12, false),
+      makeArea(2, 14, false),
+      makeArea(3, 16, false),
+    ]);
+    useSneakInStore.setState({ insideTipHint: { areaId: 0, card: c4 } });
+    useSneakInStore.getState().moveCard(c4, 'hand', 0);
+    useSneakInStore.getState().moveCard(c6, 'hand', 0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    expect(state.hand).toHaveLength(0);
   });
 
   test('selectCard swaps lifted cards and deselect returns lifted card', () => {

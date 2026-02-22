@@ -5,6 +5,7 @@ import {
   AREA_LABELS,
   AreaId,
   CardSource,
+  InsideTipHint,
   SneakInActions,
   SneakInArea,
   SneakInCard,
@@ -142,6 +143,8 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   endTime: null,
   totalMoves: 0,
   solution: null,
+  timeBonusMs: 0,
+  insideTipHint: null,
 
   initGame: () => {
     const { targets, hand, solution } = buildGame();
@@ -155,6 +158,8 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       endTime: null,
       totalMoves: 0,
       solution,
+      timeBonusMs: 0,
+      insideTipHint: null,
     });
   },
 
@@ -370,9 +375,35 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
     set({ areas: newAreas, hand: [...hand, ...allReturning] });
   },
 
-  // Called when the 120-second countdown expires.
+  // Called when the countdown expires (accounts for any time bonus from False Alarm).
   timeoutGame: () => {
-    const { startTime } = get();
-    set({ phase: 'timeout', endTime: startTime ? startTime + 120000 : Date.now() });
+    const { startTime, timeBonusMs } = get();
+    const totalMs = 120_000 + timeBonusMs;
+    set({ phase: 'timeout', endTime: startTime ? startTime + totalMs : Date.now() });
+  },
+
+  activateFalseAlarm: () => {
+    const { phase, timeBonusMs } = get();
+    if (phase !== 'idle' && phase !== 'playing') return;
+    set({ timeBonusMs: timeBonusMs + 60_000 });
+  },
+
+  activateInsideTip: (areaId: AreaId) => {
+    const { solution, hand, phase } = get();
+    if (!solution || phase === 'done' || phase === 'timeout') return;
+    const entry = solution[areaId];
+    if (!entry) return;
+    for (const rankVal of entry.cards) {
+      const match = hand.find(sc => parseInt(sc.card.rank, 10) === rankVal);
+      if (match) {
+        set({ insideTipHint: { areaId, card: match } as InsideTipHint });
+        return;
+      }
+    }
+    // No match in hand — leave hint unchanged
+  },
+
+  clearInsideTipHint: () => {
+    set({ insideTipHint: null });
   },
 }));

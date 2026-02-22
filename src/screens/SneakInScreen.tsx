@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSneakInStore } from '../store/sneakInStore';
+import { useInventoryStore } from '../store/inventoryStore';
 import {
   AreaId,
   AREA_ICONS,
@@ -152,11 +153,22 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const areas = useSneakInStore(s => s.areas);
   const startTime = useSneakInStore(s => s.startTime);
   const endTime = useSneakInStore(s => s.endTime);
+  const timeBonusMs = useSneakInStore(s => s.timeBonusMs);
+  const insideTipHint = useSneakInStore(s => s.insideTipHint);
   const moveCard = useSneakInStore(s => s.moveCard);
   const returnAreaToHand = useSneakInStore(s => s.returnAreaToHand);
   const returnAllToHand = useSneakInStore(s => s.returnAllToHand);
   const timeoutGame = useSneakInStore(s => s.timeoutGame);
+  const { activateFalseAlarm, activateInsideTip, clearInsideTipHint } = useSneakInStore.getState();
+
+  const inventoryItems = useInventoryStore(s => s.items);
+  const { removeItem } = useInventoryStore.getState();
+
+  const hasFalseAlarm = inventoryItems.some(e => e.itemId === 'false-alarm' && e.quantity > 0);
+  const hasInsideTip  = inventoryItems.some(e => e.itemId === 'inside-tip'  && e.quantity > 0);
+
   const [helpVisible, setHelpVisible] = useState(false);
+  const [pickingHintArea, setPickingHintArea] = useState(false);
   const { playTap } = useCardSound();
 
   // --- Screen-level drag state ---
@@ -213,25 +225,29 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
     });
   }, [measureDropTargets]);
 
+  const effectiveTotalMs = TOTAL_TIME_MS + timeBonusMs;
+  const warningThresholdMs = effectiveTotalMs * (30_000 / 120_000);
+  const dangerThresholdMs  = effectiveTotalMs * (10_000 / 120_000);
+
   // Force re-render every 100 ms while the timer is running; also check for timeout.
   const [, tick] = useState(0);
   useEffect(() => {
     if (phase !== 'playing') return;
     const interval = setInterval(() => {
       tick(n => n + 1);
-      if (startTime && Date.now() - startTime >= TOTAL_TIME_MS) {
+      if (startTime && Date.now() - startTime >= effectiveTotalMs) {
         timeoutGame();
       }
     }, 100);
     return () => clearInterval(interval);
-  }, [phase, startTime, timeoutGame]);
+  }, [phase, startTime, timeoutGame, effectiveTotalMs]);
 
   useEffect(() => {
     scheduleMeasure();
   }, [areas, hand, scheduleMeasure]);
 
   const elapsedMs = startTime ? (endTime ?? Date.now()) - startTime : 0;
-  const remainingMs = Math.max(0, TOTAL_TIME_MS - elapsedMs);
+  const remainingMs = Math.max(0, effectiveTotalMs - elapsedMs);
   const solvedCount = areas.filter(a => a.isSolved).length;
 
   // Keep resolveDropTarget in a ref so handleDragEnd stays stable even when
@@ -322,13 +338,13 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
         <Text style={styles.title}>SNEAK IN</Text>
         <View style={[
           styles.timerBadge,
-          remainingMs <= 30000 && styles.timerBadgeWarning,
-          remainingMs <= 10000 && styles.timerBadgeDanger,
+          remainingMs <= warningThresholdMs && styles.timerBadgeWarning,
+          remainingMs <= dangerThresholdMs && styles.timerBadgeDanger,
         ]}>
           <Text style={[
             styles.timerText,
-            remainingMs <= 30000 && styles.timerTextWarning,
-            remainingMs <= 10000 && styles.timerTextDanger,
+            remainingMs <= warningThresholdMs && styles.timerTextWarning,
+            remainingMs <= dangerThresholdMs && styles.timerTextDanger,
           ]}>
             {formatTime(remainingMs)}
           </Text>
@@ -391,6 +407,9 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                   <Text style={[styles.areaLabel, locked && styles.dimmed]}>
                     {AREA_LABELS[area.id].toUpperCase()}
                   </Text>
+                  {insideTipHint?.areaId === area.id && !area.isSolved && (
+                    <Text style={styles.areaHintLabel}>💡</Text>
+                  )}
 
                   {locked ? (
                     <Text style={styles.lockedLabel}>LOCKED</Text>
@@ -483,6 +502,30 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
 
         {(phase === 'playing' || phase === 'idle') && (
           <View style={styles.toolbar}>
+            {insideTipHint && (
+              <TouchableOpacity style={styles.toolbarBtn} onPress={clearInsideTipHint}>
+                <Text style={styles.toolbarBtnText}>✕ hint</Text>
+              </TouchableOpacity>
+            )}
+            {hasFalseAlarm && (
+              <TouchableOpacity
+                style={styles.toolbarBtn}
+                onPress={() => {
+                  activateFalseAlarm();
+                  removeItem('false-alarm');
+                }}
+              >
+                <Text style={styles.toolbarBtnText}>🚨 +1:00</Text>
+              </TouchableOpacity>
+            )}
+            {hasInsideTip && (
+              <TouchableOpacity
+                style={styles.toolbarBtn}
+                onPress={() => setPickingHintArea(true)}
+              >
+                <Text style={styles.toolbarBtnText}>🕵️ Hint</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.toolbarBtn, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnDisabled]}
               disabled={!hasAnyReturnable || !!activeDrag}
@@ -503,12 +546,13 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
           >
             {hand.map(sc => {
               const red = RED_SUITS.has(sc.card.suit);
+              const isHinted = insideTipHint?.card.instanceId === sc.instanceId;
               return (
                 <DraggableCard
                   key={sc.instanceId}
                   card={sc}
                   source="hand"
-                  style={styles.handCard}
+                  style={[styles.handCard, isHinted && styles.handCardHinted]}
                   isDragging={activeDrag?.card.instanceId === sc.instanceId}
                   dragPan={dragPan}
                   onDragStart={handleDragStart}
@@ -529,6 +573,32 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
           </ScrollView>
         </View>
       </View>
+
+      {pickingHintArea && (
+        <View style={styles.hintPickerOverlay}>
+          <Text style={styles.hintPickerTitle}>Choose an area to reveal a hint:</Text>
+          {AREA_IDS.map(areaId => (
+            <TouchableOpacity
+              key={areaId}
+              style={styles.hintPickerCard}
+              onPress={() => {
+                activateInsideTip(areaId);
+                removeItem('inside-tip');
+                setPickingHintArea(false);
+              }}
+            >
+              <Text style={styles.hintPickerCardIcon}>{AREA_ICONS[areaId]}</Text>
+              <Text style={styles.hintPickerCardLabel}>{AREA_LABELS[areaId]}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={[styles.hintPickerCard, styles.hintPickerCancel]}
+            onPress={() => setPickingHintArea(false)}
+          >
+            <Text style={styles.hintPickerCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <SneakInHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
 
@@ -906,6 +976,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.md,
     justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
   },
   toolbarBtn: {
     backgroundColor: theme.colors.greenSuccess,
@@ -973,6 +1044,76 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.caption,
     fontWeight: theme.fontWeights.medium,
     marginLeft: theme.spacing.two,
+  },
+
+  // Hint card highlight (gold border)
+  handCardHinted: {
+    borderWidth: 2,
+    borderColor: theme.colors.gold,
+    shadowColor: theme.colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+
+  // Small 💡 label under hinted area name
+  areaHintLabel: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.sm,
+    marginTop: theme.spacing.two,
+  },
+
+  // Full-screen overlay for Inside Tip area picker
+  hintPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    zIndex: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+  },
+  hintPickerTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.bold,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  hintPickerCard: {
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.xl,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.ten,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    borderWidth: theme.borderWidths.medium,
+    borderColor: theme.colors.borderMedium,
+  },
+  hintPickerCardIcon: {
+    fontSize: theme.fontSizes.lg,
+  },
+  hintPickerCardLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.bold,
+  },
+  hintPickerCancel: {
+    borderColor: theme.colors.borderSubtle,
+    justifyContent: 'center',
+    marginTop: theme.spacing.sm,
+  },
+  hintPickerCancelText: {
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.medium,
   },
 
 });

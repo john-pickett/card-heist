@@ -31,6 +31,31 @@ describe('inventoryStore', () => {
     expect(useInventoryStore.getState().items).toEqual([]);
   });
 
+  test('removeItem decrements quantity by 1', () => {
+    useInventoryStore.setState({ items: [{ itemId: 'false-alarm', quantity: 3 }] });
+    useInventoryStore.getState().removeItem('false-alarm');
+    expect(useInventoryStore.getState().items).toEqual([{ itemId: 'false-alarm', quantity: 2 }]);
+  });
+
+  test('removeItem removes the entry when quantity reaches 0', () => {
+    useInventoryStore.setState({ items: [{ itemId: 'false-alarm', quantity: 1 }] });
+    useInventoryStore.getState().removeItem('false-alarm');
+    expect(useInventoryStore.getState().items).toEqual([]);
+  });
+
+  test('removeItem does nothing for an unknown item', () => {
+    useInventoryStore.setState({ items: [{ itemId: 'false-alarm', quantity: 1 }] });
+    useInventoryStore.getState().removeItem('unknown-item');
+    expect(useInventoryStore.getState().items).toEqual([{ itemId: 'false-alarm', quantity: 1 }]);
+  });
+
+  test('removeItem ignores non-positive quantity values', () => {
+    useInventoryStore.setState({ items: [{ itemId: 'false-alarm', quantity: 2 }] });
+    useInventoryStore.getState().removeItem('false-alarm', 0);
+    useInventoryStore.getState().removeItem('false-alarm', -1);
+    expect(useInventoryStore.getState().items).toEqual([{ itemId: 'false-alarm', quantity: 2 }]);
+  });
+
   test('clearInventory removes all items', () => {
     useInventoryStore.setState({ items: [{ itemId: 'false-alarm', quantity: 1 }] });
     useInventoryStore.getState().clearInventory();

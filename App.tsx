@@ -26,6 +26,7 @@ import { useInventoryStore } from './src/store/inventoryStore';
 import { useReckoningStore } from './src/store/vaultStore';
 import { useSneakInStore } from './src/store/sneakInStore';
 import { MARKET_ACT_ORDER, MARKET_ITEMS } from './src/data/marketItems';
+import { MarketAct } from './src/types/market';
 import {
   DEFAULT_TUTORIALS,
   TUTORIALS_STORAGE_KEY,
@@ -70,6 +71,19 @@ export default function App() {
       if (actSort !== 0) return actSort;
       return a.item.title.localeCompare(b.item.title);
     });
+
+  const activeAct: MarketAct | null =
+    gameFlow === 'act1' ? 'Act One' :
+    gameFlow === 'act2' ? 'Act Two' :
+    gameFlow === 'act3' ? 'Act Three' :
+    null;
+
+  const activeInventoryRows = activeAct
+    ? inventoryRows.filter(row => row.item.act === activeAct)
+    : [];
+  const otherInventoryRows = activeAct
+    ? inventoryRows.filter(row => row.item.act !== activeAct)
+    : inventoryRows;
 
   useEffect(() => {
     let mounted = true;
@@ -378,7 +392,25 @@ export default function App() {
                   contentContainerStyle={styles.inventoryListContent}
                   showsVerticalScrollIndicator={false}
                 >
-                  {inventoryRows.map(({ item, quantity }) => (
+                  {activeInventoryRows.length > 0 && (
+                    <View style={styles.activeSection}>
+                      <Text style={styles.activeSectionLabel}>Active</Text>
+                      {activeInventoryRows.map(({ item, quantity }) => (
+                        <View key={item.id} style={styles.inventoryItemCard}>
+                          <View style={styles.inventoryItemHeader}>
+                            <Text style={styles.inventoryItemIcon}>{item.icon}</Text>
+                            <View style={styles.inventoryItemMain}>
+                              <Text style={styles.inventoryItemTitle}>{item.title}</Text>
+                              <Text style={styles.inventoryItemAct}>{item.act}</Text>
+                            </View>
+                            <Text style={styles.inventoryItemQuantity}>x{quantity}</Text>
+                          </View>
+                          <Text style={styles.inventoryItemEffect}>{item.effect}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  {otherInventoryRows.map(({ item, quantity }) => (
                     <View key={item.id} style={styles.inventoryItemCard}>
                       <View style={styles.inventoryItemHeader}>
                         <Text style={styles.inventoryItemIcon}>{item.icon}</Text>
@@ -605,5 +637,19 @@ const styles = StyleSheet.create({
     color: theme.colors.text78,
     fontSize: theme.fontSizes.m,
     lineHeight: 19,
+  },
+  activeSection: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.gold,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  activeSectionLabel: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.black,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
   },
 });

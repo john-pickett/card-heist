@@ -10,6 +10,7 @@ export interface InventoryEntry {
 interface InventoryStore {
   items: InventoryEntry[];
   addItem: (itemId: string, quantity?: number) => void;
+  removeItem: (itemId: string, quantity?: number) => void;
   clearInventory: () => void;
 }
 
@@ -31,6 +32,22 @@ export const useInventoryStore = create(
               : entry
           ),
         });
+      },
+      removeItem: (itemId, quantity = 1) => {
+        if (quantity <= 0) return;
+        const existing = get().items.find(entry => entry.itemId === itemId);
+        if (!existing) return;
+        if (existing.quantity - quantity <= 0) {
+          set({ items: get().items.filter(entry => entry.itemId !== itemId) });
+        } else {
+          set({
+            items: get().items.map(entry =>
+              entry.itemId === itemId
+                ? { ...entry, quantity: entry.quantity - quantity }
+                : entry
+            ),
+          });
+        }
       },
       clearInventory: () => set({ items: [] }),
     }),

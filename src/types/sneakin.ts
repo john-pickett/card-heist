@@ -40,6 +40,11 @@ export interface SneakInSolutionEntry {
   target: number;
 }
 
+export interface InsideTipHint {
+  areaId: AreaId;
+  card: SneakInCard;
+}
+
 export interface SneakInState {
   phase: SneakInPhase;
   hand: SneakInCard[];
@@ -50,6 +55,8 @@ export interface SneakInState {
   endTime: number | null;
   totalMoves: number;
   solution: SneakInSolutionEntry[] | null;
+  timeBonusMs: number;
+  insideTipHint: InsideTipHint | null;
 }
 
 export interface SneakInActions {
@@ -62,4 +69,7 @@ export interface SneakInActions {
   returnAreaToHand: (areaId: AreaId) => void;
   returnAllToHand: () => void;
   timeoutGame: () => void;
+  activateFalseAlarm: () => void;
+  activateInsideTip: (areaId: AreaId) => void;
+  clearInsideTipHint: () => void;
 }
