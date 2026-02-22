@@ -164,8 +164,11 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const inventoryItems = useInventoryStore(s => s.items);
   const { removeItem } = useInventoryStore.getState();
 
-  const hasFalseAlarm = inventoryItems.some(e => e.itemId === 'false-alarm' && e.quantity > 0);
-  const hasInsideTip  = inventoryItems.some(e => e.itemId === 'inside-tip'  && e.quantity > 0);
+  const falseAlarmQty = inventoryItems.find(e => e.itemId === 'false-alarm')?.quantity ?? 0;
+  const insideTipQty = inventoryItems.find(e => e.itemId === 'inside-tip')?.quantity ?? 0;
+  const hasFalseAlarm = falseAlarmQty > 0;
+  const hasInsideTip = insideTipQty > 0;
+  const showBuffToolbar = hasFalseAlarm || hasInsideTip;
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [pickingHintArea, setPickingHintArea] = useState(false);
@@ -357,6 +360,36 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
         </TouchableOpacity>
       </View>
 
+      {showBuffToolbar && (
+        <View style={styles.buffToolbar}>
+          {hasFalseAlarm && (
+            <TouchableOpacity
+              style={styles.buffToolbarBtn}
+              onPress={() => {
+                activateFalseAlarm();
+                removeItem('false-alarm');
+              }}
+            >
+              <Text style={styles.buffToolbarBtnText}>
+                {'🚨 +1:00'}
+                <Text style={styles.buffToolbarBtnQtyText}> x{falseAlarmQty}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+          {hasInsideTip && (
+            <TouchableOpacity
+              style={styles.buffToolbarBtn}
+              onPress={() => setPickingHintArea(true)}
+            >
+              <Text style={styles.buffToolbarBtnText}>
+                {'🕵️ Hint'}
+                <Text style={styles.buffToolbarBtnQtyText}> x{insideTipQty}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Areas grid */}
       <View style={styles.areasGrid} onLayout={scheduleMeasure}>
         {rows.map((row, rowIdx) => (
@@ -505,25 +538,6 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
             {insideTipHint && (
               <TouchableOpacity style={styles.toolbarBtn} onPress={clearInsideTipHint}>
                 <Text style={styles.toolbarBtnText}>✕ hint</Text>
-              </TouchableOpacity>
-            )}
-            {hasFalseAlarm && (
-              <TouchableOpacity
-                style={styles.toolbarBtn}
-                onPress={() => {
-                  activateFalseAlarm();
-                  removeItem('false-alarm');
-                }}
-              >
-                <Text style={styles.toolbarBtnText}>🚨 +1:00</Text>
-              </TouchableOpacity>
-            )}
-            {hasInsideTip && (
-              <TouchableOpacity
-                style={styles.toolbarBtn}
-                onPress={() => setPickingHintArea(true)}
-              >
-                <Text style={styles.toolbarBtnText}>🕵️ Hint</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -726,6 +740,31 @@ const styles = StyleSheet.create({
     padding: theme.spacing.sm,
     gap: theme.spacing.sm,
     overflow: 'visible',
+  },
+  buffToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
+    gap: theme.spacing.sm,
+  },
+  buffToolbarBtn: {
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.r8,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderMedium,
+  },
+  buffToolbarBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.bold,
+  },
+  buffToolbarBtnQtyText: {
+    color: theme.colors.text70,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.medium,
   },
   areasRow: {
     flex: 1,

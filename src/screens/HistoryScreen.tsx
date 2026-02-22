@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
   },
   scrollContent: {
-    paddingTop: theme.spacing.fiftyTwo,
+    paddingTop: theme.spacing.fourteen,
     paddingBottom: theme.spacing.xxxl,
     paddingHorizontal: theme.spacing.lg,
     gap: theme.spacing.lg,
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BG,
     alignItems: 'center',
-    paddingTop: theme.spacing.sixty,
+    paddingTop: theme.spacing.fourteen,
     paddingHorizontal: theme.spacing.xl,
   },
   emptyText: {

@@ -18,6 +18,7 @@ import { HistoryScreen } from './src/screens/HistoryScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { MarketScreen } from './src/screens/MarketScreen';
 import { VaultScreen } from './src/screens/VaultScreen';
+import { DevelopmentScreen } from './src/screens/DevelopmentScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SneakInScreen } from './src/screens/SneakInScreen';
 import { useEscapeStore } from './src/store/escapeStore';
@@ -41,6 +42,7 @@ type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [settingsScreen, setSettingsScreen] = useState<'main' | 'development'>('main');
   const [gameFlow, setGameFlow] = useState<GameFlow>('home');
   const [act1TimeBonus, setAct1TimeBonus] = useState(0);
   const [act2Score, setAct2Score] = useState(0);
@@ -289,10 +291,18 @@ export default function App() {
 
   const renderContent = () => {
     if (activeTab === 'settings') {
+      if (__DEV__ && settingsScreen === 'development') {
+        return (
+          <DevelopmentScreen
+            onBack={() => setSettingsScreen('main')}
+            onResetHeistData={handleResetHeistData}
+          />
+        );
+      }
       return (
         <SettingsScreen
           onResetTutorials={handleResetTutorials}
-          onResetHeistData={handleResetHeistData}
+          onOpenDevelopment={() => setSettingsScreen('development')}
         />
       );
     }
@@ -303,7 +313,7 @@ export default function App() {
 
   return (
     <PaperProvider>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, !isInHeist && styles.safeAreaWithTabBar]}>
         <View style={styles.appShell}>
           <View style={styles.topAppBar}>
             <View style={styles.goldWrap}>
@@ -349,7 +359,10 @@ export default function App() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tabItem, activeTab === 'settings' && styles.tabItemActive]}
-              onPress={() => setActiveTab('settings')}
+              onPress={() => {
+                setSettingsScreen('main');
+                setActiveTab('settings');
+              }}
             >
               <Text
                 style={[styles.tabLabel, activeTab === 'settings' && styles.tabLabelActive]}
@@ -437,6 +450,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
+  },
+  safeAreaWithTabBar: {
+    backgroundColor: theme.colors.bgPanel,
   },
   appShell: {
     flex: 1,

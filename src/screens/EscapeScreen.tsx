@@ -13,6 +13,7 @@ import { useAudioPlayer } from 'expo-audio';
 import { EscapeDiscardModal } from '../components/EscapeDiscardModal';
 import { EscapeHelpModal } from '../components/EscapeHelpModal';
 import { useEscapeStore } from '../store/escapeStore';
+import { useInventoryStore } from '../store/inventoryStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import theme from '../theme';
@@ -49,7 +50,7 @@ export function EscapeScreen({
     selectedIds,
     errorMessage,
     policeMessage,
-    policeLastPlay,
+    turnLog,
     outOfPlay,
     infoMessage,
     initGame,
@@ -60,10 +61,16 @@ export function EscapeScreen({
     endPoliceTurn,
     clearError,
     clearInfo,
+    activateFalseTrail,
   } = useEscapeStore();
 
+  const falseTrailQty = useInventoryStore(
+    s => s.items.find(i => i.itemId === 'false-trail')?.quantity ?? 0,
+  );
+  const hasFalseTrail = falseTrailQty > 0;
+  const removeItem = useInventoryStore(s => s.removeItem);
+
   const fanfarePlayer  = useAudioPlayer(require('../../assets/sounds/fanfare.wav'));
-  const stingPlayer    = useAudioPlayer(require('../../assets/sounds/police-sting.wav'));
   const winPlayer      = useAudioPlayer(require('../../assets/sounds/win-fanfare.wav'));
   const losePlayer     = useAudioPlayer(require('../../assets/sounds/lose-fanfare.wav'));
   const notifyPlayer   = useAudioPlayer(require('../../assets/sounds/notify.wav'));
@@ -79,21 +86,12 @@ export function EscapeScreen({
     }
   }, [layMeld, fanfarePlayer, soundEnabled]);
 
-  // Police sting: fires when police reveal a mid-game meld (phase goes to
-  // police_reveal, not directly to lost — that path gets the lose fanfare).
-  useEffect(() => {
-    if (soundEnabled && phase === 'police_reveal' && policeLastPlay && policeLastPlay.length >= 3) {
-      stingPlayer.seekTo(0);
-      stingPlayer.play();
-    }
-  }, [phase, policeLastPlay]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Your-turn notification: play after the police finish their turn
   const prevPhaseRef = useRef(phase);
   useEffect(() => {
     const prev = prevPhaseRef.current;
     prevPhaseRef.current = phase;
-    if (soundEnabled && phase === 'player_turn' && (prev === 'police_reveal' || prev === 'police_thinking')) {
+    if (soundEnabled && phase === 'player_turn' && (prev === 'awaiting_continue' || prev === 'police_thinking')) {
       notifyPlayer.seekTo(0);
       notifyPlayer.play();
     }
@@ -110,6 +108,11 @@ export function EscapeScreen({
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
+  const [lostConfirmed, setLostConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (phase === 'lost') setLostConfirmed(false);
+  }, [phase]);
 
   const { width: screenWidth } = useWindowDimensions();
   // 4 cards per row, 3 gaps of 8px, 16px padding each side
@@ -130,10 +133,7 @@ export function EscapeScreen({
       const t = setTimeout(runPoliceTurn, 900);
       return () => clearTimeout(t);
     }
-    if (phase === 'police_reveal') {
-      const t = setTimeout(endPoliceTurn, 1400);
-      return () => clearTimeout(t);
-    }
+    // No auto-advance for 'awaiting_continue' — player taps Continue
   }, [phase]);
 
   // Auto-clear error
@@ -212,8 +212,8 @@ export function EscapeScreen({
     );
   }
 
-  // ── Lost ───────────────────────────────────────────────────────────────────
-  if (phase === 'lost') {
+  // ── Lost (confirmed) ───────────────────────────────────────────────────────
+  if (phase === 'lost' && lostConfirmed) {
     return (
       <View style={styles.screen}>
         <Text style={[styles.heading, styles.headingRed]}>CAUGHT!</Text>
@@ -238,24 +238,29 @@ export function EscapeScreen({
   // ── Status message ─────────────────────────────────────────────────────────
   const statusText = infoMessage
     ? infoMessage
+    : phase === 'police_thinking'
+    ? 'Police are moving...'
     : policeMessage
     ? policeMessage
     : errorMessage
     ? errorMessage
-    : isPlayerTurn
-    ? `Step ${playerPosition} of 6 — reach EXIT (step 1) to escape`
-    : 'Police are thinking...';
+    : `Step ${playerPosition} of 6 — reach EXIT (step 1) to escape`;
 
   const statusColor = infoMessage
     ? theme.colors.successTeal
+    : phase === 'lost'
+    ? theme.colors.errorRed
     : policeMessage
     ? theme.colors.gold
     : errorMessage
     ? theme.colors.errorRed
     : theme.colors.textMuted;
+
   const tutorialParagraph =
     'In Escape, you are racing to the exit while police pressure builds every turn. ' +
     'Select cards to lay melds or discard strategically to move your position and protect your total gold, because getting caught means losing most of the haul.';
+
+  const showContinue = phase === 'awaiting_continue' || (phase === 'lost' && !lostConfirmed);
 
   // ── Game Board ─────────────────────────────────────────────────────────────
   return (
@@ -271,6 +276,21 @@ export function EscapeScreen({
           <Text style={styles.helpBtnText}>?</Text>
         </TouchableOpacity>
       </View>
+
+      {hasFalseTrail && (
+        <View style={styles.buffToolbar}>
+          <TouchableOpacity
+            style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
+            onPress={isPlayerTurn ? () => { activateFalseTrail(); removeItem('false-trail'); } : undefined}
+            activeOpacity={isPlayerTurn ? 0.75 : 1}
+          >
+            <Text style={styles.toolbarBtnText}>
+              {'🧭 False Trail'}
+              <Text style={styles.toolbarBtnQtyText}> x{falseTrailQty}</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Path Track */}
       <View style={styles.trackContainer}>
@@ -316,26 +336,19 @@ export function EscapeScreen({
         </View>
       </View>
 
-      {/* Police play area */}
-      {policeLastPlay && (
-        <View style={styles.policePlayArea}>
-          <Text style={styles.policePlayLabel}>
-            {policeLastPlay.length >= 3 ? 'Police melded:' : 'Police discarded:'}
-          </Text>
-          <View style={styles.fanContainer}>
-            {policeLastPlay.map((ec, i) => {
-              const isRed = RED_SUITS.has(ec.card.suit);
-              return (
-                <View
-                  key={ec.instanceId}
-                  style={[styles.fanCard, { left: i * 18, zIndex: i }]}
-                >
-                  <Text style={[styles.fanRank, isRed && styles.redText]}>{ec.card.rank}</Text>
-                  <Text style={[styles.fanSuit, isRed && styles.redText]}>{SUIT_SYMBOL[ec.card.suit]}</Text>
-                </View>
-              );
-            })}
-          </View>
+      {/* Turn Log */}
+      {turnLog.length > 0 && (
+        <View style={styles.turnLogPanel}>
+          <Text style={styles.turnLogTitle}>LAST TURNS</Text>
+          {[...turnLog].reverse().map((entry, i) => (
+            <View key={entry.turn} style={[styles.turnLogRow, i > 0 && styles.turnLogRowOld]}>
+              <Text style={styles.turnLogTurnNum}>T{entry.turn}</Text>
+              <View style={styles.turnLogActions}>
+                <Text style={styles.turnLogActionYou} numberOfLines={1}>You: {entry.playerAction}</Text>
+                <Text style={styles.turnLogActionPolice} numberOfLines={1}>👮 {entry.policeAction}</Text>
+              </View>
+            </View>
+          ))}
         </View>
       )}
 
@@ -404,35 +417,49 @@ export function EscapeScreen({
 
       {/* Action buttons */}
       <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={[
-            styles.btn,
-            styles.btnMeld,
-            (buttonsDisabled || selectedIds.length < 3) && styles.btnDisabled,
-          ]}
-          onPress={handleLayMeld}
-          disabled={buttonsDisabled || selectedIds.length < 3}
-        >
-          <Text style={styles.btnText}>LAY MELD</Text>
-          {selectedIds.length >= 3 && (
-            <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
-          )}
-        </TouchableOpacity>
+        {showContinue ? (
+          <TouchableOpacity
+            style={[styles.btn, styles.btnContinue]}
+            onPress={() => {
+              if (phase === 'awaiting_continue') endPoliceTurn();
+              else setLostConfirmed(true);
+            }}
+          >
+            <Text style={styles.btnText}>Continue</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[
+                styles.btn,
+                styles.btnMeld,
+                (buttonsDisabled || selectedIds.length < 3) && styles.btnDisabled,
+              ]}
+              onPress={handleLayMeld}
+              disabled={buttonsDisabled || selectedIds.length < 3}
+            >
+              <Text style={styles.btnText}>LAY MELD</Text>
+              {selectedIds.length >= 3 && (
+                <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
+              )}
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.btn,
-            styles.btnDiscard,
-            (buttonsDisabled || selectedIds.length === 0) && styles.btnDisabled,
-          ]}
-          onPress={discard}
-          disabled={buttonsDisabled || selectedIds.length === 0}
-        >
-          <Text style={styles.btnText}>DISCARD</Text>
-          {selectedIds.length > 0 && (
-            <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.btn,
+                styles.btnDiscard,
+                (buttonsDisabled || selectedIds.length === 0) && styles.btnDisabled,
+              ]}
+              onPress={discard}
+              disabled={buttonsDisabled || selectedIds.length === 0}
+            >
+              <Text style={styles.btnText}>DISCARD</Text>
+              {selectedIds.length > 0 && (
+                <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
@@ -564,45 +591,51 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xl,
   },
 
-  // Police play area
-  policePlayArea: {
+  // Turn log
+  turnLogPanel: {
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.r8,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
     marginBottom: theme.spacing.six,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderFaint,
   },
-  policePlayLabel: {
+  turnLogTitle: {
+    color: theme.colors.text50,
+    fontSize: theme.fontSizes.caption,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  turnLogRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.xs,
+    paddingVertical: 2,
+  },
+  turnLogRowOld: {
+    opacity: 0.45,
+  },
+  turnLogTurnNum: {
+    color: theme.colors.text50,
+    fontSize: theme.fontSizes.caption,
+    fontWeight: theme.fontWeights.black,
+    width: 22,
+    paddingTop: 1,
+  },
+  turnLogActions: {
+    flex: 1,
+  },
+  turnLogActionYou: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: 14,
+  },
+  turnLogActionPolice: {
     color: theme.colors.gold,
     fontSize: theme.fontSizes.caption,
-    fontWeight: theme.fontWeights.bold,
-    letterSpacing: 0.5,
-    marginBottom: theme.spacing.xs,
-  },
-  fanContainer: {
-    height: 62,
-    position: 'relative',
-  },
-  fanCard: {
-    position: 'absolute',
-    top: 0,
-    width: 42,
-    height: 60,
-    backgroundColor: theme.colors.cardFace,
-    borderRadius: theme.radii.r6,
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.cardBorder,
-    paddingHorizontal: theme.spacing.xs,
-    paddingVertical: theme.spacing.three,
-    justifyContent: 'space-between',
-  },
-  fanRank: {
-    color: theme.colors.cardTextDark,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.black,
-    lineHeight: 15,
-  },
-  fanSuit: {
-    color: theme.colors.cardTextDark,
-    fontSize: theme.fontSizes.s,
     lineHeight: 14,
-    textAlign: 'right',
   },
 
   // Status
@@ -704,6 +737,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgPrimary,
     borderColor: theme.colors.greenPrimary,
   },
+  btnContinue: {
+    backgroundColor: theme.colors.bgPanel,
+    borderColor: theme.colors.gold,
+  },
   btnDisabled: {
     opacity: 0.35,
   },
@@ -728,6 +765,38 @@ const styles = StyleSheet.create({
     color: theme.colors.text60,
     fontSize: theme.fontSizes.caption,
     marginTop: theme.spacing.two,
+  },
+
+  // Buff toolbar
+  buffToolbar: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  toolbarBtn: {
+    borderRadius: theme.radii.lg,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.bgPanel,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolbarBtnDisabled: {
+    opacity: 0.35,
+  },
+  toolbarBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.heavy,
+    letterSpacing: 0.3,
+  },
+  toolbarBtnQtyText: {
+    color: theme.colors.text60,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.medium,
+    letterSpacing: 0.2,
   },
 
   // Result screens

@@ -53,7 +53,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'After every action you take, the police play automatically. If they can match, they advance 1 step toward you. If they cannot match, they discard their lowest card and draw.',
+        body: 'After every action you take, the police automatically advance 1 step toward you. Every discard also pushes them 1 extra step closer.',
       },
     ],
   },
@@ -75,7 +75,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'Matches are the only way to advance — prioritize building them. Every 2nd discard you make draws the police 1 step closer, on top of their normal turn. A 4-card set advances you 2 steps.',
+        body: 'Matches are the only way to advance — prioritize building them. The police advance every turn regardless — discarding buys you cards but not safety. Every discard moves them 1 extra step. Any 4-card match advances you 2 steps.',
       },
     ],
   },

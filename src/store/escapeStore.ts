@@ -6,6 +6,7 @@ import {
   EscapeState,
   EscapeActions,
   MeldValidation,
+  TurnLogEntry,
 } from '../types/escape';
 
 const RANK_ORDER: Rank[] = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -29,59 +30,6 @@ function validateMeld(cards: Card[]): MeldValidation {
   const consecutive = indices.every((idx, i) => i === 0 || idx === indices[i - 1] + 1);
   if (consecutive) return { valid: true, type: 'run' };
   return { valid: false, reason: 'Not a valid set or run' };
-}
-
-function findPoliceMeld(hand: EscapeCard[]): EscapeCard[] | null {
-  // 1. Scan for set (group by rank, any group >= 3)
-  const byRank = new Map<Rank, EscapeCard[]>();
-  for (const ec of hand) {
-    const group = byRank.get(ec.card.rank) ?? [];
-    group.push(ec);
-    byRank.set(ec.card.rank, group);
-  }
-  for (const group of byRank.values()) {
-    if (group.length >= 3) return group.slice(0, 3);
-  }
-
-  // 2. Scan for run (group by suit, sort by RANK_ORDER index, sliding window for 3+ consecutive)
-  const bySuit = new Map<string, EscapeCard[]>();
-  for (const ec of hand) {
-    const group = bySuit.get(ec.card.suit) ?? [];
-    group.push(ec);
-    bySuit.set(ec.card.suit, group);
-  }
-  for (const group of bySuit.values()) {
-    if (group.length < 3) continue;
-    const sorted = [...group].sort(
-      (a, b) => RANK_ORDER.indexOf(a.card.rank) - RANK_ORDER.indexOf(b.card.rank)
-    );
-    // Sliding window: look for 3 consecutive
-    for (let i = 0; i <= sorted.length - 3; i++) {
-      const window = sorted.slice(i, i + 3);
-      const idxs = window.map(ec => RANK_ORDER.indexOf(ec.card.rank));
-      const consecutive = idxs[1] === idxs[0] + 1 && idxs[2] === idxs[1] + 1;
-      if (consecutive) return window;
-    }
-  }
-
-  return null;
-}
-
-function discardLowest(hand: EscapeCard[]): { worst: EscapeCard; rest: EscapeCard[] } {
-  function cardValue(rank: Rank): number {
-    if (rank === 'A') return 1;
-    if (rank === 'J' || rank === 'Q' || rank === 'K') return 10;
-    return parseInt(rank, 10);
-  }
-  let worstIdx = 0;
-  let worstVal = cardValue(hand[0].card.rank);
-  for (let i = 1; i < hand.length; i++) {
-    const v = cardValue(hand[i].card.rank);
-    if (v < worstVal) { worstVal = v; worstIdx = i; }
-  }
-  const worst = hand[worstIdx];
-  const rest = hand.filter((_, i) => i !== worstIdx);
-  return { worst, rest };
 }
 
 // Draw `count` cards from deck, reshuffling outOfPlay if deck runs short
@@ -132,7 +80,6 @@ const INITIAL_STATE: EscapeState = {
   selectedIds: [],
   errorMessage: null,
   policeMessage: null,
-  policeLastPlay: null,
   outOfPlay: [],
   infoMessage: null,
   lastMeldType: null,
@@ -144,6 +91,8 @@ const INITIAL_STATE: EscapeState = {
   policeMelds: 0,
   policeCardsDrawn: 0,
   turnsPlayed: 0,
+  turnLog: [],
+  lastPlayerAction: null,
 };
 
 export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => ({
@@ -153,13 +102,12 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     instanceCounter = 0;
     const cards = toEscapeCards(shuffleDeck(createDeck()));
     const playerHand = cards.slice(0, 8);
-    const policeHand = cards.slice(8, 15);
-    const deck = cards.slice(15);
+    const deck = cards.slice(8);
     set({
       ...INITIAL_STATE,
       deck,
       playerHand,
-      policeHand,
+      policeHand: [],
     });
   },
 
@@ -189,8 +137,9 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const drawCount = 8 - remaining.length;
     const newOutOfPlayBeforeDraw = [...outOfPlay, ...selectedCards];
     const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
-    const advance = result.type === 'set' && selectedCards.length === 4 ? 2 : 1;
+    const advance = selectedCards.length === 4 ? 2 : 1;
     const newPosition = playerPosition - advance;
+    const actionStr = `Laid a match (${result.type}, ${advance} step${advance > 1 ? 's' : ''})`;
 
     const meldCounters = {
       playerMelds: playerMelds + 1,
@@ -210,6 +159,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
         errorMessage: null,
         infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
         lastMeldType: result.type,
+        lastPlayerAction: actionStr,
         phase: 'won',
         ...meldCounters,
       });
@@ -223,6 +173,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
         errorMessage: null,
         infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
         lastMeldType: result.type,
+        lastPlayerAction: actionStr,
         phase: 'police_thinking',
         ...meldCounters,
       });
@@ -241,25 +192,9 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
 
     const newDiscardCount = playerDiscardCount + 1;
-    const policeAdvance = newDiscardCount % 2 === 0;
-    const newPolicePos = policeAdvance ? policePosition - 1 : policePosition;
-
-    if (policeAdvance && newPolicePos <= playerPosition) {
-      set({
-        playerHand: newHand,
-        deck: newDeck,
-        outOfPlay: newOutOfPlay,
-        selectedIds: [],
-        errorMessage: null,
-        infoMessage: null,
-        policePosition: newPolicePos,
-        phase: 'lost',
-        playerDiscardCount: newDiscardCount,
-        playerCardsDrawn: playerCardsDrawn + drawCount,
-        turnsPlayed: turnsPlayed + 1,
-      });
-      return;
-    }
+    const policeAdvance = true;
+    const newPolicePos = Math.max(playerPosition, policePosition - 1);
+    const actionStr = `Discarded ${selectedIds.length} card${selectedIds.length > 1 ? 's' : ''}${policeAdvance ? ' — police alerted' : ''}`;
 
     set({
       playerHand: newHand,
@@ -267,10 +202,9 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       outOfPlay: newOutOfPlay,
       selectedIds: [],
       errorMessage: null,
-      infoMessage: policeAdvance
-        ? 'Police heard the noise — they moved closer!'
-        : (reshuffled ? 'Deck empty — reshuffling discards...' : null),
+      infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
       policePosition: newPolicePos,
+      lastPlayerAction: actionStr,
       phase: 'police_thinking',
       playerDiscardCount: newDiscardCount,
       playerCardsDrawn: playerCardsDrawn + drawCount,
@@ -279,57 +213,42 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
   },
 
   runPoliceTurn: () => {
-    const { policeHand, deck, policePosition, playerPosition, outOfPlay, policeMelds, policeCardsDrawn } = get();
+    const { policePosition, playerPosition, turnsPlayed, turnLog, lastPlayerAction } = get();
+    const nextPolicePos = policePosition - 1;
+    const caught = nextPolicePos <= playerPosition;
+    const newPolicePos = caught ? playerPosition : nextPolicePos;
+    const policeAction = caught
+      ? "Police closed in — they've caught you!"
+      : `Police closed in — now at step ${newPolicePos}`;
 
-    const meld = findPoliceMeld(policeHand);
-    if (meld) {
-      const meldIds = new Set(meld.map(ec => ec.instanceId));
-      const remaining = policeHand.filter(ec => !meldIds.has(ec.instanceId));
-      const newOutOfPlayBeforeDraw = [...outOfPlay, ...meld];
-      const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, meld.length, newOutOfPlayBeforeDraw);
-      const newPolicePos = policePosition - 1;
-      const policeMsg = `Police lay down a meld!${reshuffled ? ' (deck reshuffled)' : ''}`;
+    const entry: TurnLogEntry = {
+      turn: turnsPlayed,
+      playerAction: lastPlayerAction ?? '—',
+      policeAction,
+      playerPos: playerPosition,
+      policePos: newPolicePos,
+    };
+    const newLog = [...turnLog, entry].slice(-3);
 
-      if (newPolicePos <= playerPosition) {
-        set({
-          policeHand: newHand,
-          deck: newDeck,
-          outOfPlay: newOutOfPlay,
-          policePosition: newPolicePos,
-          policeMessage: policeMsg,
-          policeLastPlay: meld,
-          phase: 'lost',
-          policeMelds: policeMelds + 1,
-          policeCardsDrawn: policeCardsDrawn + meld.length,
-        });
-      } else {
-        set({
-          policeHand: newHand,
-          deck: newDeck,
-          outOfPlay: newOutOfPlay,
-          policePosition: newPolicePos,
-          policeMessage: policeMsg,
-          policeLastPlay: meld,
-          phase: 'police_reveal',
-          policeMelds: policeMelds + 1,
-          policeCardsDrawn: policeCardsDrawn + meld.length,
-        });
-      }
-    } else {
-      const { worst, rest } = discardLowest(policeHand);
-      const newOutOfPlayBeforeDraw = [...outOfPlay, worst];
-      const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, rest, 1, newOutOfPlayBeforeDraw);
-      const policeMsg = `Police discard ${worst.card.rank} and draw.${reshuffled ? ' (deck reshuffled)' : ''}`;
+    if (caught) {
       set({
-        policeHand: newHand,
-        deck: newDeck,
-        outOfPlay: newOutOfPlay,
-        policeMessage: policeMsg,
-        policeLastPlay: [worst],
-        phase: 'police_reveal',
-        policeCardsDrawn: policeCardsDrawn + 1,
+        policePosition: newPolicePos,
+        policeMessage: policeAction,
+        turnLog: newLog,
+        lastPlayerAction: null,
+        phase: 'awaiting_continue',
       });
+      return;
     }
+
+    set({
+      policePosition: newPolicePos,
+      policeMessage: null,
+      turnLog: newLog,
+      lastPlayerAction: null,
+      lastMeldType: null,
+      phase: 'player_turn',
+    });
   },
 
   endPoliceTurn: () => {
@@ -347,4 +266,10 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
 
   clearError: () => set({ errorMessage: null }),
   clearInfo: () => set({ infoMessage: null }),
+
+  activateFalseTrail: () => {
+    const { phase, policePosition } = get();
+    if (phase !== 'player_turn') return;
+    set({ policePosition: Math.min(6, policePosition + 1) });
+  },
 }));

@@ -29,12 +29,20 @@ export function SneakInSolutionModal({ visible, onClose, solution, areas }: Snea
           >
             {solution.map((entry, i) => {
               const area = areas[i];
-              const lastAttempt = area.failedCombos.length > 0
-                ? area.failedCombos[area.failedCombos.length - 1]
-                : null;
-              const attemptSum = lastAttempt
-                ? lastAttempt.reduce((s, sc) => s + parseInt(sc.card.rank, 10), 0)
+              const lastFailedAttempt =
+                area.failedCombos.length > 0
+                  ? area.failedCombos[area.failedCombos.length - 1]
+                  : null;
+              const displayAttempt =
+                area.isSolved && area.cards.length > 0
+                  ? area.cards
+                  : area.cards.length > 0
+                  ? area.cards
+                  : lastFailedAttempt;
+              const attemptSum = displayAttempt
+                ? displayAttempt.reduce((s, sc) => s + parseInt(sc.card.rank, 10), 0)
                 : 0;
+              const attemptLabel = area.isSolved ? 'How you solved it' : 'Your last attempt';
 
               return (
                 <View key={i} style={styles.section}>
@@ -56,10 +64,10 @@ export function SneakInSolutionModal({ visible, onClose, solution, areas }: Snea
                   </View>
 
                   <View style={styles.rowBlock}>
-                    <Text style={styles.rowLabel}>Your last attempt</Text>
-                    {lastAttempt ? (
+                    <Text style={styles.rowLabel}>{attemptLabel}</Text>
+                    {displayAttempt ? (
                       <View style={styles.chipRow}>
-                        {lastAttempt.map((sc, j) => (
+                        {displayAttempt.map((sc, j) => (
                           <View key={j} style={[styles.chip, styles.chipAttempt]}>
                             <Text style={styles.chipText}>{sc.card.rank}</Text>
                           </View>
@@ -67,7 +75,9 @@ export function SneakInSolutionModal({ visible, onClose, solution, areas }: Snea
                         <Text style={styles.attemptSum}>= {attemptSum}</Text>
                       </View>
                     ) : (
-                      <Text style={styles.firstTryText}>Solved on first attempt</Text>
+                      <Text style={styles.firstTryText}>
+                        {area.isSolved ? 'Solved on first attempt' : 'No attempt recorded'}
+                      </Text>
                     )}
                   </View>
                 </View>

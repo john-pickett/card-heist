@@ -7,8 +7,8 @@ export interface EscapeCard {
 
 export type EscapePhase =
   | 'player_turn'
-  | 'police_thinking'  // 900 ms: "Police searching hand..."
-  | 'police_reveal'    // 1400 ms: show police action result
+  | 'police_thinking'      // 900ms: animating police advance
+  | 'awaiting_continue'    // player must tap Continue to proceed
   | 'won'
   | 'lost';
 
@@ -18,17 +18,24 @@ export interface MeldResult { valid: true; type: MeldType; }
 export interface MeldError  { valid: false; reason: string; }
 export type MeldValidation = MeldResult | MeldError;
 
+export interface TurnLogEntry {
+  turn: number;
+  playerAction: string;   // e.g. "Laid a match (set, 1 step)"
+  policeAction: string;   // e.g. "Police closed in — now at step 4"
+  playerPos: number;
+  policePos: number;
+}
+
 export interface EscapeState {
   phase: EscapePhase;
   deck: EscapeCard[];
   playerHand: EscapeCard[];   // always 8 during play
-  policeHand: EscapeCard[];   // always 7, never shown to player
+  policeHand: EscapeCard[];   // always empty, kept for history compatibility
   playerPosition: number;     // 1–6, starts 4
   policePosition: number;     // 1–6, starts 6
   selectedIds: string[];      // instanceIds of selected player cards
   errorMessage: string | null;  // auto-clears after 2 s
   policeMessage: string | null; // shown during police turn
-  policeLastPlay: EscapeCard[] | null; // cards police played last turn
   outOfPlay: EscapeCard[];    // all cards no longer in deck
   infoMessage: string | null; // reshuffle notice, auto-clears after 3 s
   lastMeldType: MeldType | null;
@@ -40,6 +47,8 @@ export interface EscapeState {
   policeMelds: number;
   policeCardsDrawn: number;
   turnsPlayed: number;
+  turnLog: TurnLogEntry[];
+  lastPlayerAction: string | null;
 }
 
 export interface EscapeActions {
@@ -48,7 +57,8 @@ export interface EscapeActions {
   layMeld: () => void;
   discard: () => void;
   runPoliceTurn: () => void;   // called by screen useEffect after 900 ms
-  endPoliceTurn: () => void;   // called by screen useEffect after 1400 ms
+  endPoliceTurn: () => void;   // called on Continue button press
   clearError: () => void;
   clearInfo: () => void;
+  activateFalseTrail: () => void;
 }

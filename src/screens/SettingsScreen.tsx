@@ -5,12 +5,11 @@ import theme from '../theme';
 
 interface Props {
   onResetTutorials: () => Promise<void>;
-  onResetHeistData: () => Promise<void>;
+  onOpenDevelopment: () => void;
 }
 
-export function SettingsScreen({ onResetTutorials, onResetHeistData }: Props) {
+export function SettingsScreen({ onResetTutorials, onOpenDevelopment }: Props) {
   const [tutorialMessage, setTutorialMessage] = useState<string | null>(null);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const soundEnabled = useSettingsStore(s => s.soundEnabled);
   const setSoundEnabled = useSettingsStore(s => s.setSoundEnabled);
 
@@ -20,15 +19,6 @@ export function SettingsScreen({ onResetTutorials, onResetHeistData }: Props) {
       setTutorialMessage('Tutorials reset. They will show again on your next run.');
     } catch {
       setTutorialMessage('Could not reset tutorials right now. Please try again.');
-    }
-  };
-
-  const handleResetHeistData = async () => {
-    try {
-      await onResetHeistData();
-      setResetMessage('All heist data cleared. Game state is now reset.');
-    } catch {
-      setResetMessage('Could not reset heist data right now. Please try again.');
     }
   };
 
@@ -64,18 +54,15 @@ export function SettingsScreen({ onResetTutorials, onResetHeistData }: Props) {
         {tutorialMessage && <Text style={styles.message}>{tutorialMessage}</Text>}
       </View>
 
-      <View style={[styles.panel, styles.panelSpaced]}>
-        <Text style={styles.settingTitle}>Development</Text>
-        <Text style={styles.settingDesc}>
-          Clear all heist progression and inventory as if the game were freshly installed.
-        </Text>
-
-        <TouchableOpacity style={[styles.resetBtn, styles.dangerBtn]} onPress={handleResetHeistData}>
-          <Text style={styles.resetBtnText}>Reset All Heist Data</Text>
+      {__DEV__ && (
+        <TouchableOpacity
+          style={[styles.navButton, styles.panelSpaced]}
+          onPress={onOpenDevelopment}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.navButtonText}>Development</Text>
         </TouchableOpacity>
-
-        {resetMessage && <Text style={styles.message}>{resetMessage}</Text>}
-      </View>
+      )}
     </View>
   );
 }
@@ -84,7 +71,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
-    paddingTop: theme.spacing.sixty,
+    paddingTop: theme.spacing.fourteen,
     paddingHorizontal: theme.spacing.xl,
   },
   title: {
@@ -105,6 +92,21 @@ const styles = StyleSheet.create({
   },
   panelSpaced: {
     marginTop: theme.spacing.md,
+  },
+  navButton: {
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.lg,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderLight,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  navButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
+    textAlign: 'center',
+    letterSpacing: 0.4,
   },
   settingTitle: {
     color: theme.colors.gold,
@@ -132,9 +134,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.fourteen,
     borderWidth: theme.borderWidths.thin,
     borderColor: theme.colors.borderStrong,
-  },
-  dangerBtn: {
-    backgroundColor: theme.colors.red,
   },
   resetBtnText: {
     color: theme.colors.textPrimary,

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   Image,
   PanResponder,
   StyleSheet,
@@ -8,11 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAudioPlayer } from 'expo-audio';
 import { AceModal } from '../components/vault/AceModal';
 import { ReckoningHelpModal } from '../components/vault/VaultHelpModal';
 import { VaultColumn } from '../components/vault/VaultColumn';
 import { useReckoningStore } from '../store/vaultStore';
 import { useInventoryStore } from '../store/inventoryStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { useCardSound } from '../hooks/useCardSound';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import { VaultCard } from '../types/vault';
@@ -27,9 +30,56 @@ const SUIT_SYMBOL: Record<string, string> = {
 const RED_SUITS = new Set(['hearts', 'diamonds']);
 
 type DropRect = { x: number; y: number; width: number; height: number };
+type CoinParticle = {
+  id: number;
+  x: number;
+  y: number;
+  dx: number;
+  peakY: number;
+  endY: number;
+  rotateDeg: string;
+  size: number;
+};
 
 function pointInRect(x: number, y: number, r: DropRect): boolean {
   return x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height;
+}
+
+function buildCoinBurstParticles(
+  vaultRects: Record<number, DropRect>,
+  screenOffset: { x: number; y: number }
+): CoinParticle[] {
+  const particles: CoinParticle[] = [];
+  let id = 0;
+
+  for (const vaultId of [0, 1, 2] as const) {
+    const rect = vaultRects[vaultId];
+    if (!rect) continue;
+
+    const originX = rect.x - screenOffset.x + rect.width / 2;
+    const originY = rect.y - screenOffset.y + Math.min(rect.height * 0.25, 90);
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (-100 + (i / 11) * 200) * (Math.PI / 180);
+      const spread = 60 + Math.random() * 85;
+      const vertical = 70 + Math.random() * 90;
+      const dx = Math.cos(angle) * spread;
+      const peakY = -(vertical + 20 + Math.random() * 24);
+      const endY = peakY + 28 + Math.random() * 54;
+      particles.push({
+        id: id++,
+        x: originX,
+        y: originY,
+        dx,
+        peakY,
+        endY,
+        rotateDeg: `${Math.round(-35 + Math.random() * 70)}deg`,
+        size: 14 + Math.round(Math.random() * 6),
+      });
+    }
+  }
+
+  return particles;
 }
 
 interface VaultScreenProps {
@@ -41,12 +91,15 @@ interface VaultScreenProps {
 export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: VaultScreenProps) {
   const [helpVisible, setHelpVisible] = useState(false);
   const { playTap, playLootGain, playLootLoss } = useCardSound();
+  const celebrationPlayer = useAudioPlayer(require('../../assets/sounds/fanfare.wav'));
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
 
   // Store reads
   const phase = useReckoningStore((s) => s.phase);
   const deck = useReckoningStore((s) => s.deck);
   const currentCard = useReckoningStore((s) => s.currentCard);
   const vaults = useReckoningStore((s) => s.vaults);
+  const exactHits = useReckoningStore((s) => s.exactHits);
   const preBuffPhase = useReckoningStore((s) => s.preBuffPhase);
 
   const initGame = useReckoningStore((s) => s.initGame);
@@ -64,12 +117,10 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   // Inventory
   const inventoryItems = useInventoryStore((s) => s.items);
   const removeItem = useInventoryStore((s) => s.removeItem);
-  const hasInsideSwitch = inventoryItems.some(
-    (e) => e.itemId === 'inside-switch' && e.quantity > 0,
-  );
-  const hasBurnEvidence = inventoryItems.some(
-    (e) => e.itemId === 'burn-evidence' && e.quantity > 0,
-  );
+  const insideSwitchQty = inventoryItems.find((e) => e.itemId === 'inside-switch')?.quantity ?? 0;
+  const burnEvidenceQty = inventoryItems.find((e) => e.itemId === 'burn-evidence')?.quantity ?? 0;
+  const hasInsideSwitch = insideSwitchQty > 0;
+  const hasBurnEvidence = burnEvidenceQty > 0;
 
   // Running score from vaults already in play
   const runningScore = useMemo(() => {
@@ -156,6 +207,10 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const [switchDragCard, setSwitchDragCard] = useState<VaultCard | null>(null);
   const switchFromVaultIdRef = useRef<0 | 1 | 2 | null>(null);
   const switchDragInstanceIdRef = useRef<string | null>(null);
+  const [holdPerfectFinish, setHoldPerfectFinish] = useState(false);
+  const [coinParticles, setCoinParticles] = useState<CoinParticle[]>([]);
+  const coinBurstAnim = useRef(new Animated.Value(0)).current;
+  const perfectFinishTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (phase === 'idle') {
@@ -165,9 +220,39 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
 
   useEffect(() => {
     if (phase === 'done') {
+      if (exactHits === 3) {
+        if (perfectFinishTriggeredRef.current) return;
+
+        perfectFinishTriggeredRef.current = true;
+        setHoldPerfectFinish(true);
+        setCoinParticles(buildCoinBurstParticles(vaultRects, screenOffsetRef.current));
+        coinBurstAnim.setValue(0);
+        Animated.timing(coinBurstAnim, {
+          toValue: 1,
+          duration: 1250,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+
+        if (soundEnabled) {
+          celebrationPlayer.seekTo(0);
+          celebrationPlayer.play();
+        }
+        return;
+      }
       onGameEnd();
     }
-  }, [phase]);
+  }, [phase, exactHits, vaultRects, coinBurstAnim, onGameEnd, celebrationPlayer, soundEnabled]);
+
+  useEffect(() => {
+    if (phase !== 'done') {
+      perfectFinishTriggeredRef.current = false;
+      setHoldPerfectFinish(false);
+      setCoinParticles([]);
+      coinBurstAnim.stopAnimation();
+      coinBurstAnim.setValue(0);
+    }
+  }, [phase, coinBurstAnim]);
 
   const prevVaultsRef = useRef(vaults);
   useEffect(() => {
@@ -341,6 +426,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
     currentCard !== null;
 
   const canBurnCurrentCard = phase === 'burn' && currentCard !== null;
+  const showPerfectFinishOverlay = phase === 'done' && exactHits === 3 && holdPerfectFinish;
 
   const assignHint = inBuffMode
     ? phase === 'burn'
@@ -403,7 +489,10 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
                   }
                   activeOpacity={phase === 'dealing' || phase === 'assigning' ? 0.75 : 1}
                 >
-                  <Text style={styles.toolbarBtnText}>🧰 Switch</Text>
+                  <Text style={styles.toolbarBtnText}>
+                    {'🧰 Switch'}
+                    <Text style={styles.toolbarBtnQtyText}> x{insideSwitchQty}</Text>
+                  </Text>
                 </TouchableOpacity>
               )}
               {hasBurnEvidence && (
@@ -419,7 +508,10 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
                   }
                   activeOpacity={phase === 'dealing' || phase === 'assigning' ? 0.75 : 1}
                 >
-                  <Text style={styles.toolbarBtnText}>🔥 Burn</Text>
+                  <Text style={styles.toolbarBtnText}>
+                    {'🔥 Burn'}
+                    <Text style={styles.toolbarBtnQtyText}> x{burnEvidenceQty}</Text>
+                  </Text>
                 </TouchableOpacity>
               )}
             </>
@@ -594,6 +686,77 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         </Animated.View>
       )}
 
+      {coinParticles.length > 0 && showPerfectFinishOverlay && (
+        <View pointerEvents="none" style={styles.coinBurstLayer}>
+          {coinParticles.map((particle) => {
+            const opacity = coinBurstAnim.interpolate({
+              inputRange: [0, 0.06, 0.82, 1],
+              outputRange: [0, 1, 1, 0],
+              extrapolate: 'clamp',
+            });
+            const translateX = coinBurstAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, particle.dx],
+            });
+            const translateY = coinBurstAnim.interpolate({
+              inputRange: [0, 0.45, 1],
+              outputRange: [0, particle.peakY, particle.endY],
+              extrapolate: 'clamp',
+            });
+            const scale = coinBurstAnim.interpolate({
+              inputRange: [0, 0.12, 1],
+              outputRange: [0.45, 1.12, 0.9],
+              extrapolate: 'clamp',
+            });
+            return (
+              <Animated.View
+                key={particle.id}
+                style={[
+                  styles.coinParticle,
+                  {
+                    left: particle.x - particle.size / 2,
+                    top: particle.y - particle.size / 2,
+                    width: particle.size,
+                    height: particle.size,
+                    borderRadius: particle.size / 2,
+                    opacity,
+                    transform: [
+                      { translateX },
+                      { translateY },
+                      { rotate: particle.rotateDeg },
+                      { scale },
+                    ],
+                  },
+                ]}
+              >
+                <Text style={styles.coinParticleText}>$</Text>
+              </Animated.View>
+            );
+          })}
+        </View>
+      )}
+
+      {showPerfectFinishOverlay && (
+        <View style={styles.perfectFinishOverlay}>
+          <View style={styles.perfectFinishPanel}>
+            <Text style={styles.perfectFinishTitle}>PERFECT CRACK</Text>
+            <Text style={styles.perfectFinishBody}>
+              Exact hit on all three vaults. Take a look at the board, then continue when you are ready.
+            </Text>
+            <TouchableOpacity
+              style={styles.perfectFinishBtn}
+              onPress={() => {
+                setHoldPerfectFinish(false);
+                onGameEnd();
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.perfectFinishBtnText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <AceModal />
       <ReckoningHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
       {showTutorial && (
@@ -693,6 +856,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.s,
     fontWeight: theme.fontWeights.bold,
+  },
+  toolbarBtnQtyText: {
+    color: theme.colors.text70,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.medium,
   },
   toolbarCancelBtn: {
     backgroundColor: theme.colors.bgPanel,
@@ -851,6 +1019,76 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
+  },
+  coinBurstLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 60,
+    elevation: 30,
+  },
+  coinParticle: {
+    position: 'absolute',
+    backgroundColor: theme.colors.goldBright,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.goldDim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  coinParticleText: {
+    color: '#7a5b00',
+    fontSize: theme.fontSizes.xs,
+    fontWeight: theme.fontWeights.black,
+    lineHeight: 12,
+  },
+  perfectFinishOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 70,
+    elevation: 40,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    justifyContent: 'flex-end',
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+  },
+  perfectFinishPanel: {
+    backgroundColor: 'rgba(27,67,50,0.96)',
+    borderRadius: theme.radii.lg,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.gold,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.ten,
+  },
+  perfectFinishTitle: {
+    color: theme.colors.goldBright,
+    fontSize: theme.fontSizes.lg,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 1.5,
+    textAlign: 'center',
+  },
+  perfectFinishBody: {
+    color: theme.colors.text85,
+    fontSize: theme.fontSizes.md,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  perfectFinishBtn: {
+    alignSelf: 'center',
+    backgroundColor: theme.colors.greenPrimary,
+    borderRadius: theme.radii.r12,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderMedium,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.forty,
+    marginTop: theme.spacing.xs,
+  },
+  perfectFinishBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.subtitle,
+    fontWeight: theme.fontWeights.heavy,
+    letterSpacing: 0.6,
   },
   snapTopRow: {
     flexDirection: 'row',
