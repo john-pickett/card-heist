@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import theme from '../theme';
+import { SneakInSolutionModal } from '../components/SneakInSolutionModal';
+import { useSneakInStore } from '../store/sneakInStore';
 
 type TimingGrade = 'excellent' | 'superb' | 'great' | 'solid' | 'notbad' | 'timeout';
 type TimingRating = { grade: TimingGrade; label: string; bonus: number };
@@ -42,6 +44,9 @@ interface Props {
 
 export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, cumulativeGold, onContinue }: Props) {
   const rating = getTimingRating(elapsedMs ?? 0, timedOut);
+  const solution = useSneakInStore(s => s.solution);
+  const areas = useSneakInStore(s => s.areas);
+  const [showSolutionModal, setShowSolutionModal] = useState(false);
 
   return (
     <View style={styles.screen}>
@@ -63,7 +68,7 @@ export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, cumulativeG
             {rating.label}
           </Text>
           <Text style={styles.perfBonus}>
-            {timingBonus > 0 ? `+${timingBonus} point bonus` : 'No time bonus'}
+            {timingBonus > 0 ? `+${timingBonus} gold bonus` : 'No gold bonus'}
           </Text>
         </View>
 
@@ -97,10 +102,24 @@ export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, cumulativeG
       </ScrollView>
 
       <View style={styles.footer}>
+        {solution && (
+          <TouchableOpacity style={styles.reviewBtn} onPress={() => setShowSolutionModal(true)}>
+            <Text style={styles.reviewBtnText}>Review Solution</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.continueBtn} onPress={onContinue}>
           <Text style={styles.continueBtnText}>Continue to Act 2 →</Text>
         </TouchableOpacity>
       </View>
+
+      {solution && (
+        <SneakInSolutionModal
+          visible={showSolutionModal}
+          onClose={() => setShowSolutionModal(false)}
+          solution={solution}
+          areas={areas}
+        />
+      )}
     </View>
   );
 }
@@ -246,6 +265,21 @@ const styles = StyleSheet.create({
     color: theme.colors.text76,
     fontSize: theme.fontSizes.md,
     lineHeight: 18,
+  },
+  reviewBtn: {
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.lg,
+    paddingVertical: theme.spacing.lg,
+    alignItems: 'center',
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderStrong,
+    marginBottom: theme.spacing.sm,
+  },
+  reviewBtnText: {
+    color: theme.colors.textSoft,
+    fontSize: theme.fontSizes.subtitle,
+    fontWeight: theme.fontWeights.heavy,
+    letterSpacing: 0.5,
   },
   continueBtn: {
     backgroundColor: theme.colors.greenPrimary,
