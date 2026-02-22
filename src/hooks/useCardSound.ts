@@ -6,6 +6,7 @@ export function useCardSound() {
   const tapPlayer = useAudioPlayer(require('../../assets/sounds/tap.wav'));
   const lootGainPlayer = useAudioPlayer(require('../../assets/sounds/coins-in-bag.wav'));
   const lootLossPlayer = useAudioPlayer(require('../../assets/sounds/coins-out-of-bag.wav'));
+  const purchasePlayer = useAudioPlayer(require('../../assets/sounds/notify.wav'));
   const soundEnabled = useSettingsStore(s => s.soundEnabled);
 
   const playTap = useCallback(() => {
@@ -26,5 +27,11 @@ export function useCardSound() {
     lootLossPlayer.play();
   }, [lootLossPlayer, soundEnabled]);
 
-  return { playTap, playLootGain, playLootLoss };
+  const playPurchase = useCallback(() => {
+    if (!soundEnabled) return;
+    purchasePlayer.seekTo(0);
+    purchasePlayer.play();
+  }, [purchasePlayer, soundEnabled]);
+
+  return { playTap, playLootGain, playLootLoss, playPurchase };
 }

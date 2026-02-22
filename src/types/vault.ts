@@ -19,7 +19,7 @@ export interface Vault {
   targetRevealed: boolean;
 }
 
-export type ReckoningPhase = 'idle' | 'dealing' | 'assigning' | 'ace' | 'done';
+export type ReckoningPhase = 'idle' | 'dealing' | 'assigning' | 'ace' | 'switch' | 'burn' | 'done';
 
 export interface PendingAce {
   card: Card;
@@ -39,6 +39,8 @@ export interface ReckoningState {
   busts: number;
   aceOnes: number;
   aceElevens: number;
+  preBuffPhase: 'dealing' | 'assigning' | null;
+  switchSource: { vaultId: 0 | 1 | 2; instanceId: string } | null;
 }
 
 export interface ReckoningActions {
@@ -47,4 +49,11 @@ export interface ReckoningActions {
   assignCard: (vaultId: 0 | 1 | 2) => void;
   chooseAceValue: (value: AceValue) => void;
   standVault: (vaultId: 0 | 1 | 2) => void;
+  activateInsideSwitch: () => void;
+  cancelInsideSwitch: () => void;
+  completeSwitchMove: (fromVaultId: 0 | 1 | 2, instanceId: string, toVaultId: 0 | 1 | 2) => void;
+  activateBurnEvidence: () => void;
+  cancelBurnEvidence: () => void;
+  burnVaultCard: (vaultId: 0 | 1 | 2, instanceId: string) => void;
+  burnCurrentCard: () => void;
 }
