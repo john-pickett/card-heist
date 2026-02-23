@@ -28,7 +28,12 @@ import { useInventoryStore } from './src/store/inventoryStore';
 import { useReckoningStore } from './src/store/vaultStore';
 import { useSneakInStore } from './src/store/sneakInStore';
 import { useSettingsStore } from './src/store/settingsStore';
-import { MARKET_ACT_ORDER, MARKET_ITEMS, MARKET_UNLOCK_HEISTS } from './src/data/marketItems';
+import {
+  BLACK_MARKET_ENTRY_FEE,
+  MARKET_ACT_ORDER,
+  MARKET_ITEMS,
+  MARKET_UNLOCK_HEISTS,
+} from './src/data/marketItems';
 import { MarketAct } from './src/types/market';
 import {
   DEFAULT_TUTORIALS,
@@ -59,6 +64,7 @@ export default function App() {
 
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
   const spentGold = useHistoryStore(s => s.spentGold);
+  const spendGold = useHistoryStore(s => s.spendGold);
   const heistCount = useHistoryStore(s => s.records.length);
   const availableGold = lifetimeGold - spentGold;
   const inventoryItems = useInventoryStore(s => s.items);
@@ -365,7 +371,13 @@ export default function App() {
       if (shouldShowBlackMarketIntro) {
         return (
           <BlackMarketIntroScreen
-            onContinue={() => setBlackMarketIntroSeen(true)}
+            availableGold={availableGold}
+            entryFee={BLACK_MARKET_ENTRY_FEE}
+            onContinue={() => {
+              if (availableGold < BLACK_MARKET_ENTRY_FEE) return;
+              spendGold(BLACK_MARKET_ENTRY_FEE);
+              setBlackMarketIntroSeen(true);
+            }}
           />
         );
       }

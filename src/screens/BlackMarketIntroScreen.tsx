@@ -3,10 +3,14 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import theme from '../theme';
 
 interface Props {
+  availableGold: number;
+  entryFee: number;
   onContinue: () => void;
 }
 
-export function BlackMarketIntroScreen({ onContinue }: Props) {
+export function BlackMarketIntroScreen({ availableGold, entryFee, onContinue }: Props) {
+  const canAfford = availableGold >= entryFee;
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -23,8 +27,8 @@ export function BlackMarketIntroScreen({ onContinue }: Props) {
             It is tucked under your door, folded into a perfect square, sealed with black wax and
             no name. Inside: a hand-drawn key, an address that does not exist on any map you own,
             and a time written in green ink. When you arrive, the building is just a shuttered
-            tailor shop. You knock anyway. A slot opens. Someone asks, "How many jobs?" You answer,
-            "Five." The lock clicks before you finish the word.
+            tailor shop. You knock anyway. A slot opens. Someone asks, "How many jobs?" 
+            You answer, "Five." The voice then adds, {' '}" {entryFee}{' '}gold to get in."
           </Text>
           <Text style={styles.storyText}>
             Downstairs, behind bolts, curtains, and one suspiciously polite bodyguard, the real
@@ -35,16 +39,28 @@ export function BlackMarketIntroScreen({ onContinue }: Props) {
         </View>
 
         <View style={styles.hintCard}>
-          <Text style={styles.hintTitle}>Access granted</Text>
+          <Text style={styles.hintTitle}>Entry fee required</Text>
           <Text style={styles.hintText}>
-            Spend your gold here between heists to stock up on tools for future runs.
+            First-time entry costs {entryFee} gold. You have {availableGold} gold.
           </Text>
+          {!canAfford && (
+            <Text style={styles.hintWarning}>
+              You need {entryFee - availableGold} more gold before they let you in.
+            </Text>
+          )}
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.continueBtn} onPress={onContinue} activeOpacity={0.8}>
-          <Text style={styles.continueBtnText}>Continue to Market</Text>
+        <TouchableOpacity
+          style={[styles.continueBtn, !canAfford && styles.continueBtnDisabled]}
+          onPress={onContinue}
+          activeOpacity={0.8}
+          disabled={!canAfford}
+        >
+          <Text style={[styles.continueBtnText, !canAfford && styles.continueBtnTextDisabled]}>
+            {canAfford ? `Pay ${entryFee} Gold` : `Need ${entryFee} Gold`}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -125,6 +141,12 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     lineHeight: 18,
   },
+  hintWarning: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
+    marginTop: theme.spacing.sm,
+  },
   footer: {
     paddingHorizontal: theme.spacing.xxl,
     paddingTop: theme.spacing.md,
@@ -142,10 +164,17 @@ const styles = StyleSheet.create({
     borderWidth: theme.borderWidths.thin,
     borderColor: theme.colors.borderMedium,
   },
+  continueBtnDisabled: {
+    backgroundColor: theme.colors.bgOverlaySoft,
+    borderColor: theme.colors.borderSubtle,
+  },
   continueBtnText: {
     color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.subtitle,
     fontWeight: theme.fontWeights.heavy,
     letterSpacing: 0.5,
+  },
+  continueBtnTextDisabled: {
+    color: theme.colors.textMuted,
   },
 });

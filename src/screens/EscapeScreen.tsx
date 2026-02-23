@@ -15,7 +15,11 @@ import { EscapeHelpModal } from '../components/EscapeHelpModal';
 import { useEscapeStore } from '../store/escapeStore';
 import { useInventoryStore } from '../store/inventoryStore';
 import { useSettingsStore } from '../store/settingsStore';
-import { ESCAPE_EXIT_POSITION, ESCAPE_PATH_LENGTH } from '../constants/escapeBalance';
+import {
+  ESCAPE_EXIT_POSITION,
+  ESCAPE_PATH_LENGTH,
+  ESCAPE_POLICE_ALERT_THRESHOLD,
+} from '../constants/escapeBalance';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import theme from '../theme';
 
@@ -49,6 +53,7 @@ export function EscapeScreen({
     playerPosition,
     policePosition,
     selectedIds,
+    policeAlertLevel,
     errorMessage,
     policeMessage,
     turnLog,
@@ -278,19 +283,27 @@ export function EscapeScreen({
     'Select cards to lay melds or discard strategically to move your position and protect your total gold, because getting caught means losing most of the haul.';
 
   const showContinue = phase === 'awaiting_continue' || (phase === 'lost' && !lostConfirmed);
+  const alertSegmentsFilled = Math.min(ESCAPE_POLICE_ALERT_THRESHOLD, policeAlertLevel);
+  const alertLevelColor =
+    alertSegmentsFilled >= 3
+      ? theme.colors.red
+      : alertSegmentsFilled === 2
+      ? theme.colors.orange
+      : alertSegmentsFilled === 1
+      ? theme.colors.gold
+      : theme.colors.borderFaint;
 
   // ── Game Board ─────────────────────────────────────────────────────────────
   return (
     <View style={styles.screen}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>ACT 3: ESCAPE</Text>
-        <View style={[styles.turnBadge, isPlayerTurn ? styles.turnBadgePlayer : styles.turnBadgePolice]}>
-          <Text style={styles.turnBadgeText}>{isPlayerTurn ? 'YOUR TURN' : 'POLICE TURN'}</Text>
+        <Text style={styles.headerTitle}>ESCAPE</Text>
+        <View style={styles.scoreBadge}>
+          <Text style={styles.scoreText}>Gold: {totalScore}</Text>
         </View>
-        <Text style={styles.headerScore}>{totalScore} gold</Text>
         <TouchableOpacity style={styles.helpBtn} onPress={() => setHelpVisible(true)} hitSlop={8}>
-          <Text style={styles.helpBtnText}>?</Text>
+          <Text style={styles.helpBtnText}>Help</Text>
         </TouchableOpacity>
       </View>
 
@@ -353,6 +366,29 @@ export function EscapeScreen({
         </View>
       </View>
 
+      <View style={styles.alertMeterWrap}>
+        <View style={styles.alertMeterHeader}>
+          <Text style={styles.alertMeterLabel}>ALERT</Text>
+          <Text style={[styles.alertMeterValue, { color: alertLevelColor }]}>
+            {alertSegmentsFilled}/{ESCAPE_POLICE_ALERT_THRESHOLD}
+          </Text>
+        </View>
+        <View style={styles.alertMeterRow}>
+          {[0, 1, 2].map(idx => {
+            const filled = idx < alertSegmentsFilled;
+            return (
+              <View
+                key={idx}
+                style={[
+                  styles.alertMeterSegment,
+                  filled && { backgroundColor: alertLevelColor, borderColor: alertLevelColor },
+                ]}
+              />
+            );
+          })}
+        </View>
+      </View>
+
       {/* Recent Police Activity */}
       {turnLog.length > 0 && (
         <View style={styles.turnLogPanel}>
@@ -361,53 +397,110 @@ export function EscapeScreen({
             <View key={entry.turn} style={[styles.turnLogRow, i > 0 && styles.turnLogRowOld]}>
               <Text style={styles.turnLogTurnNum}>T{entry.turn}</Text>
               <View style={styles.turnLogActions}>
-                <Text style={styles.turnLogActionPolice} numberOfLines={2}>👮 {entry.policeAction}</Text>
+                {(entry.policeEvents ?? [entry.policeAction]).map((event, eventIdx) => (
+                  <Text
+                    key={`${entry.turn}-p-${eventIdx}`}
+                    style={styles.turnLogActionPolice}
+                    numberOfLines={2}
+                  >
+                    👮 {event}
+                  </Text>
+                ))}
               </View>
             </View>
           ))}
         </View>
       )}
 
-      {/* Status area */}
-      <View style={styles.statusArea}>
-        <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
-      </View>
+      <View style={styles.bottomDock}>
+        {/* Status area */}
+        <View style={styles.statusArea}>
+          <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
+        </View>
 
-      {/* Hand label row */}
-      <View style={styles.handLabelRow}>
-        <Text style={styles.handLabel}>MY HAND</Text>
-        <TouchableOpacity onPress={() => setDiscardModalVisible(true)}>
-          <Text style={styles.deckBtn}>DECK: {deck.length} →</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 2×4 card grid */}
-      <View style={styles.handGrid}>
-        {playerHand.map(ec => {
-          const selected = selectedIds.includes(ec.instanceId);
-          const isRed = RED_SUITS.has(ec.card.suit);
-          return (
+        {/* Action buttons */}
+        <View style={styles.actionRow}>
+          {showContinue ? (
             <TouchableOpacity
-              key={ec.instanceId}
-              onPress={() => toggleSelect(ec.instanceId)}
-              disabled={buttonsDisabled}
-              activeOpacity={0.75}
+              style={[styles.btn, styles.btnContinue]}
+              onPress={() => {
+                if (phase === 'awaiting_continue') endPoliceTurn();
+                else setLostConfirmed(true);
+              }}
             >
-              <View style={[
-                styles.miniCard,
-                selected && styles.miniCardSelected,
-                { width: cardW, height: cardH },
-              ]}>
-                <Text style={[styles.miniRank, isRed && styles.redText]}>
-                  {ec.card.rank}
-                </Text>
-                <Text style={[styles.miniSuit, isRed && styles.redText]}>
-                  {SUIT_SYMBOL[ec.card.suit]}
-                </Text>
-              </View>
+              <Text style={styles.btnText}>Continue</Text>
             </TouchableOpacity>
-          );
-        })}
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.btn,
+                  styles.btnMeld,
+                  (buttonsDisabled || selectedIds.length < 3) && styles.btnDisabled,
+                ]}
+                onPress={handleLayMeld}
+                disabled={buttonsDisabled || selectedIds.length < 3}
+              >
+                <Text style={styles.btnText}>LAY MELD</Text>
+                {selectedIds.length >= 3 && (
+                  <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.btn,
+                  styles.btnDiscard,
+                  (buttonsDisabled || selectedIds.length === 0) && styles.btnDisabled,
+                ]}
+                onPress={discard}
+                disabled={buttonsDisabled || selectedIds.length === 0}
+              >
+                <Text style={styles.btnText}>DISCARD</Text>
+                {selectedIds.length > 0 && (
+                  <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {/* Hand label row */}
+        <View style={styles.handLabelRow}>
+          <Text style={styles.handLabel}>MY HAND</Text>
+          <TouchableOpacity onPress={() => setDiscardModalVisible(true)}>
+            <Text style={styles.deckBtn}>DECK: {deck.length} →</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 2×4 card grid */}
+        <View style={styles.handGrid}>
+          {playerHand.map(ec => {
+            const selected = selectedIds.includes(ec.instanceId);
+            const isRed = RED_SUITS.has(ec.card.suit);
+            return (
+              <TouchableOpacity
+                key={ec.instanceId}
+                onPress={() => toggleSelect(ec.instanceId)}
+                disabled={buttonsDisabled}
+                activeOpacity={0.75}
+              >
+                <View style={[
+                  styles.miniCard,
+                  selected && styles.miniCardSelected,
+                  { width: cardW, height: cardH },
+                ]}>
+                  <Text style={[styles.miniRank, isRed && styles.redText]}>
+                    {ec.card.rank}
+                  </Text>
+                  <Text style={[styles.miniSuit, isRed && styles.redText]}>
+                    {SUIT_SYMBOL[ec.card.suit]}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       <EscapeHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
@@ -431,52 +524,6 @@ export function EscapeScreen({
         </ActTutorialOverlay>
       )}
 
-      {/* Action buttons */}
-      <View style={styles.actionRow}>
-        {showContinue ? (
-          <TouchableOpacity
-            style={[styles.btn, styles.btnContinue]}
-            onPress={() => {
-              if (phase === 'awaiting_continue') endPoliceTurn();
-              else setLostConfirmed(true);
-            }}
-          >
-            <Text style={styles.btnText}>Continue</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={[
-                styles.btn,
-                styles.btnMeld,
-                (buttonsDisabled || selectedIds.length < 3) && styles.btnDisabled,
-              ]}
-              onPress={handleLayMeld}
-              disabled={buttonsDisabled || selectedIds.length < 3}
-            >
-              <Text style={styles.btnText}>LAY MELD</Text>
-              {selectedIds.length >= 3 && (
-                <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.btn,
-                styles.btnDiscard,
-                (buttonsDisabled || selectedIds.length === 0) && styles.btnDisabled,
-              ]}
-              onPress={discard}
-              disabled={buttonsDisabled || selectedIds.length === 0}
-            >
-              <Text style={styles.btnText}>DISCARD</Text>
-              {selectedIds.length > 0 && (
-                <Text style={styles.btnSub}>{selectedIds.length} cards</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
     </View>
   );
 }
@@ -488,7 +535,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
-    paddingTop: theme.spacing.fiftyTwo,
     paddingHorizontal: theme.spacing.lg,
   },
 
@@ -496,14 +542,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingTop: theme.spacing.ten,
     marginBottom: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
   headerTitle: {
-    color: theme.colors.gold,
-    fontSize: theme.fontSizes.subtitle,
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.lg,
     fontWeight: theme.fontWeights.black,
-    letterSpacing: 1.5,
+    letterSpacing: 2,
     flex: 1,
   },
   turnBadge: {
@@ -523,29 +570,33 @@ const styles = StyleSheet.create({
     fontWeight: theme.fontWeights.black,
     letterSpacing: 1,
   },
-  headerScore: {
-    color: theme.colors.gold,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.heavy,
+  scoreBadge: {
+    backgroundColor: theme.colors.greenPrimary,
+    borderRadius: theme.radii.r8,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.three,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderStrong,
+  },
+  scoreText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.bold,
   },
 
   // Help button
   helpBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: theme.radii.lg,
     backgroundColor: theme.colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.borderStrong,
+    borderRadius: theme.radii.r8,
+    paddingHorizontal: theme.spacing.ten,
+    paddingVertical: theme.spacing.xs,
   },
   helpBtnText: {
-    color: theme.colors.text70,
-    fontSize: theme.fontSizes.m,
-    fontWeight: theme.fontWeights.heavy,
+    color: theme.colors.text75,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.bold,
   },
-
+  
   // Path track
   trackContainer: {
     marginBottom: theme.spacing.md,
@@ -608,6 +659,46 @@ const styles = StyleSheet.create({
   },
 
   // Turn log
+  alertMeterWrap: {
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.r8,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderFaint,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    marginBottom: theme.spacing.six,
+  },
+  alertMeterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.xs,
+  },
+  alertMeterLabel: {
+    color: theme.colors.text50,
+    fontSize: theme.fontSizes.caption,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 1,
+  },
+  alertMeterValue: {
+    fontSize: theme.fontSizes.caption,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 0.5,
+  },
+  alertMeterRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
+  },
+  alertMeterSegment: {
+    flex: 1,
+    height: 10,
+    borderRadius: theme.radii.r8,
+    backgroundColor: theme.colors.bgPrimary,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderFaint,
+  },
+
+  // Turn log
   turnLogPanel: {
     backgroundColor: theme.colors.bgPanel,
     borderRadius: theme.radii.r8,
@@ -655,6 +746,10 @@ const styles = StyleSheet.create({
   },
 
   // Status
+  bottomDock: {
+    marginTop: 'auto',
+    paddingBottom: theme.spacing.xxl,
+  },
   statusArea: {
     height: 36,
     alignItems: 'center',
@@ -734,7 +829,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    paddingBottom: theme.spacing.xxl,
+    marginBottom: theme.spacing.sm,
   },
   btn: {
     flex: 1,

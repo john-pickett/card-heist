@@ -19,6 +19,7 @@ export const ESCAPE_POLICE_AUTO_MOVE_CHANCE_BY_PLAYER_TURN = [
 ] as const;
 
 export const ESCAPE_POLICE_DISCARDS_PER_EXTRA_MOVE = 2;
+export const ESCAPE_POLICE_ALERT_THRESHOLD = 3;
 
 export function getEscapePoliceAutoMoveChancePct(playerTurnsCompleted: number): number {
   if (playerTurnsCompleted <= 0) return 0;

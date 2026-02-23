@@ -22,6 +22,7 @@ export interface TurnLogEntry {
   turn: number;
   playerAction: string;   // e.g. "Laid a match (set, 1 step)"
   policeAction: string;   // e.g. "Police closed in — now at step 4"
+  policeEvents?: string[]; // separate police log events within the same turn
   playerPos: number;
   policePos: number;
 }
@@ -44,11 +45,13 @@ export interface EscapeState {
   playerRuns: number;
   playerCardsDrawn: number;
   playerDiscardCount: number;
+  policeAlertLevel: number;
   policeMelds: number;
   policeCardsDrawn: number;
   turnsPlayed: number;
   turnLog: TurnLogEntry[];
   lastPlayerAction: string | null;
+  pendingPoliceAlertAction: string | null;
 }
 
 export interface EscapeActions {

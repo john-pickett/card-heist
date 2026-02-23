@@ -1,5 +1,6 @@
 import { Rank, Suit } from '../types/card';
 import {
+  ESCAPE_POLICE_ALERT_THRESHOLD,
   ESCAPE_POLICE_START_POSITION,
   ESCAPE_PLAYER_START_POSITION,
   ESCAPE_POLICE_AUTO_MOVE_CHANCE_BY_PLAYER_TURN,
@@ -38,7 +39,7 @@ export interface SimulationResult {
 export interface GameConfig {
   playerStart?: number;            // default from escapeBalance
   policeStart?: number;            // default from escapeBalance
-  discardsPerAdvance?: number;     // default 2 (every 2nd player discard → police advance)
+  alertThreshold?: number;         // default from escapeBalance (noise alerts police after N player actions)
   policeAutoAdvanceEvery?: number; // legacy override; if set, uses deterministic auto-advance cadence
   policeAutoMoveChanceByTurn?: number[]; // current Act 3 baseline chance schedule by player turn
   policeMeldAdvance?: number;      // legacy simulator option; ignored unless useLegacyPoliceAi=true
@@ -254,15 +255,20 @@ export function runOneGame(config: GameConfig = {}): GameResult {
   const {
     playerStart = ESCAPE_PLAYER_START_POSITION,
     policeStart = ESCAPE_POLICE_START_POSITION,
-    discardsPerAdvance = 2,
+    alertThreshold = ESCAPE_POLICE_ALERT_THRESHOLD,
     policeAutoAdvanceEvery,
     policeAutoMoveChanceByTurn = [...ESCAPE_POLICE_AUTO_MOVE_CHANCE_BY_PLAYER_TURN],
     policeMeldAdvance = 1,
     useLegacyPoliceAi = false,
   } = config;
 
-  const shuffled = shuffleArray(createSimDeck());
-  let playerHand: SimCard[] = shuffled.slice(0, 8);
+  let shuffled: SimCard[];
+  let playerHand: SimCard[];
+  do {
+    shuffled = shuffleArray(createSimDeck());
+    playerHand = shuffled.slice(0, 8);
+  } while (!findPlayerMeld(playerHand));
+
   let policeHand: SimCard[] = useLegacyPoliceAi ? shuffled.slice(8, 15) : [];
   let deck: SimCard[] = useLegacyPoliceAi ? shuffled.slice(15) : shuffled.slice(8);
   let outOfPlay: SimCard[] = [];
@@ -270,6 +276,8 @@ export function runOneGame(config: GameConfig = {}): GameResult {
   let playerPosition = playerStart;
   let policePosition = policeStart;
   let playerDiscardCount = 0;
+  let policeAlertLevel = 0;
+  let resetAlertAfterPoliceTurn = false;
   let turns = 0;
   let playerMelds = 0;
   let policeMelds = 0;
@@ -292,6 +300,15 @@ export function runOneGame(config: GameConfig = {}): GameResult {
       if (playerPosition <= 1) {
         return { won: true, turns, playerMelds, policeMelds, terminatedByLimit: false };
       }
+
+      policeAlertLevel = Math.min(alertThreshold, policeAlertLevel + 1);
+      if (policeAlertLevel >= alertThreshold) {
+        policePosition--;
+        resetAlertAfterPoliceTurn = true;
+        if (policePosition <= playerPosition) {
+          return { won: false, turns, playerMelds, policeMelds, terminatedByLimit: false };
+        }
+      }
     } else {
       const discard = chooseBestDiscard(playerHand);
       const remaining = playerHand.filter(c => c !== discard);
@@ -301,8 +318,11 @@ export function runOneGame(config: GameConfig = {}): GameResult {
       deck = drawn.newDeck;
       outOfPlay = drawn.newOutOfPlay;
       playerDiscardCount++;
-      if (playerDiscardCount % discardsPerAdvance === 0) {
+
+      policeAlertLevel = Math.min(alertThreshold, policeAlertLevel + 1);
+      if (policeAlertLevel >= alertThreshold) {
         policePosition--;
+        resetAlertAfterPoliceTurn = true;
         if (policePosition <= playerPosition) {
           return { won: false, turns, playerMelds, policeMelds, terminatedByLimit: false };
         }
@@ -348,6 +368,11 @@ export function runOneGame(config: GameConfig = {}): GameResult {
       if (policePosition <= playerPosition) {
         return { won: false, turns, playerMelds, policeMelds, terminatedByLimit: false };
       }
+    }
+
+    if (resetAlertAfterPoliceTurn) {
+      policeAlertLevel = 0;
+      resetAlertAfterPoliceTurn = false;
     }
   }
 
@@ -397,13 +422,13 @@ export function runSimulation(n: number, config?: GameConfig): SimulationResult 
 
 const SWEEP_CONFIGS: Array<{ label: string; config: GameConfig }> = [
   { label: 'Baseline',        config: {} },
-  { label: 'Per-discard',     config: { discardsPerAdvance: 1 } },
+  { label: 'Alert @1',        config: { alertThreshold: 1 } },
   { label: 'No Auto',         config: { policeAutoMoveChanceByTurn: [0] } },
   { label: 'Timer ×2',        config: { policeAutoAdvanceEvery: 2 } },
   { label: 'Legacy Police',   config: { useLegacyPoliceAi: true, policeAutoAdvanceEvery: 1 } },
   { label: 'Baseline +P5',    config: { playerStart: 5 } },
   { label: 'Timer ×2 +P5',    config: { policeAutoAdvanceEvery: 2, playerStart: 5 } },
-  { label: 'Combo',           config: { discardsPerAdvance: 1, policeAutoAdvanceEvery: 2 } },
+  { label: 'Combo',           config: { alertThreshold: 1, policeAutoAdvanceEvery: 2 } },
 ];
 
 export function runSweep(n: number): SweepEntry[] {

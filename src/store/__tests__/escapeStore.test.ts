@@ -32,13 +32,45 @@ function resetEscapeStore(overrides: Partial<ReturnType<typeof useEscapeStore.ge
     playerRuns: 0,
     playerCardsDrawn: 0,
     playerDiscardCount: 0,
+    policeAlertLevel: 0,
     policeMelds: 0,
     policeCardsDrawn: 0,
     turnsPlayed: 0,
     turnLog: [],
     lastPlayerAction: null,
+    pendingPoliceAlertAction: null,
     ...overrides,
   });
+}
+
+function openingHandHasMeld(hand: EscapeCard[]): boolean {
+  const rankOrder: Rank[] = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  for (let a = 0; a < hand.length; a++) {
+    for (let b = a + 1; b < hand.length; b++) {
+      for (let c = b + 1; c < hand.length; c++) {
+        const triples = [hand[a], hand[b], hand[c]];
+        const tripleRanks = triples.map(card => card.card.rank);
+        const isSet3 = tripleRanks.every(rank => rank === tripleRanks[0]);
+        const isRun3 = tripleRanks
+          .map(rank => rankOrder.indexOf(rank))
+          .sort((x, y) => x - y)
+          .every((idx, i, arr) => i === 0 || idx === arr[i - 1] + 1);
+        if (isSet3 || isRun3) return true;
+
+        for (let d = c + 1; d < hand.length; d++) {
+          const quads = [hand[a], hand[b], hand[c], hand[d]];
+          const quadRanks = quads.map(card => card.card.rank);
+          const isSet4 = quadRanks.every(rank => rank === quadRanks[0]);
+          const isRun4 = quadRanks
+            .map(rank => rankOrder.indexOf(rank))
+            .sort((x, y) => x - y)
+            .every((idx, i, arr) => i === 0 || idx === arr[i - 1] + 1);
+          if (isSet4 || isRun4) return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 describe('escapeStore', () => {
@@ -60,6 +92,14 @@ describe('escapeStore', () => {
 
     expect(state.errorMessage).toBe('Select 3 or 4 cards to meld');
     expect(state.phase).toBe('player_turn');
+  });
+
+  test('initGame deals an opening hand with at least one valid meld', () => {
+    useEscapeStore.getState().initGame();
+    const state = useEscapeStore.getState();
+
+    expect(state.playerHand).toHaveLength(8);
+    expect(openingHandHasMeld(state.playerHand)).toBe(true);
   });
 
   test('layMeld with 4-card set advances two spaces and can win', () => {
@@ -139,7 +179,7 @@ describe('escapeStore', () => {
     expect(state.lastMeldType).toBe('run');
   });
 
-  test('discard advances police on every second discard and transitions to police_thinking', () => {
+  test('discard raises police alert and transitions to police_thinking', () => {
     const p1 = makeEscapeCard('2', 'p1');
     const p2 = makeEscapeCard('9', 'p2');
     const draw1 = makeEscapeCard('5', 'd1');
@@ -148,6 +188,7 @@ describe('escapeStore', () => {
       playerPosition: 3,
       policePosition: 4,
       playerDiscardCount: 1,
+      policeAlertLevel: 1,
       playerHand: [p1, p2],
       selectedIds: ['p1'],
       deck: [draw1],
@@ -157,10 +198,30 @@ describe('escapeStore', () => {
     const state = useEscapeStore.getState();
 
     expect(state.phase).toBe('police_thinking');
-    expect(state.policePosition).toBe(3);
+    expect(state.policePosition).toBe(4);
+    expect(state.policeAlertLevel).toBe(2);
     expect(state.playerDiscardCount).toBe(2);
     expect(state.playerCardsDrawn).toBe(1);
     expect(state.turnsPlayed).toBe(1);
+  });
+
+  test('discard re-sorts player hand A through K after drawing replacement cards', () => {
+    const handA = makeEscapeCard('K', 'k1', 'hearts');
+    const handB = makeEscapeCard('3', 'c3', 'clubs');
+    const draw1 = makeEscapeCard('A', 'a1', 'spades');
+    const draw2 = makeEscapeCard('10', 't1', 'diamonds');
+
+    resetEscapeStore({
+      playerHand: [handA, handB],
+      selectedIds: ['k1'],
+      deck: [draw1],
+      outOfPlay: [draw2],
+    });
+
+    useEscapeStore.getState().discard();
+    const state = useEscapeStore.getState();
+
+    expect(state.playerHand.map(c => c.card.rank)).toEqual(['A', '3']);
   });
 
   test('runPoliceTurn advances police 1 step and returns control to player when not caught', () => {
@@ -182,7 +243,7 @@ describe('escapeStore', () => {
     expect(state.lastMeldType).toBeNull();
   });
 
-  test('runPoliceTurn clamps police position to player position on catch and waits for continue', () => {
+  test('runPoliceTurn clamps police position to player position on catch and loses immediately', () => {
     resetEscapeStore({
       policePosition: 4,
       playerPosition: 3,
@@ -193,9 +254,9 @@ describe('escapeStore', () => {
     useEscapeStore.getState().runPoliceTurn();
     const state = useEscapeStore.getState();
 
-    expect(state.phase).toBe('awaiting_continue');
+    expect(state.phase).toBe('lost');
     expect(state.policePosition).toBe(3);
-    expect(state.policeMessage).toBe("Police heard movement and closed in — they've caught you!");
+    expect(state.policeMessage).toBe("Police search is getting closer — they've caught you!");
     expect(state.turnLog.at(-1)?.policePos).toBe(3);
   });
 
@@ -212,7 +273,7 @@ describe('escapeStore', () => {
 
     expect(state.phase).toBe('player_turn');
     expect(state.policePosition).toBe(5);
-    expect(state.turnLog.at(-1)?.policeAction).toBe('Police heard movement and are investigating nearby');
+    expect(state.turnLog.at(-1)?.policeAction).toBe('Police are investigating nearby');
   });
 
   test('runPoliceTurn records turn log entry', () => {
@@ -296,13 +357,13 @@ describe('escapeStore', () => {
       expect(state.phase).toBe('player_turn');
     });
 
-    test('caps at position 6', () => {
+    test('caps at path length', () => {
       resetEscapeStore({ policePosition: 6, phase: 'player_turn' });
 
       useEscapeStore.getState().activateFalseTrail();
       const state = useEscapeStore.getState();
 
-      expect(state.policePosition).toBe(6);
+      expect(state.policePosition).toBe(7);
     });
 
     test('does nothing outside player_turn', () => {

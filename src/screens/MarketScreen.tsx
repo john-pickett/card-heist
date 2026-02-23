@@ -45,7 +45,7 @@ export function MarketScreen() {
           <Text style={styles.lockedIcon}>🚪</Text>
           <Text style={styles.lockedMessage}>
             The shadowy people running the black market don't know you yet. This door will open
-            after 5 heists.
+            after {MARKET_UNLOCK_HEISTS} heist{MARKET_UNLOCK_HEISTS === 1 ? '' : 's'}.
           </Text>
           <Text style={styles.lockedProgress}>
             {heistsRemaining} heist{heistsRemaining === 1 ? '' : 's'} to go

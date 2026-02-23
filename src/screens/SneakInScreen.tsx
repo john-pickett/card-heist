@@ -3,7 +3,6 @@ import {
   Animated,
   Image,
   PanResponder,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -317,6 +316,7 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const hasAnyReturnable = areas.some(a => a.isUnlocked && a.cards.length > 0);
 
   const rows = [areas.slice(0, 2), areas.slice(2, 4)];
+  const handRows = [hand.slice(0, 5), hand.slice(5, 10)].filter(row => row.length > 0);
   const tutorialParagraph =
     'Drag cards from your hand into unlocked areas and match each target sum to crack every zone. Each zone requires two or three cards (no more and no less!).' +
     ' You can move cards back and forth to fix mistakes, but the timer never stops, so solve all four quickly to lock in the best bonus.';
@@ -553,38 +553,39 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
         )}
 
         <View ref={handDropRef} onLayout={scheduleMeasure} style={styles.handDropZone}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.handContent}
-          >
-            {hand.map(sc => {
-              const red = RED_SUITS.has(sc.card.suit);
-              const isHinted = insideTipHint?.card.instanceId === sc.instanceId;
-              return (
-                <DraggableCard
-                  key={sc.instanceId}
-                  card={sc}
-                  source="hand"
-                  style={[styles.handCard, isHinted && styles.handCardHinted]}
-                  isDragging={activeDrag?.card.instanceId === sc.instanceId}
-                  dragPan={dragPan}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                >
-                  <Text style={[styles.handRank, red && styles.red]}>
-                    {sc.card.rank}
-                  </Text>
-                  <Text style={[styles.handSuit, red && styles.red]}>
-                    {SUIT_SYMBOL[sc.card.suit]}
-                  </Text>
-                </DraggableCard>
-              );
-            })}
-            {hand.length === 0 && (
-              <Text style={styles.emptyHand}>All cards placed</Text>
-            )}
-          </ScrollView>
+          {hand.length === 0 ? (
+            <Text style={styles.emptyHand}>All cards placed</Text>
+          ) : (
+            <View style={styles.handGrid}>
+              {handRows.map((row, rowIndex) => (
+                <View key={`hand-row-${rowIndex}`} style={styles.handRow}>
+                  {row.map(sc => {
+                    const red = RED_SUITS.has(sc.card.suit);
+                    const isHinted = insideTipHint?.card.instanceId === sc.instanceId;
+                    return (
+                      <DraggableCard
+                        key={sc.instanceId}
+                        card={sc}
+                        source="hand"
+                        style={[styles.handCard, isHinted && styles.handCardHinted]}
+                        isDragging={activeDrag?.card.instanceId === sc.instanceId}
+                        dragPan={dragPan}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <Text style={[styles.handRank, red && styles.red]}>
+                          {sc.card.rank}
+                        </Text>
+                        <Text style={[styles.handSuit, red && styles.red]}>
+                          {SUIT_SYMBOL[sc.card.suit]}
+                        </Text>
+                      </DraggableCard>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </View>
 
@@ -919,14 +920,20 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   handDropZone: {
-    minHeight: 76,
+    minHeight: 150,
     overflow: 'visible',
   },
-  handContent: {
+  handGrid: {
     paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
+    gap: theme.spacing.six,
     alignItems: 'center',
     overflow: 'visible',
+  },
+  handRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    justifyContent: 'center',
+    minHeight: 68,
   },
   handCard: {
     backgroundColor: theme.colors.cardFace,

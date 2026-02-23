@@ -1,6 +1,7 @@
 import { MarketItemDefinition } from '../types/market';
 
-export const MARKET_UNLOCK_HEISTS = 5;
+export const MARKET_UNLOCK_HEISTS = __DEV__ ? 1 : 5;
+export const BLACK_MARKET_ENTRY_FEE = 2000;
 
 export const MARKET_ITEMS: MarketItemDefinition[] = [
   {
