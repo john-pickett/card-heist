@@ -224,7 +224,7 @@ describe('vaultStore', () => {
 
     expect(state.vaults[2].isStood).toBe(true);
     expect(state.phase).toBe('done');
-    expect(state.finalScore).toBe(33); // 13*2 + 0 + 7
+    expect(state.finalScore).toBe(330); // (13*2 + 0 + 7) * 10
   });
 
   test('deck-empty condition ends game after chooseAceValue', () => {
@@ -243,7 +243,7 @@ describe('vaultStore', () => {
 
     expect(state.vaults[0].sum).toBe(3);
     expect(state.phase).toBe('done');
-    expect(state.finalScore).toBe(3);
+    expect(state.finalScore).toBe(30);
     expect(state.aceOnes).toBe(1);
   });
 

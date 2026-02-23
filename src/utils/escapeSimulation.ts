@@ -1,4 +1,9 @@
 import { Rank, Suit } from '../types/card';
+import {
+  ESCAPE_POLICE_START_POSITION,
+  ESCAPE_PLAYER_START_POSITION,
+  ESCAPE_POLICE_AUTO_MOVE_CHANCE_BY_PLAYER_TURN,
+} from '../constants/escapeBalance';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,10 +36,11 @@ export interface SimulationResult {
 }
 
 export interface GameConfig {
-  playerStart?: number;            // default 4
-  policeStart?: number;            // default 6
-  discardsPerAdvance?: number;     // default 1 (every player discard → police advance)
-  policeAutoAdvanceEvery?: number; // default 1 (current Act 3 = every turn)
+  playerStart?: number;            // default from escapeBalance
+  policeStart?: number;            // default from escapeBalance
+  discardsPerAdvance?: number;     // default 2 (every 2nd player discard → police advance)
+  policeAutoAdvanceEvery?: number; // legacy override; if set, uses deterministic auto-advance cadence
+  policeAutoMoveChanceByTurn?: number[]; // current Act 3 baseline chance schedule by player turn
   policeMeldAdvance?: number;      // legacy simulator option; ignored unless useLegacyPoliceAi=true
   useLegacyPoliceAi?: boolean;     // legacy simulator mode (police hand/meld/discard model)
 }
@@ -234,16 +240,23 @@ function chooseBestDiscard(hand: SimCard[]): SimCard {
   return worstCard;
 }
 
+function getPoliceAutoMoveChancePctForTurn(turns: number, chances: number[]): number {
+  if (turns <= 0 || chances.length === 0) return 0;
+  const idx = Math.min(turns - 1, chances.length - 1);
+  return chances[idx] ?? 0;
+}
+
 // ─── Layer 5: Run one game ───────────────────────────────────────────────────
 
 const MAX_TURNS = 500;
 
 export function runOneGame(config: GameConfig = {}): GameResult {
   const {
-    playerStart = 4,
-    policeStart = 6,
-    discardsPerAdvance = 1,
-    policeAutoAdvanceEvery = 1,
+    playerStart = ESCAPE_PLAYER_START_POSITION,
+    policeStart = ESCAPE_POLICE_START_POSITION,
+    discardsPerAdvance = 2,
+    policeAutoAdvanceEvery,
+    policeAutoMoveChanceByTurn = [...ESCAPE_POLICE_AUTO_MOVE_CHANCE_BY_PLAYER_TURN],
     policeMeldAdvance = 1,
     useLegacyPoliceAi = false,
   } = config;
@@ -323,9 +336,14 @@ export function runOneGame(config: GameConfig = {}): GameResult {
       }
     }
 
-    // Current Act 3: police advance after every player action.
-    // In legacy mode this remains configurable for sweep experiments.
-    if (policeAutoAdvanceEvery > 0 && turns % policeAutoAdvanceEvery === 0) {
+    // Current Act 3 baseline: escalating chance to auto-advance after each player turn.
+    // Optional deterministic cadence remains available for simulator sweeps.
+    const shouldAutoAdvance =
+      typeof policeAutoAdvanceEvery === 'number'
+        ? policeAutoAdvanceEvery > 0 && turns % policeAutoAdvanceEvery === 0
+        : Math.random() < getPoliceAutoMoveChancePctForTurn(turns, policeAutoMoveChanceByTurn) / 100;
+
+    if (shouldAutoAdvance) {
       policePosition--;
       if (policePosition <= playerPosition) {
         return { won: false, turns, playerMelds, policeMelds, terminatedByLimit: false };
@@ -379,8 +397,8 @@ export function runSimulation(n: number, config?: GameConfig): SimulationResult 
 
 const SWEEP_CONFIGS: Array<{ label: string; config: GameConfig }> = [
   { label: 'Baseline',        config: {} },
-  { label: 'Per-2-discard',   config: { discardsPerAdvance: 2 } },
-  { label: 'No Timer',        config: { policeAutoAdvanceEvery: 0 } },
+  { label: 'Per-discard',     config: { discardsPerAdvance: 1 } },
+  { label: 'No Auto',         config: { policeAutoMoveChanceByTurn: [0] } },
   { label: 'Timer ×2',        config: { policeAutoAdvanceEvery: 2 } },
   { label: 'Legacy Police',   config: { useLegacyPoliceAi: true, policeAutoAdvanceEvery: 1 } },
   { label: 'Baseline +P5',    config: { playerStart: 5 } },

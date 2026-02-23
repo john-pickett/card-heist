@@ -1,5 +1,10 @@
 import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ESCAPE_EXIT_POSITION,
+  ESCAPE_POLICE_START_POSITION,
+  ESCAPE_PLAYER_START_POSITION,
+} from '../constants/escapeBalance';
 import theme from '../theme';
 
 interface EscapeHelpModalProps {
@@ -18,7 +23,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'Move your token from step 4 to step 1 (EXIT) before the police catch up. The police start at step 6 and close in each turn.',
+        body: `Move your token from step ${ESCAPE_PLAYER_START_POSITION} to step ${ESCAPE_EXIT_POSITION} (EXIT) before the police catch up. The police start at step ${ESCAPE_POLICE_START_POSITION} and investigate more aggressively as turns go on.`,
       },
     ],
   },
@@ -53,7 +58,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'After every action you take, the police automatically advance 1 step toward you. Every discard also pushes them 1 extra step closer.',
+        body: 'After your turn, the police may move based on an escalating alert chance: 0%, 20%, 40%, 60%, 80%, then 100% from turn 6 onward. Every 2nd discard also pushes them 1 extra step closer.',
       },
     ],
   },
@@ -62,7 +67,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: 'Escape',
-        body: 'Reach step 1 (EXIT). You keep 100% of your campaign score.',
+        body: `Reach step ${ESCAPE_EXIT_POSITION} (EXIT). You keep 100% of your campaign score.`,
       },
       {
         label: 'Caught',
@@ -75,7 +80,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'Matches are the only way to advance — prioritize building them. The police advance every turn regardless — discarding buys you cards but not safety. Every discard moves them 1 extra step. Any 4-card match advances you 2 steps.',
+        body: 'Matches are the only way to advance — prioritize building them. Early turns are safer, but the police become more likely to close in each turn. Every 2nd discard moves them 1 extra step. Any 4-card match advances you 2 steps.',
       },
     ],
   },

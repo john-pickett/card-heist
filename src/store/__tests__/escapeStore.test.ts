@@ -139,7 +139,7 @@ describe('escapeStore', () => {
     expect(state.lastMeldType).toBe('run');
   });
 
-  test('discard advances police and transitions to police_thinking', () => {
+  test('discard advances police on every second discard and transitions to police_thinking', () => {
     const p1 = makeEscapeCard('2', 'p1');
     const p2 = makeEscapeCard('9', 'p2');
     const draw1 = makeEscapeCard('5', 'd1');
@@ -147,7 +147,7 @@ describe('escapeStore', () => {
     resetEscapeStore({
       playerPosition: 3,
       policePosition: 4,
-      playerDiscardCount: 0,
+      playerDiscardCount: 1,
       playerHand: [p1, p2],
       selectedIds: ['p1'],
       deck: [draw1],
@@ -158,7 +158,7 @@ describe('escapeStore', () => {
 
     expect(state.phase).toBe('police_thinking');
     expect(state.policePosition).toBe(3);
-    expect(state.playerDiscardCount).toBe(1);
+    expect(state.playerDiscardCount).toBe(2);
     expect(state.playerCardsDrawn).toBe(1);
     expect(state.turnsPlayed).toBe(1);
   });
@@ -167,7 +167,7 @@ describe('escapeStore', () => {
     resetEscapeStore({
       policePosition: 5,
       playerPosition: 2,
-      turnsPlayed: 3,
+      turnsPlayed: 6,
       lastPlayerAction: 'Laid a match (set, 1 step)',
       lastMeldType: 'set',
     });
@@ -186,7 +186,7 @@ describe('escapeStore', () => {
     resetEscapeStore({
       policePosition: 4,
       playerPosition: 3,
-      turnsPlayed: 2,
+      turnsPlayed: 6,
       lastPlayerAction: 'Discarded 1 card',
     });
 
@@ -195,15 +195,31 @@ describe('escapeStore', () => {
 
     expect(state.phase).toBe('awaiting_continue');
     expect(state.policePosition).toBe(3);
-    expect(state.policeMessage).toBe("Police closed in — they've caught you!");
+    expect(state.policeMessage).toBe("Police heard movement and closed in — they've caught you!");
     expect(state.turnLog.at(-1)?.policePos).toBe(3);
+  });
+
+  test('runPoliceTurn can log an investigation without movement', () => {
+    resetEscapeStore({
+      policePosition: 5,
+      playerPosition: 2,
+      turnsPlayed: 1, // 0% move chance
+      lastPlayerAction: 'Laid a match (run, 1 step)',
+    });
+
+    useEscapeStore.getState().runPoliceTurn();
+    const state = useEscapeStore.getState();
+
+    expect(state.phase).toBe('player_turn');
+    expect(state.policePosition).toBe(5);
+    expect(state.turnLog.at(-1)?.policeAction).toBe('Police heard movement and are investigating nearby');
   });
 
   test('runPoliceTurn records turn log entry', () => {
     resetEscapeStore({
       policePosition: 5,
       playerPosition: 2,
-      turnsPlayed: 3,
+      turnsPlayed: 6,
       lastPlayerAction: 'Discarded 2 cards',
       turnLog: [],
     });
@@ -212,7 +228,7 @@ describe('escapeStore', () => {
     const state = useEscapeStore.getState();
 
     expect(state.turnLog).toHaveLength(1);
-    expect(state.turnLog[0].turn).toBe(3);
+    expect(state.turnLog[0].turn).toBe(6);
     expect(state.turnLog[0].playerAction).toBe('Discarded 2 cards');
     expect(state.turnLog[0].policePos).toBe(4);
   });
@@ -226,7 +242,7 @@ describe('escapeStore', () => {
     resetEscapeStore({
       policePosition: 4,
       playerPosition: 2,
-      turnsPlayed: 4,
+      turnsPlayed: 6,
       lastPlayerAction: 'Discarded 1 card',
       turnLog: existingLog,
     });
@@ -236,7 +252,7 @@ describe('escapeStore', () => {
 
     expect(state.turnLog).toHaveLength(3);
     expect(state.turnLog[0].turn).toBe(2);
-    expect(state.turnLog[2].turn).toBe(4);
+    expect(state.turnLog[2].turn).toBe(6);
   });
 
   test('endPoliceTurn sets lost when police catch player', () => {

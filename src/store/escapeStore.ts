@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { createDeck, shuffleDeck } from '../data/deck';
 import { Card, Rank } from '../types/card';
 import {
+  ESCAPE_EXIT_POSITION,
+  ESCAPE_PATH_LENGTH,
+  ESCAPE_POLICE_DISCARDS_PER_EXTRA_MOVE,
+  ESCAPE_POLICE_START_POSITION,
+  ESCAPE_PLAYER_START_POSITION,
+  getEscapePoliceAutoMoveChancePct,
+} from '../constants/escapeBalance';
+import {
   EscapeCard,
   EscapeState,
   EscapeActions,
@@ -75,8 +83,8 @@ const INITIAL_STATE: EscapeState = {
   deck: [],
   playerHand: [],
   policeHand: [],
-  playerPosition: 4,
-  policePosition: 6,
+  playerPosition: ESCAPE_PLAYER_START_POSITION,
+  policePosition: ESCAPE_POLICE_START_POSITION,
   selectedIds: [],
   errorMessage: null,
   policeMessage: null,
@@ -149,12 +157,12 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       turnsPlayed: turnsPlayed + 1,
     };
 
-    if (newPosition <= 1) {
+    if (newPosition <= ESCAPE_EXIT_POSITION) {
       set({
         playerHand: newHand,
         deck: newDeck,
         outOfPlay: newOutOfPlay,
-        playerPosition: 1,
+        playerPosition: ESCAPE_EXIT_POSITION,
         selectedIds: [],
         errorMessage: null,
         infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
@@ -192,8 +200,10 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
 
     const newDiscardCount = playerDiscardCount + 1;
-    const policeAdvance = true;
-    const newPolicePos = Math.max(playerPosition, policePosition - 1);
+    const policeAdvance = newDiscardCount % ESCAPE_POLICE_DISCARDS_PER_EXTRA_MOVE === 0;
+    const newPolicePos = policeAdvance
+      ? Math.max(playerPosition, policePosition - 1)
+      : policePosition;
     const actionStr = `Discarded ${selectedIds.length} card${selectedIds.length > 1 ? 's' : ''}${policeAdvance ? ' — police alerted' : ''}`;
 
     set({
@@ -214,12 +224,16 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
 
   runPoliceTurn: () => {
     const { policePosition, playerPosition, turnsPlayed, turnLog, lastPlayerAction } = get();
-    const nextPolicePos = policePosition - 1;
-    const caught = nextPolicePos <= playerPosition;
+    const autoMoveChancePct = getEscapePoliceAutoMoveChancePct(turnsPlayed);
+    const shouldAutoMove = Math.random() < autoMoveChancePct / 100;
+    const nextPolicePos = shouldAutoMove ? policePosition - 1 : policePosition;
+    const caught = shouldAutoMove && nextPolicePos <= playerPosition;
     const newPolicePos = caught ? playerPosition : nextPolicePos;
     const policeAction = caught
-      ? "Police closed in — they've caught you!"
-      : `Police closed in — now at step ${newPolicePos}`;
+      ? "Police heard movement and closed in — they've caught you!"
+      : shouldAutoMove
+      ? `Police heard movement and closed in — now at step ${newPolicePos}`
+      : 'Police heard movement and are investigating nearby';
 
     const entry: TurnLogEntry = {
       turn: turnsPlayed,
@@ -270,6 +284,6 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
   activateFalseTrail: () => {
     const { phase, policePosition } = get();
     if (phase !== 'player_turn') return;
-    set({ policePosition: Math.min(6, policePosition + 1) });
+    set({ policePosition: Math.min(ESCAPE_PATH_LENGTH, policePosition + 1) });
   },
 }));

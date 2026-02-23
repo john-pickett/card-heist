@@ -247,7 +247,10 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
 
         {/* Terminal overlays */}
         {vault.isBusted && (
-          <View style={[styles.overlay, styles.bustedOverlay]}>
+          <View
+            pointerEvents={buffModeActive ? 'none' : 'auto'}
+            style={[styles.overlay, styles.bustedOverlay]}
+          >
             <Text style={styles.overlayText}>BUST</Text>
           </View>
         )}

@@ -18,11 +18,11 @@ function formatTime(ms: number): string {
 function getTimingRating(elapsedMs: number, timedOut: boolean): TimingRating {
   if (timedOut) return { grade: 'timeout',   label: 'Time Ran Out', bonus: 0  };
   const s = Math.floor(elapsedMs / 1000);
-  if (s <= 15) return { grade: 'excellent', label: 'Excellent',    bonus: 50 };
-  if (s <= 30) return { grade: 'superb',    label: 'Superb',       bonus: 40 };
-  if (s <= 60) return { grade: 'great',     label: 'Great',        bonus: 25 };
-  if (s <= 90) return { grade: 'solid',     label: 'Solid',        bonus: 15 };
-  return       { grade: 'notbad',    label: 'Not Bad',      bonus: 10 };
+  if (s <= 15) return { grade: 'excellent', label: 'Excellent',    bonus: 500 };
+  if (s <= 30) return { grade: 'superb',    label: 'Superb',       bonus: 400 };
+  if (s <= 60) return { grade: 'great',     label: 'Great',        bonus: 250 };
+  if (s <= 90) return { grade: 'solid',     label: 'Solid',        bonus: 150 };
+  return       { grade: 'notbad',    label: 'Not Bad',      bonus: 100 };
 }
 
 const GRADE_COLORS: Record<TimingGrade, string> = {

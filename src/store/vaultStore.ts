@@ -24,8 +24,8 @@ function computeSum(cards: VaultCard[]): number {
 
 function vaultScore(vault: Vault): number {
   if (vault.isBusted) return 0;
-  if (vault.sum === vault.target) return vault.sum * 2;
-  return vault.sum;
+  if (vault.sum === vault.target) return vault.sum * 2 * 10;
+  return vault.sum * 10;
 }
 
 function isTerminal(vault: Vault): boolean {

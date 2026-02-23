@@ -126,8 +126,8 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const runningScore = useMemo(() => {
     return vaults.reduce((total, v) => {
       if (v.isBusted) return total;
-      if (v.sum === v.target) return total + v.sum * 2;
-      return total + v.sum;
+      if (v.sum === v.target) return total + v.sum * 2 * 10;
+      return total + v.sum * 10;
     }, 0);
   }, [vaults]);
 

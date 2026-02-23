@@ -10,7 +10,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     title: 'Inside Tip',
     flavor: 'A leak from someone on the inside.',
     effect: 'Reveal one card from an area.',
-    cost: 10,
+    cost: 100,
   },
   {
     id: 'false-alarm',
@@ -19,7 +19,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     title: 'False Alarm',
     flavor: 'Authorities ignore the initial report.',
     effect: 'Extend timer by one minute.',
-    cost: 20,
+    cost: 200,
   },
   {
     id: 'inside-switch',
@@ -28,7 +28,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     title: 'Inside Switch',
     flavor: 'Slide the cash to a better lockbox.',
     effect: 'Move card from one vault to another.',
-    cost: 15,
+    cost: 150,
   },
   {
     id: 'burn-evidence',
@@ -37,7 +37,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     title: 'Burn the Evidence',
     flavor: 'Card? What card?',
     effect: 'Discard one card (drawn now or already played).',
-    cost: 15,
+    cost: 150,
   },
   {
     id: 'false-trail',
@@ -46,7 +46,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     title: 'False Trail',
     flavor: 'Can this be right?',
     effect: 'Move police back one step.',
-    cost: 15,
+    cost: 150,
   },
 ];
 

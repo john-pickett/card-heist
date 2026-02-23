@@ -18,8 +18,8 @@ export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProp
     onPlayAgain();
   };
 
-  const maxPossible = 13 + 18 + 21; // all 3 targets
-  const isMaxScore = finalScore >= (13 + 18 + 21) * 2;
+  const maxPossible = (13 + 18 + 21) * 10; // all 3 targets, 10x economy
+  const isMaxScore = finalScore >= (13 + 18 + 21) * 2 * 10;
 
   return (
     <View style={styles.screen}>
@@ -39,7 +39,7 @@ export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProp
           {vaults.map((vault) => {
             const isBusted = vault.isBusted;
             const isExact = !isBusted && vault.sum === vault.target;
-            const score = isBusted ? 0 : isExact ? vault.sum * 2 : vault.sum;
+            const score = isBusted ? 0 : isExact ? vault.sum * 2 * 10 : vault.sum * 10;
 
             const statusLabel = isBusted ? 'BUSTED' : isExact ? 'EXACT ×2' : 'UNDER';
             const statusColor = isBusted ? theme.colors.errorRed : isExact ? theme.colors.gold : theme.colors.textGreen;

@@ -347,7 +347,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       if (a.id !== areaId) return a;
       const updatedFailed =
         returningCards.length >= 2
-          ? [...a.failedCombos, returningCards]
+          ? [returningCards]
           : a.failedCombos;
       return { ...a, cards: [], isSolved: false, failedCombos: updatedFailed };
     });
@@ -366,7 +366,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       allReturning.push(...returningCards);
       const updatedFailed =
         returningCards.length >= 2
-          ? [...a.failedCombos, returningCards]
+          ? [returningCards]
           : a.failedCombos;
       return { ...a, cards: [], isSolved: false, failedCombos: updatedFailed };
     });

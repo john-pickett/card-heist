@@ -16,6 +16,7 @@ import { Act2BridgeScreen } from './src/screens/Act2BridgeScreen';
 import { EscapeScreen } from './src/screens/EscapeScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { BlackMarketIntroScreen } from './src/screens/BlackMarketIntroScreen';
 import { MarketScreen } from './src/screens/MarketScreen';
 import { VaultScreen } from './src/screens/VaultScreen';
 import { DevelopmentScreen } from './src/screens/DevelopmentScreen';
@@ -26,7 +27,8 @@ import { useHistoryStore } from './src/store/historyStore';
 import { useInventoryStore } from './src/store/inventoryStore';
 import { useReckoningStore } from './src/store/vaultStore';
 import { useSneakInStore } from './src/store/sneakInStore';
-import { MARKET_ACT_ORDER, MARKET_ITEMS } from './src/data/marketItems';
+import { useSettingsStore } from './src/store/settingsStore';
+import { MARKET_ACT_ORDER, MARKET_ITEMS, MARKET_UNLOCK_HEISTS } from './src/data/marketItems';
 import { MarketAct } from './src/types/market';
 import {
   DEFAULT_TUTORIALS,
@@ -39,6 +41,7 @@ import theme from './src/theme';
 
 type Tab = 'home' | 'market' | 'history' | 'settings';
 type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3';
+type DevLaunchAct = 'act1' | 'act2' | 'act3' | null;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -52,11 +55,15 @@ export default function App() {
   const [tutorialsSeen, setTutorialsSeen] = useState<TutorialSeen>(DEFAULT_TUTORIALS);
   const [tutorialsReady, setTutorialsReady] = useState(false);
   const [inventoryVisible, setInventoryVisible] = useState(false);
+  const [devLaunchAct, setDevLaunchAct] = useState<DevLaunchAct>(null);
 
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
   const spentGold = useHistoryStore(s => s.spentGold);
+  const heistCount = useHistoryStore(s => s.records.length);
   const availableGold = lifetimeGold - spentGold;
   const inventoryItems = useInventoryStore(s => s.items);
+  const blackMarketIntroSeen = useSettingsStore(s => s.blackMarketIntroSeen);
+  const setBlackMarketIntroSeen = useSettingsStore(s => s.setBlackMarketIntroSeen);
 
   const act1Bonus = act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
@@ -140,9 +147,45 @@ export default function App() {
   };
 
   const handleStartGame = () => {
+    setDevLaunchAct(null);
     useSneakInStore.getState().initGame();
     setCampaignStartTime(Date.now());
     setGameFlow('act1');
+  };
+
+  const handleLaunchActForTesting = (act: 'act1' | 'act2' | 'act3') => {
+    setDevLaunchAct(act);
+    setActiveTab('home');
+    resetCampaignState();
+
+    if (act === 'act1') {
+      useSneakInStore.getState().initGame();
+      setCampaignStartTime(Date.now());
+      setGameFlow('act1');
+      return;
+    }
+
+    if (act === 'act2') {
+      useReckoningStore.getState().initGame();
+      setCampaignStartTime(Date.now());
+      setGameFlow('act2');
+      return;
+    }
+
+    useEscapeStore.getState().initGame();
+    setCampaignStartTime(Date.now());
+    setGameFlow('act3');
+  };
+
+  const handleReturnToDevelopmentFromAct = () => {
+    useSneakInStore.getState().initGame();
+    useReckoningStore.getState().initGame();
+    useEscapeStore.getState().initGame();
+    resetCampaignState();
+    setDevLaunchAct(null);
+    setGameFlow('home');
+    setActiveTab('settings');
+    setSettingsScreen('development');
   };
 
   const handleSneakInEnd = () => {
@@ -154,11 +197,11 @@ export default function App() {
       elapsedMs = state.endTime - state.startTime;
       const elapsedSec = Math.floor(elapsedMs / 1000);
       timingBonus =
-        elapsedSec <= 15 ? 50 :
-        elapsedSec <= 30 ? 40 :
-        elapsedSec <= 60 ? 25 :
-        elapsedSec <= 90 ? 15 :
-        elapsedSec <= 120 ? 10 : 0;
+        elapsedSec <= 15 ? 500 :
+        elapsedSec <= 30 ? 400 :
+        elapsedSec <= 60 ? 250 :
+        elapsedSec <= 90 ? 150 :
+        elapsedSec <= 120 ? 100 : 0;
     }
     setAct1TimeBonus(timingBonus);
     setAct1Record({ elapsedMs, timedOut, timingBonus, totalMoves: state.totalMoves });
@@ -192,6 +235,7 @@ export default function App() {
     if (!campaignStartTime || !act1Record || !act2Record) return;
     const escapeState = useEscapeStore.getState();
     const won = escapeState.phase === 'won';
+    const payoutGold = won ? totalScore : Math.round(totalScore * 0.33);
     const act3: Act3Record = {
       won,
       playerMelds: escapeState.playerMelds,
@@ -206,7 +250,7 @@ export default function App() {
       id: Date.now().toString(),
       date: new Date().toISOString(),
       won,
-      totalGold: won ? totalScore : 0,
+      totalGold: payoutGold,
       act1: act1Record,
       act2: act2Record,
       act3,
@@ -224,12 +268,20 @@ export default function App() {
   };
 
   const handlePlayAgain = () => {
+    if (devLaunchAct) {
+      handleReturnToDevelopmentFromAct();
+      return;
+    }
     recordCurrentHeist();
     resetCampaignState();
     setGameFlow('home');
   };
 
   const handleReturnHome = () => {
+    if (devLaunchAct) {
+      handleReturnToDevelopmentFromAct();
+      return;
+    }
     recordCurrentHeist();
     resetCampaignState();
     setGameFlow('home');
@@ -288,6 +340,8 @@ export default function App() {
   };
 
   const isInHeist = activeTab === 'home' && gameFlow !== 'home';
+  const shouldShowBlackMarketIntro =
+    activeTab === 'market' && heistCount >= MARKET_UNLOCK_HEISTS && !blackMarketIntroSeen;
 
   const renderContent = () => {
     if (activeTab === 'settings') {
@@ -296,6 +350,7 @@ export default function App() {
           <DevelopmentScreen
             onBack={() => setSettingsScreen('main')}
             onResetHeistData={handleResetHeistData}
+            onLaunchAct={handleLaunchActForTesting}
           />
         );
       }
@@ -306,7 +361,16 @@ export default function App() {
         />
       );
     }
-    if (activeTab === 'market') return <MarketScreen />;
+    if (activeTab === 'market') {
+      if (shouldShowBlackMarketIntro) {
+        return (
+          <BlackMarketIntroScreen
+            onContinue={() => setBlackMarketIntroSeen(true)}
+          />
+        );
+      }
+      return <MarketScreen />;
+    }
     if (activeTab === 'history') return <HistoryScreen />;
     return renderHomeTab();
   };
@@ -329,6 +393,16 @@ export default function App() {
               <Text style={styles.bagIcon}>👜</Text>
               <Text style={styles.bagCount}>{totalInventoryCount}</Text>
             </TouchableOpacity>
+
+            {devLaunchAct && gameFlow !== 'home' && (
+              <TouchableOpacity
+                style={styles.devBackButton}
+                onPress={handleReturnToDevelopmentFromAct}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.devBackButtonText}>Back to Dev</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.contentArea}>{renderContent()}</View>
@@ -508,6 +582,19 @@ const styles = StyleSheet.create({
     minWidth: 22,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
+  },
+  devBackButton: {
+    borderRadius: theme.radii.r8,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.bgOverlaySoft,
+    paddingVertical: theme.spacing.seven,
+    paddingHorizontal: theme.spacing.md,
+  },
+  devBackButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.heavy,
   },
   contentArea: {
     flex: 1,

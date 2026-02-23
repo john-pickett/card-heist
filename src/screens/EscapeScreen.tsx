@@ -15,6 +15,7 @@ import { EscapeHelpModal } from '../components/EscapeHelpModal';
 import { useEscapeStore } from '../store/escapeStore';
 import { useInventoryStore } from '../store/inventoryStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { ESCAPE_EXIT_POSITION, ESCAPE_PATH_LENGTH } from '../constants/escapeBalance';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import theme from '../theme';
 
@@ -127,6 +128,20 @@ export function EscapeScreen({
   // Initialize on mount
   useEffect(() => { initGame(); }, []);
 
+  // Reset Act 3 state and silence any lingering audio when leaving the screen.
+  useEffect(() => {
+    return () => {
+      [fanfarePlayer, winPlayer, losePlayer, notifyPlayer].forEach(player => {
+        try {
+          player.pause();
+        } catch {
+          // Expo may dispose the native audio object before this cleanup runs.
+        }
+      });
+      useEscapeStore.getState().initGame();
+    };
+  }, [fanfarePlayer, winPlayer, losePlayer, notifyPlayer]);
+
   // Police turn driver
   useEffect(() => {
     if (phase === 'police_thinking') {
@@ -168,21 +183,23 @@ export function EscapeScreen({
     }).start();
   }, [policePosition]);
 
-  // Step X positions: step 1 = left (0), step 6 = right (trackWidth)
-  // stepLeft(step) = ((step - 1) / 5) * trackWidth, then flip: ((6 - step) / 5) * trackWidth
+  const steps = Array.from({ length: ESCAPE_PATH_LENGTH }, (_, i) => i + 1);
+  const stepDenominator = Math.max(1, ESCAPE_PATH_LENGTH - 1);
+
+  // Step positions: EXIT (step 1) is left, highest step is right.
   function stepLeft(step: number): number {
     if (trackWidth === 0) return 0;
-    return ((6 - step) / 5) * trackWidth;
+    return ((ESCAPE_PATH_LENGTH - step) / stepDenominator) * trackWidth;
   }
 
-  const stepPositions = [1, 2, 3, 4, 5, 6].map(stepLeft);
+  const stepPositions = steps.map(stepLeft);
 
   const playerTokenLeft = playerAnim.interpolate({
-    inputRange: [1, 2, 3, 4, 5, 6],
+    inputRange: steps,
     outputRange: stepPositions,
   });
   const policeTokenLeft = policeAnim.interpolate({
-    inputRange: [1, 2, 3, 4, 5, 6],
+    inputRange: steps,
     outputRange: stepPositions,
   });
 
@@ -244,7 +261,7 @@ export function EscapeScreen({
     ? policeMessage
     : errorMessage
     ? errorMessage
-    : `Step ${playerPosition} of 6 — reach EXIT (step 1) to escape`;
+    : `Step ${playerPosition} of ${ESCAPE_PATH_LENGTH} — reach EXIT (step ${ESCAPE_EXIT_POSITION}) to escape`;
 
   const statusColor = infoMessage
     ? theme.colors.successTeal
@@ -305,9 +322,9 @@ export function EscapeScreen({
           <View style={styles.trackLine} />
 
           {/* Step circles */}
-          {[1, 2, 3, 4, 5, 6].map(step => {
+          {steps.map(step => {
             const left = stepLeft(step) - CIRCLE_SIZE / 2 + TOKEN_SIZE / 2;
-            const isExit = step === 1;
+            const isExit = step === ESCAPE_EXIT_POSITION;
             return (
               <View
                 key={step}
@@ -318,7 +335,7 @@ export function EscapeScreen({
                 ]}
               >
                 <Text style={[styles.stepLabel, isExit && styles.stepLabelExit]}>
-                  {isExit ? 'EXIT' : step === 6 ? '6' : `${step}`}
+                  {isExit ? 'EXIT' : `${step}`}
                 </Text>
               </View>
             );
@@ -336,16 +353,15 @@ export function EscapeScreen({
         </View>
       </View>
 
-      {/* Turn Log */}
+      {/* Recent Police Activity */}
       {turnLog.length > 0 && (
         <View style={styles.turnLogPanel}>
-          <Text style={styles.turnLogTitle}>LAST TURNS</Text>
-          {[...turnLog].reverse().map((entry, i) => (
+          <Text style={styles.turnLogTitle}>POLICE ACTIVITY</Text>
+          {[...turnLog].slice(-2).reverse().map((entry, i) => (
             <View key={entry.turn} style={[styles.turnLogRow, i > 0 && styles.turnLogRowOld]}>
               <Text style={styles.turnLogTurnNum}>T{entry.turn}</Text>
               <View style={styles.turnLogActions}>
-                <Text style={styles.turnLogActionYou} numberOfLines={1}>You: {entry.playerAction}</Text>
-                <Text style={styles.turnLogActionPolice} numberOfLines={1}>👮 {entry.policeAction}</Text>
+                <Text style={styles.turnLogActionPolice} numberOfLines={2}>👮 {entry.policeAction}</Text>
               </View>
             </View>
           ))}

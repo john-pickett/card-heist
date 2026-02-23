@@ -168,6 +168,34 @@ describe('sneakInStore', () => {
     expect(state.areas[1].failedCombos).toHaveLength(0);
   });
 
+  test('returnAreaToHand keeps only the most recent failed combo for an area', () => {
+    const c2 = makeCard('2', 'c2');
+    const c4 = makeCard('4', 'c4');
+    const c6 = makeCard('6', 'c6');
+    const c7 = makeCard('7', 'c7');
+    const areas = [
+      makeArea(0, 8, true),
+      makeArea(1, 12, false),
+      makeArea(2, 14, false),
+      makeArea(3, 16, false),
+    ];
+    areas[0].cards = [c2, c6];
+
+    resetSneakInStore([], areas);
+    useSneakInStore.setState({ phase: 'playing' });
+
+    useSneakInStore.getState().returnAreaToHand(0);
+    useSneakInStore.setState((state) => ({
+      hand: state.hand.filter(c => c.instanceId !== 'c4' && c.instanceId !== 'c7'),
+      areas: state.areas.map(a => (a.id === 0 ? { ...a, cards: [c4, c7] } : a)),
+    }));
+    useSneakInStore.getState().returnAreaToHand(0);
+
+    const latest = useSneakInStore.getState().areas[0].failedCombos;
+    expect(latest).toHaveLength(1);
+    expect(latest[0].map(c => c.instanceId)).toEqual(['c4', 'c7']);
+  });
+
   // ---------------------------------------------------------------------------
   // False Alarm buff
   // ---------------------------------------------------------------------------

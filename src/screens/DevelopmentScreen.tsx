@@ -6,6 +6,7 @@ import theme from '../theme';
 interface Props {
   onBack: () => void;
   onResetHeistData: () => Promise<void>;
+  onLaunchAct: (act: 'act1' | 'act2' | 'act3') => void;
 }
 
 type SimPreset = 100 | 1000 | 10000;
@@ -19,7 +20,7 @@ function SimStatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function DevelopmentScreen({ onBack, onResetHeistData }: Props) {
+export function DevelopmentScreen({ onBack, onResetHeistData, onLaunchAct }: Props) {
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const [simRunCount, setSimRunCount] = useState<SimPreset>(1000);
@@ -69,6 +70,25 @@ export function DevelopmentScreen({ onBack, onResetHeistData }: Props) {
       <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.85}>
         <Text style={styles.backButtonText}>Back to Settings</Text>
       </TouchableOpacity>
+
+      <View style={[styles.panel, styles.panelSpaced]}>
+        <Text style={styles.settingTitle}>Jump to Act</Text>
+        <Text style={styles.settingDesc}>
+          Start directly in a specific act for faster testing. Use the in-game Back to Dev button to return here.
+        </Text>
+
+        <View style={styles.jumpRow}>
+          <TouchableOpacity style={styles.jumpBtn} onPress={() => onLaunchAct('act1')}>
+            <Text style={styles.resetBtnText}>Act 1</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.jumpBtn} onPress={() => onLaunchAct('act2')}>
+            <Text style={styles.resetBtnText}>Act 2</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.jumpBtn} onPress={() => onLaunchAct('act3')}>
+            <Text style={styles.resetBtnText}>Act 3</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View style={[styles.panel, styles.panelSpaced]}>
         <Text style={styles.settingTitle}>Reset Heist Data</Text>
@@ -265,6 +285,21 @@ const styles = StyleSheet.create({
   presetRow: {
     flexDirection: 'row',
     gap: s.sm,
+  },
+  jumpRow: {
+    flexDirection: 'row',
+    gap: s.sm,
+    flexWrap: 'wrap',
+  },
+  jumpBtn: {
+    backgroundColor: c.bgDeep,
+    borderRadius: r.md,
+    borderWidth: b.thin,
+    borderColor: c.borderLight,
+    paddingVertical: s.ten,
+    paddingHorizontal: s.fourteen,
+    minWidth: 84,
+    alignItems: 'center',
   },
   presetBtn: {
     backgroundColor: c.bgDeep,
