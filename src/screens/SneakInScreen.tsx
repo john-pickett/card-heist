@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
     borderWidth: theme.borderWidths.thick,
   },
   areaIcon: {
-    fontSize: theme.fontSizes.giant2,
+    fontSize: theme.fontSizes.display,
     textAlign: 'center',
     marginBottom: theme.spacing.six,
   },

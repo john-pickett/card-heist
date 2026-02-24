@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Act1BridgeScreen } from './src/screens/Act1BridgeScreen';
 import { Act2BridgeScreen } from './src/screens/Act2BridgeScreen';
@@ -389,8 +389,9 @@ export default function App() {
 
   return (
     <PaperProvider>
-      <SafeAreaView style={[styles.safeArea, !isInHeist && styles.safeAreaWithTabBar]}>
-        <View style={styles.appShell}>
+      <SafeAreaProvider>
+        <SafeAreaView style={[styles.safeArea, !isInHeist && styles.safeAreaWithTabBar]}>
+          <View style={styles.appShell}>
           <View style={styles.topAppBar}>
             <View style={styles.goldWrap}>
               <Text style={styles.goldLabel}>Gold</Text>
@@ -459,75 +460,76 @@ export default function App() {
           </View>}
         </View>
 
-        <Modal
-          visible={inventoryVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setInventoryVisible(false)}
-        >
-          <View style={styles.inventoryOverlay}>
-            <Pressable
-              style={styles.inventoryBackdrop}
-              onPress={() => setInventoryVisible(false)}
-            />
-            <View style={styles.inventorySheet}>
-              <View style={styles.inventoryHandle} />
-              <Text style={styles.inventoryTitle}>Inventory</Text>
-              <Text style={styles.inventorySubtitle}>
-                Items on hand for your next heist.
-              </Text>
+          <Modal
+            visible={inventoryVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setInventoryVisible(false)}
+          >
+            <View style={styles.inventoryOverlay}>
+              <Pressable
+                style={styles.inventoryBackdrop}
+                onPress={() => setInventoryVisible(false)}
+              />
+              <View style={styles.inventorySheet}>
+                <View style={styles.inventoryHandle} />
+                <Text style={styles.inventoryTitle}>Inventory</Text>
+                <Text style={styles.inventorySubtitle}>
+                  Items on hand for your next heist.
+                </Text>
 
-              {inventoryRows.length === 0 ? (
-                <View style={styles.emptyInventoryCard}>
-                  <Text style={styles.emptyInventoryIcon}>🧳</Text>
-                  <Text style={styles.emptyInventoryTitle}>No items yet</Text>
-                  <Text style={styles.emptyInventoryText}>
-                    Buy tools from the market and they will appear here.
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView
-                  style={styles.inventoryList}
-                  contentContainerStyle={styles.inventoryListContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {activeInventoryRows.length > 0 && (
-                    <View style={styles.activeSection}>
-                      <Text style={styles.activeSectionLabel}>Active</Text>
-                      {activeInventoryRows.map(({ item, quantity }) => (
-                        <View key={item.id} style={styles.inventoryItemCard}>
-                          <View style={styles.inventoryItemHeader}>
-                            <Text style={styles.inventoryItemIcon}>{item.icon}</Text>
-                            <View style={styles.inventoryItemMain}>
-                              <Text style={styles.inventoryItemTitle}>{item.title}</Text>
-                              <Text style={styles.inventoryItemAct}>{item.act}</Text>
+                {inventoryRows.length === 0 ? (
+                  <View style={styles.emptyInventoryCard}>
+                    <Text style={styles.emptyInventoryIcon}>🧳</Text>
+                    <Text style={styles.emptyInventoryTitle}>No items yet</Text>
+                    <Text style={styles.emptyInventoryText}>
+                      Buy tools from the market and they will appear here.
+                    </Text>
+                  </View>
+                ) : (
+                  <ScrollView
+                    style={styles.inventoryList}
+                    contentContainerStyle={styles.inventoryListContent}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {activeInventoryRows.length > 0 && (
+                      <View style={styles.activeSection}>
+                        <Text style={styles.activeSectionLabel}>Active</Text>
+                        {activeInventoryRows.map(({ item, quantity }) => (
+                          <View key={item.id} style={styles.inventoryItemCard}>
+                            <View style={styles.inventoryItemHeader}>
+                              <Text style={styles.inventoryItemIcon}>{item.icon}</Text>
+                              <View style={styles.inventoryItemMain}>
+                                <Text style={styles.inventoryItemTitle}>{item.title}</Text>
+                                <Text style={styles.inventoryItemAct}>{item.act}</Text>
+                              </View>
+                              <Text style={styles.inventoryItemQuantity}>x{quantity}</Text>
                             </View>
-                            <Text style={styles.inventoryItemQuantity}>x{quantity}</Text>
+                            <Text style={styles.inventoryItemEffect}>{item.effect}</Text>
                           </View>
-                          <Text style={styles.inventoryItemEffect}>{item.effect}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  {otherInventoryRows.map(({ item, quantity }) => (
-                    <View key={item.id} style={styles.inventoryItemCard}>
-                      <View style={styles.inventoryItemHeader}>
-                        <Text style={styles.inventoryItemIcon}>{item.icon}</Text>
-                        <View style={styles.inventoryItemMain}>
-                          <Text style={styles.inventoryItemTitle}>{item.title}</Text>
-                          <Text style={styles.inventoryItemAct}>{item.act}</Text>
-                        </View>
-                        <Text style={styles.inventoryItemQuantity}>x{quantity}</Text>
+                        ))}
                       </View>
-                      <Text style={styles.inventoryItemEffect}>{item.effect}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              )}
+                    )}
+                    {otherInventoryRows.map(({ item, quantity }) => (
+                      <View key={item.id} style={styles.inventoryItemCard}>
+                        <View style={styles.inventoryItemHeader}>
+                          <Text style={styles.inventoryItemIcon}>{item.icon}</Text>
+                          <View style={styles.inventoryItemMain}>
+                            <Text style={styles.inventoryItemTitle}>{item.title}</Text>
+                            <Text style={styles.inventoryItemAct}>{item.act}</Text>
+                          </View>
+                          <Text style={styles.inventoryItemQuantity}>x{quantity}</Text>
+                        </View>
+                        <Text style={styles.inventoryItemEffect}>{item.effect}</Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
             </View>
-          </View>
-        </Modal>
-      </SafeAreaView>
+          </Modal>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </PaperProvider>
   );
 }

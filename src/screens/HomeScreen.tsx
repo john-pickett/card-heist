@@ -9,7 +9,7 @@ interface Props {
 export function HomeScreen({ onStartGame }: Props) {
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>BANK HEIST</Text>
+      <Text style={styles.title}>CARD HEIST</Text>
 
       <View style={styles.introBox}>
         <Text style={styles.introTitle}>Welcome to the crew.</Text>
