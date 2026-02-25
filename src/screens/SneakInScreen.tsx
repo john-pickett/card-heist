@@ -423,6 +423,12 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                     isDragTarget && styles.areaCardDropTarget,
                   ]}
                 >
+                  <View pointerEvents="none" style={styles.areaBackgroundLayer}>
+                    <Text style={[styles.areaIcon, locked && styles.dimmed]}>
+                      {AREA_ICONS[area.id]}
+                    </Text>
+                  </View>
+
                   {area.isUnlocked && area.cards.length > 0 && !activeDrag && (
                     <TouchableOpacity
                       style={styles.areaReturnBtn}
@@ -433,29 +439,25 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                     </TouchableOpacity>
                   )}
 
-                  <Text style={[styles.areaIcon, locked && styles.dimmed]}>
-                    {AREA_ICONS[area.id]}
-                  </Text>
+                  <View style={styles.areaTopContent}>
+                    <Text style={[styles.areaLabel, locked && styles.dimmed]}>
+                      {AREA_LABELS[area.id].toUpperCase()}
+                    </Text>
+                    {insideTipHint?.areaId === area.id && !area.isSolved && (
+                      <Text style={styles.areaHintLabel}>💡</Text>
+                    )}
 
-                  <Text style={[styles.areaLabel, locked && styles.dimmed]}>
-                    {AREA_LABELS[area.id].toUpperCase()}
-                  </Text>
-                  {insideTipHint?.areaId === area.id && !area.isSolved && (
-                    <Text style={styles.areaHintLabel}>💡</Text>
-                  )}
-
-                  {locked ? (
-                    <Text style={styles.lockedLabel}>LOCKED</Text>
-                  ) : area.isSolved ? (
-                    <Text style={styles.solvedBadge}>✓ DONE</Text>
-                  ) : (
-                    <View style={styles.targetRow}>
-                      <Text style={styles.targetValue}>{area.target}</Text>
-                    </View>
-                  )}
+                    {locked ? (
+                      <Text style={styles.lockedLabel}>LOCKED</Text>
+                    ) : !area.isSolved ? (
+                      <View style={styles.targetRow}>
+                        <Text style={styles.targetValue}>{area.target}</Text>
+                      </View>
+                    ) : null}
+                  </View>
 
                   {!locked && (
-                    <>
+                    <View style={styles.areaBottomContent}>
                       <View style={styles.cardsZone}>
                         <View style={styles.cardsRow}>
                           {area.cards.map(sc => {
@@ -489,7 +491,7 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                               area.isSolved && styles.sumTextSolved,
                             ]}
                           >
-                            {area.isSolved ? `${cardSum} ✓` : `${cardSum} of ${area.target}`}
+                            {area.isSolved ? `${area.target} Done ✓` : `${cardSum} of ${area.target}`}
                           </Text>
                         )}
                       </View>
@@ -516,7 +518,7 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                           ))}
                         </View>
                       )}
-                    </>
+                    </View>
                   )}
                 </View>
               );
@@ -788,6 +790,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     overflow: 'visible',
+    position: 'relative',
   },
   areaCardActive: {
     borderColor: theme.colors.areaGlowBorder,
@@ -814,10 +817,27 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.textSoft,
     borderWidth: theme.borderWidths.thick,
   },
+  areaBackgroundLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 0,
+  },
   areaIcon: {
     fontSize: theme.fontSizes.display,
     textAlign: 'center',
-    marginBottom: theme.spacing.six,
+    opacity: 0.22,
+  },
+  areaTopContent: {
+    marginTop: 0,
+    paddingTop: theme.spacing.xs,
+    alignItems: 'center',
+    minHeight: 58,
+    zIndex: 1,
   },
   areaLabel: {
     color: theme.colors.text50,
@@ -853,10 +873,16 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   cardsZone: {
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.two,
     alignItems: 'center',
     gap: theme.spacing.xs,
     overflow: 'visible',
+  },
+  areaBottomContent: {
+    marginTop: 'auto',
+    paddingBottom: theme.spacing.xs,
+    alignItems: 'center',
+    width: '100%',
   },
   cardsRow: {
     flexDirection: 'row',
@@ -1055,7 +1081,7 @@ const styles = StyleSheet.create({
 
   // Failed combos history
   failedCombosSection: {
-    marginTop: theme.spacing.six,
+    marginTop: theme.spacing.two,
     alignItems: 'center',
     gap: theme.spacing.three,
   },
