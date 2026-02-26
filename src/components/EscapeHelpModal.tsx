@@ -58,7 +58,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'After your turn, the police may move based on an escalating alert chance: 0%, 20%, 40%, 60%, 80%, then 100% from turn 6 onward. Every 2nd discard also pushes them 1 extra step closer.',
+        body: 'The police are on the scene and looking for you. They may get closer every turn, and will close in when the alert meter is filled.',
       },
     ],
   },
@@ -71,7 +71,7 @@ const SECTIONS: Section[] = [
       },
       {
         label: 'Caught',
-        body: 'The police reach your step or pass it. You keep only 33% of your campaign score.',
+        body: 'The police reach your step or pass it. You keep only a portion of your campaign score.',
       },
     ],
   },

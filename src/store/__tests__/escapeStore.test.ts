@@ -256,7 +256,7 @@ describe('escapeStore', () => {
 
     expect(state.phase).toBe('lost');
     expect(state.policePosition).toBe(3);
-    expect(state.policeMessage).toBe("Police search is getting closer — they've caught you!");
+    expect(state.policeMessage).toBe("The police patrol is getting closer. They've caught you!");
     expect(state.turnLog.at(-1)?.policePos).toBe(3);
   });
 
@@ -273,7 +273,7 @@ describe('escapeStore', () => {
 
     expect(state.phase).toBe('player_turn');
     expect(state.policePosition).toBe(5);
-    expect(state.turnLog.at(-1)?.policeAction).toBe('Police are investigating nearby');
+    expect(state.turnLog.at(-1)?.policeAction).toBe('The police are on the scene and patrolling.');
   });
 
   test('runPoliceTurn records turn log entry', () => {

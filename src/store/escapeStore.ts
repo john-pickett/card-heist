@@ -110,15 +110,20 @@ function applyPoliceNoiseAlert(
   policeAlertLevel: number,
   policePosition: number,
   playerPosition: number,
-): { nextAlertLevel: number; nextPolicePosition: number } {
+): { nextAlertLevel: number; nextPolicePosition: number; alertTriggeredMove: boolean } {
   const raisedAlertLevel = Math.min(ESCAPE_POLICE_ALERT_THRESHOLD, policeAlertLevel + 1);
   if (raisedAlertLevel < ESCAPE_POLICE_ALERT_THRESHOLD) {
-    return { nextAlertLevel: raisedAlertLevel, nextPolicePosition: policePosition };
+    return {
+      nextAlertLevel: raisedAlertLevel,
+      nextPolicePosition: policePosition,
+      alertTriggeredMove: false,
+    };
   }
 
   return {
     nextAlertLevel: raisedAlertLevel,
     nextPolicePosition: Math.max(playerPosition, policePosition - 1),
+    alertTriggeredMove: true,
   };
 }
 
@@ -214,7 +219,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const advance = selectedCards.length === 4 ? 2 : 1;
     const newPosition = playerPosition - advance;
     const actionStr = `Laid a match (${result.type}, ${advance} step${advance > 1 ? 's' : ''})`;
-    const { nextAlertLevel, nextPolicePosition } = applyPoliceNoiseAlert(
+    const { nextAlertLevel, nextPolicePosition, alertTriggeredMove } = applyPoliceNoiseAlert(
       policeAlertLevel,
       policePosition,
       newPosition <= ESCAPE_EXIT_POSITION ? ESCAPE_EXIT_POSITION : newPosition,
@@ -256,7 +261,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
         lastPlayerAction: actionStr,
         policePosition: nextPolicePosition,
         policeAlertLevel: nextAlertLevel,
-        pendingPoliceAlertAction: 'The police heard a noise and are investigating',
+        pendingPoliceAlertAction: alertTriggeredMove ? 'The police are closing in!' : null,
         phase: 'police_thinking',
         ...meldCounters,
       });
@@ -289,7 +294,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
 
     const newDiscardCount = playerDiscardCount + 1;
     const actionStr = `Discarded ${selectedIds.length} card${selectedIds.length > 1 ? 's' : ''}`;
-    const { nextAlertLevel, nextPolicePosition } = applyPoliceNoiseAlert(
+    const { nextAlertLevel, nextPolicePosition, alertTriggeredMove } = applyPoliceNoiseAlert(
       policeAlertLevel,
       policePosition,
       playerPosition,
@@ -304,7 +309,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       infoMessage: reshuffled ? 'Deck empty — reshuffling discards...' : null,
       policePosition: nextPolicePosition,
       policeAlertLevel: nextAlertLevel,
-      pendingPoliceAlertAction: 'The police heard a noise and are investigating',
+      pendingPoliceAlertAction: alertTriggeredMove ? 'The police are closing in!' : null,
       lastPlayerAction: actionStr,
       phase: 'police_thinking',
       playerDiscardCount: newDiscardCount,
@@ -330,18 +335,23 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const caught = alreadyCaught || (shouldAutoMove && nextPolicePos <= playerPosition);
     const newPolicePos = caught ? playerPosition : nextPolicePos;
     const policeActionParts: string[] = [];
+    const isFirstPoliceTurn = turnsPlayed === 1 && turnLog.length === 0;
+
+    if (isFirstPoliceTurn) {
+      policeActionParts.push('The police are on the scene and patrolling.');
+    }
 
     if (pendingPoliceAlertAction) {
       policeActionParts.push(
-        alreadyCaught ? `${pendingPoliceAlertAction} — they've caught you!` : pendingPoliceAlertAction,
+        alreadyCaught ? `${pendingPoliceAlertAction} They've caught you!` : pendingPoliceAlertAction,
       );
     }
 
     if (!alreadyCaught) {
       if (caught) {
-        policeActionParts.push("Police search is getting closer — they've caught you!");
+        policeActionParts.push("The police patrol is getting closer. They've caught you!");
       } else if (shouldAutoMove) {
-        policeActionParts.push('Police search is getting closer');
+        policeActionParts.push('The police patrol is getting closer.');
       }
     }
 

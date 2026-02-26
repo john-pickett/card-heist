@@ -11,7 +11,7 @@ export const ESCAPE_POLICE_START_POSITION = 7;
 
 export const ESCAPE_POLICE_AUTO_MOVE_CHANCE_BY_PLAYER_TURN = [
   0,   // after player turn 1
-  50,  // after player turn 2
+  100,  // after player turn 2
   100,  // after player turn 3
   100,  // after player turn 4
   100,  // after player turn 5

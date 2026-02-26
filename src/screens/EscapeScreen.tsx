@@ -46,6 +46,7 @@ export function EscapeScreen({
   showTutorial,
   onDismissTutorial,
 }: Props) {
+  const WIN_SUMMARY_DELAY_MS = 800;
   const {
     phase,
     deck,
@@ -115,9 +116,20 @@ export function EscapeScreen({
   const [helpVisible, setHelpVisible] = useState(false);
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
   const [lostConfirmed, setLostConfirmed] = useState(false);
+  const [showWinSummary, setShowWinSummary] = useState(false);
 
   useEffect(() => {
     if (phase === 'lost') setLostConfirmed(false);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'won') {
+      setShowWinSummary(false);
+      return;
+    }
+    setShowWinSummary(false);
+    const t = setTimeout(() => setShowWinSummary(true), WIN_SUMMARY_DELAY_MS);
+    return () => clearTimeout(t);
   }, [phase]);
 
   const { width: screenWidth } = useWindowDimensions();
@@ -212,7 +224,7 @@ export function EscapeScreen({
   const buttonsDisabled = !isPlayerTurn;
 
   // ── Won ────────────────────────────────────────────────────────────────────
-  if (phase === 'won') {
+  if (phase === 'won' && showWinSummary) {
     return (
       <View style={styles.screen}>
         <Text style={[styles.heading, styles.headingGold]}>ESCAPED!</Text>
@@ -239,11 +251,11 @@ export function EscapeScreen({
     return (
       <View style={styles.screen}>
         <Text style={[styles.heading, styles.headingRed]}>CAUGHT!</Text>
-        <Text style={styles.subheading}>The police got too close, and you had to drop two of your bags to run. You keep 33%.</Text>
+        <Text style={styles.subheading}>The police got too close, and you had to drop two of your bags to run. You managed to keep a portion of your loot.</Text>
         <View style={styles.panel}>
           <Text style={styles.panelLabel}>You escape with:</Text>
           <Text style={[styles.goldAmount, styles.goldAmountRed]}>{Math.round(totalScore * 0.33)} gold</Text>
-          <Text style={styles.pctLabel}>(33% of campaign score)</Text>
+          {/* <Text style={styles.pctLabel}>(1/3 of campaign score)</Text> */}
         </View>
         <View style={styles.buttonRow}>
           <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
@@ -260,6 +272,8 @@ export function EscapeScreen({
   // ── Status message ─────────────────────────────────────────────────────────
   const statusText = infoMessage
     ? infoMessage
+    : phase === 'won'
+    ? 'You made it to the exit.'
     : phase === 'police_thinking'
     ? 'Police are moving...'
     : policeMessage
@@ -395,7 +409,6 @@ export function EscapeScreen({
           <Text style={styles.turnLogTitle}>POLICE ACTIVITY</Text>
           {[...turnLog].slice(-2).reverse().map((entry, i) => (
             <View key={entry.turn} style={[styles.turnLogRow, i > 0 && styles.turnLogRowOld]}>
-              <Text style={styles.turnLogTurnNum}>T{entry.turn}</Text>
               <View style={styles.turnLogActions}>
                 {(entry.policeEvents ?? [entry.policeAction]).map((event, eventIdx) => (
                   <Text
@@ -723,13 +736,6 @@ const styles = StyleSheet.create({
   },
   turnLogRowOld: {
     opacity: 0.45,
-  },
-  turnLogTurnNum: {
-    color: theme.colors.text50,
-    fontSize: theme.fontSizes.caption,
-    fontWeight: theme.fontWeights.black,
-    width: 22,
-    paddingTop: 1,
   },
   turnLogActions: {
     flex: 1,
