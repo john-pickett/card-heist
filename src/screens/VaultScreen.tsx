@@ -741,7 +741,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
           <View style={styles.perfectFinishPanel}>
             <Text style={styles.perfectFinishTitle}>PERFECT CRACK</Text>
             <Text style={styles.perfectFinishBody}>
-              Exact hit on all three vaults. Take a look at the board, then continue when you are ready.
+              Exact hit on all three vaults!
             </Text>
             <TouchableOpacity
               style={styles.perfectFinishBtn}

@@ -232,7 +232,7 @@ export function EscapeScreen({
         <View style={styles.panel}>
           <Text style={styles.panelLabel}>You escape with:</Text>
           <Text style={styles.goldAmount}>{totalScore} gold</Text>
-          <Text style={styles.pctLabel}>(100% of campaign score)</Text>
+          {/* <Text style={styles.pctLabel}>(100% of campaign score)</Text> */}
         </View>
         <View style={styles.buttonRow}>
           <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
