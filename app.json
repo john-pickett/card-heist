@@ -24,12 +24,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+      ],
+      "package": "com.fiveamsoftware.cardheist"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,7 +40,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "adef936e-97e5-47bd-be44-67270d8463f7"
+        "projectId": "4accf77f-a54a-4e5c-9ce4-871ba9dbfc3e"
       }
     }
   }
