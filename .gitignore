@@ -42,3 +42,9 @@ yarn-error.*
 
 # testing
 coverage
+
+# build artifacts
+builds/
+
+# creds
+credentials.json

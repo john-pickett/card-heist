@@ -294,7 +294,7 @@ export function EscapeScreen({
 
   const tutorialParagraph =
     'In Escape, you are racing to the exit while police pressure builds every turn. ' +
-    'Play melds to move towards the exit. Melds are three (or four) cards of the same rank or a sequence of cards. Think: 7 - 7 -7 or 4 - 5 - 6. ';
+    'Play melds to move towards the exit. Melds are three (or four) cards of the same rank or a sequence of cards. Think: 7 - 7 - 7 or 4 - 5 - 6. ';
 
   const showContinue = phase === 'awaiting_continue' || (phase === 'lost' && !lostConfirmed);
   const alertSegmentsFilled = Math.min(ESCAPE_POLICE_ALERT_THRESHOLD, policeAlertLevel);
