@@ -17,6 +17,7 @@ import { EscapeScreen } from './src/screens/EscapeScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { BlackMarketIntroScreen } from './src/screens/BlackMarketIntroScreen';
+import { BlackMarketUnlockedScreen } from './src/screens/BlackMarketUnlockedScreen';
 import { MarketScreen } from './src/screens/MarketScreen';
 import { VaultScreen } from './src/screens/VaultScreen';
 import { DevelopmentScreen } from './src/screens/DevelopmentScreen';
@@ -70,6 +71,8 @@ export default function App() {
   const inventoryItems = useInventoryStore(s => s.items);
   const blackMarketIntroSeen = useSettingsStore(s => s.blackMarketIntroSeen);
   const setBlackMarketIntroSeen = useSettingsStore(s => s.setBlackMarketIntroSeen);
+  const blackMarketUnlockedStorySeen = useSettingsStore(s => s.blackMarketUnlockedStorySeen);
+  const setBlackMarketUnlockedStorySeen = useSettingsStore(s => s.setBlackMarketUnlockedStorySeen);
 
   const act1Bonus = act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
@@ -348,6 +351,11 @@ export default function App() {
   const isInHeist = activeTab === 'home' && gameFlow !== 'home';
   const shouldShowBlackMarketIntro =
     activeTab === 'market' && heistCount >= MARKET_UNLOCK_HEISTS && !blackMarketIntroSeen;
+  const shouldShowBlackMarketUnlockedStory =
+    activeTab === 'market' &&
+    heistCount >= MARKET_UNLOCK_HEISTS &&
+    blackMarketIntroSeen &&
+    !blackMarketUnlockedStorySeen;
 
   const renderContent = () => {
     if (activeTab === 'settings') {
@@ -377,6 +385,15 @@ export default function App() {
               if (availableGold < BLACK_MARKET_ENTRY_FEE) return;
               spendGold(BLACK_MARKET_ENTRY_FEE);
               setBlackMarketIntroSeen(true);
+            }}
+          />
+        );
+      }
+      if (shouldShowBlackMarketUnlockedStory) {
+        return (
+          <BlackMarketUnlockedScreen
+            onContinue={() => {
+              setBlackMarketUnlockedStorySeen(true);
             }}
           />
         );

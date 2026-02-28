@@ -23,7 +23,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: `Move your token from step ${ESCAPE_PLAYER_START_POSITION} to step ${ESCAPE_EXIT_POSITION} (EXIT) before the police catch up. The police start at step ${ESCAPE_POLICE_START_POSITION} and investigate more aggressively as turns go on.`,
+        body: `Move your token to the Exit before the police catch up. The police start behind you, but investigate more aggressively as turns go on.`,
       },
     ],
   },
@@ -31,8 +31,8 @@ const SECTIONS: Section[] = [
     heading: 'Your Turn',
     rows: [
       {
-        label: 'Lay a Match',
-        body: 'Select 3 or 4 cards from your hand that form a valid match, then tap LAY MATCH. Your token advances 1 step toward EXIT.',
+        label: 'Lay a Meld',
+        body: 'Select 3 or 4 cards from your hand that form a valid meld, then tap LAY MELD. Your token advances 1 step toward EXIT.',
       },
       {
         label: 'Discard',
@@ -41,7 +41,7 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    heading: 'Valid Matches',
+    heading: 'Valid Melds',
     rows: [
       {
         label: 'Set',
@@ -80,7 +80,7 @@ const SECTIONS: Section[] = [
     rows: [
       {
         label: '',
-        body: 'Matches are the only way to advance — prioritize building them. Early turns are safer, but the police become more likely to close in each turn. Every 2nd discard moves them 1 extra step. Any 4-card match advances you 2 steps.',
+        body: 'Melds are the only way to advance — prioritize building them. Early turns are safer, but the police become more likely to close in each turn. Any 4-card meld advances you 2 steps.',
       },
     ],
   },

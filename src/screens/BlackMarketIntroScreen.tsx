@@ -28,13 +28,10 @@ export function BlackMarketIntroScreen({ availableGold, entryFee, onContinue }: 
             no name. Inside: a hand-drawn key, an address that does not exist on any map you own,
             and a time written in green ink. When you arrive, the building is just a shuttered
             tailor shop. You knock anyway. A slot opens. Someone asks, "How many jobs?" 
-            You answer, "Five." The voice then adds, {' '}" {entryFee}{' '}gold to get in."
+            You answer, "Five." The voice responds, "Good."
           </Text>
           <Text style={styles.storyText}>
-            Downstairs, behind bolts, curtains, and one suspiciously polite bodyguard, the real
-            market hums to life. Tables of tools. People trading favors like currency. Every seller
-            seems to know your face, but nobody says from where. A voice in the back laughs and
-            says, "Took you long enough." Whatever this place is, you are in now.
+            A second later the voice adds, "{entryFee} gold to get in."
           </Text>
         </View>
 
