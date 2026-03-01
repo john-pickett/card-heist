@@ -3,6 +3,9 @@
   "version": "1.0.2",
   "main": "index.ts",
   "scripts": {
+    "bump": "node bump-version.js && npm run commit:version",
+    "bump:minor": "node bump-version.js minor && npm run commit:version",
+    "bump:major": "node bump-version.js major && npm run commit:version",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -11,8 +14,9 @@
     "test:watch": "jest --watch",
     "build:ios:local": "eas build --platform ios --local",
     "build:android:local": "eas build --platform android --local",
-    "build:ios": "eas build --platform ios",
-    "build:android": "eas build --platform android"
+    "build:ios": "npm run bump && eas build --platform ios",
+    "build:android": "npm run bump && eas build --platform android",
+    "commit:version": "git add package.json app.json && git commit -m \"chore: bump to $(node -p \"require('./package.json').version\")\""
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
