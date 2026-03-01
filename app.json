@@ -2,7 +2,7 @@
   "expo": {
     "name": "Card Heist",
     "slug": "card-heist",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.fiveamsoftware.cardheist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "10003"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +30,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "package": "com.fiveamsoftware.cardheist"
+      "package": "com.fiveamsoftware.cardheist",
+      "versionCode": 10003
     },
     "web": {
       "favicon": "./assets/favicon.png"
