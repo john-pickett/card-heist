@@ -7,8 +7,10 @@ interface HistoryStore {
   records: HeistRecord[];
   lifetimeGold: number;
   spentGold: number;
+  unlockedPremiumTiers: string[];
   recordHeist: (record: HeistRecord) => void;
   spendGold: (amount: number) => void;
+  unlockPremiumTier: (tierId: string) => void;
   clearHistory: () => void;
 }
 
@@ -18,12 +20,18 @@ export const useHistoryStore = create(
       records: [],
       lifetimeGold: 0,
       spentGold: 0,
+      unlockedPremiumTiers: [],
       recordHeist: (record) => set({
         records: [...get().records, record],
         lifetimeGold: get().lifetimeGold + record.totalGold,
       }),
       spendGold: (amount) => set({ spentGold: get().spentGold + amount }),
-      clearHistory: () => set({ records: [], lifetimeGold: 0, spentGold: 0 }),
+      unlockPremiumTier: (tierId) => {
+        if (!get().unlockedPremiumTiers.includes(tierId)) {
+          set({ unlockedPremiumTiers: [...get().unlockedPremiumTiers, tierId] });
+        }
+      },
+      clearHistory: () => set({ records: [], lifetimeGold: 0, spentGold: 0, unlockedPremiumTiers: [] }),
     }),
     {
       name: 'solitaire:history-v1',

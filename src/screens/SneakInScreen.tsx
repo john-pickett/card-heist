@@ -154,20 +154,23 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const endTime = useSneakInStore(s => s.endTime);
   const timeBonusMs = useSneakInStore(s => s.timeBonusMs);
   const insideTipHint = useSneakInStore(s => s.insideTipHint);
+  const freezeUntilMs = useSneakInStore(s => s.freezeUntilMs);
   const moveCard = useSneakInStore(s => s.moveCard);
   const returnAreaToHand = useSneakInStore(s => s.returnAreaToHand);
   const returnAllToHand = useSneakInStore(s => s.returnAllToHand);
   const timeoutGame = useSneakInStore(s => s.timeoutGame);
-  const { activateFalseAlarm, activateInsideTip, clearInsideTipHint } = useSneakInStore.getState();
+  const { activateFalseAlarm, activateInsideTip, clearInsideTipHint, activateTimeFreeze, endTimeFreeze } = useSneakInStore.getState();
 
   const inventoryItems = useInventoryStore(s => s.items);
   const { removeItem } = useInventoryStore.getState();
 
   const falseAlarmQty = inventoryItems.find(e => e.itemId === 'false-alarm')?.quantity ?? 0;
   const insideTipQty = inventoryItems.find(e => e.itemId === 'inside-tip')?.quantity ?? 0;
+  const timeFreezeQty = inventoryItems.find(e => e.itemId === 'time-freeze')?.quantity ?? 0;
   const hasFalseAlarm = falseAlarmQty > 0;
   const hasInsideTip = insideTipQty > 0;
-  const showBuffToolbar = hasFalseAlarm || hasInsideTip;
+  const hasTimeFreeze = timeFreezeQty > 0;
+  const showBuffToolbar = hasFalseAlarm || hasInsideTip || hasTimeFreeze;
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [pickingHintArea, setPickingHintArea] = useState(false);
@@ -237,18 +240,26 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
     if (phase !== 'playing') return;
     const interval = setInterval(() => {
       tick(n => n + 1);
-      if (startTime && Date.now() - startTime >= effectiveTotalMs) {
+      const now = Date.now();
+      if (freezeUntilMs !== null && now >= freezeUntilMs) {
+        endTimeFreeze();
+        return;
+      }
+      if (!freezeUntilMs && startTime && now - startTime >= effectiveTotalMs) {
         timeoutGame();
       }
     }, 100);
     return () => clearInterval(interval);
-  }, [phase, startTime, timeoutGame, effectiveTotalMs]);
+  }, [phase, startTime, timeoutGame, effectiveTotalMs, freezeUntilMs, endTimeFreeze]);
 
   useEffect(() => {
     scheduleMeasure();
   }, [areas, hand, scheduleMeasure]);
 
-  const elapsedMs = startTime ? (endTime ?? Date.now()) - startTime : 0;
+  const isFrozen = freezeUntilMs !== null && Date.now() < freezeUntilMs;
+  const effectiveNow = isFrozen ? freezeUntilMs! - 15_000 : (endTime ?? Date.now());
+  const elapsedMs = startTime ? effectiveNow - startTime : 0;
+  const freezeRemainingMs = isFrozen ? Math.max(0, freezeUntilMs! - Date.now()) : 0;
   const remainingMs = Math.max(0, effectiveTotalMs - elapsedMs);
   const solvedCount = areas.filter(a => a.isSolved).length;
 
@@ -341,17 +352,24 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
         <Text style={styles.title}>SNEAK IN</Text>
         <View style={[
           styles.timerBadge,
-          remainingMs <= warningThresholdMs && styles.timerBadgeWarning,
-          remainingMs <= dangerThresholdMs && styles.timerBadgeDanger,
+          isFrozen ? styles.timerBadgeFrozen :
+            (remainingMs <= warningThresholdMs && styles.timerBadgeWarning),
+          !isFrozen && remainingMs <= dangerThresholdMs && styles.timerBadgeDanger,
         ]}>
           <Text style={[
             styles.timerText,
-            remainingMs <= warningThresholdMs && styles.timerTextWarning,
-            remainingMs <= dangerThresholdMs && styles.timerTextDanger,
+            isFrozen ? styles.timerTextFrozen :
+              (remainingMs <= warningThresholdMs && styles.timerTextWarning),
+            !isFrozen && remainingMs <= dangerThresholdMs && styles.timerTextDanger,
           ]}>
-            {formatTime(remainingMs)}
+            {isFrozen ? `🧊 ${formatTime(elapsedMs)}` : formatTime(remainingMs)}
           </Text>
         </View>
+        {isFrozen && (
+          <View style={styles.freezeCountdownBadge}>
+            <Text style={styles.freezeCountdownText}>+{formatTime(freezeRemainingMs)}</Text>
+          </View>
+        )}
         <View style={styles.progressBadge}>
           <Text style={styles.progressText}>{solvedCount}/4</Text>
         </View>
@@ -384,6 +402,22 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
               <Text style={styles.buffToolbarBtnText}>
                 {'🕵️ Hint'}
                 <Text style={styles.buffToolbarBtnQtyText}> x{insideTipQty}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+          {hasTimeFreeze && (
+            <TouchableOpacity
+              style={[styles.buffToolbarBtn, isFrozen && styles.buffToolbarBtnDisabled]}
+              onPress={() => {
+                if (isFrozen) return;
+                activateTimeFreeze();
+                removeItem('time-freeze');
+              }}
+              disabled={isFrozen}
+            >
+              <Text style={styles.buffToolbarBtnText}>
+                {'🧊 Freeze'}
+                <Text style={styles.buffToolbarBtnQtyText}> x{timeFreezeQty}</Text>
               </Text>
             </TouchableOpacity>
           )}
@@ -704,6 +738,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.timerDangerBg,
     borderColor: theme.colors.errorRed,
   },
+  timerBadgeFrozen: {
+    backgroundColor: '#0d3d5c',
+    borderColor: '#4dd0e1',
+  },
   timerText: {
     color: theme.colors.textGreen,
     fontSize: theme.fontSizes.base,
@@ -715,6 +753,23 @@ const styles = StyleSheet.create({
   },
   timerTextDanger: {
     color: theme.colors.errorRed,
+  },
+  timerTextFrozen: {
+    color: '#4dd0e1',
+  },
+  freezeCountdownBadge: {
+    backgroundColor: '#0d3d5c',
+    borderRadius: theme.radii.r8,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: '#4dd0e1',
+  },
+  freezeCountdownText: {
+    color: '#4dd0e1',
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.bold,
+    fontVariant: ['tabular-nums'],
   },
   progressBadge: {
     backgroundColor: theme.colors.bgPanel,
@@ -768,6 +823,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text70,
     fontSize: theme.fontSizes.s,
     fontWeight: theme.fontWeights.medium,
+  },
+  buffToolbarBtnDisabled: {
+    opacity: 0.4,
   },
   areasRow: {
     flex: 1,

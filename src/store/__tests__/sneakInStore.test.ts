@@ -37,6 +37,7 @@ function resetSneakInStore(hand: SneakInCard[], areas: SneakInArea[]): void {
     solution: null,
     timeBonusMs: 0,
     insideTipHint: null,
+    freezeUntilMs: null,
   });
 }
 
@@ -357,6 +358,91 @@ describe('sneakInStore', () => {
     const state = useSneakInStore.getState();
     expect(state.areas[0].isSolved).toBe(true);
     expect(state.hand).toHaveLength(0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Time Freeze buff
+  // ---------------------------------------------------------------------------
+
+  test('activateTimeFreeze sets freezeUntilMs to now + 15000 when phase is playing', () => {
+    useSneakInStore.setState({ phase: 'playing' });
+    jest.spyOn(Date, 'now').mockReturnValue(5000);
+    useSneakInStore.getState().activateTimeFreeze();
+    expect(useSneakInStore.getState().freezeUntilMs).toBe(20_000);
+  });
+
+  test('activateTimeFreeze is blocked when phase is idle', () => {
+    useSneakInStore.setState({ phase: 'idle' });
+    jest.spyOn(Date, 'now').mockReturnValue(5000);
+    useSneakInStore.getState().activateTimeFreeze();
+    expect(useSneakInStore.getState().freezeUntilMs).toBeNull();
+  });
+
+  test('activateTimeFreeze is blocked when phase is done', () => {
+    useSneakInStore.setState({ phase: 'done' });
+    useSneakInStore.getState().activateTimeFreeze();
+    expect(useSneakInStore.getState().freezeUntilMs).toBeNull();
+  });
+
+  test('activateTimeFreeze is blocked when phase is timeout', () => {
+    useSneakInStore.setState({ phase: 'timeout' });
+    useSneakInStore.getState().activateTimeFreeze();
+    expect(useSneakInStore.getState().freezeUntilMs).toBeNull();
+  });
+
+  test('endTimeFreeze clears freezeUntilMs and shifts startTime forward by 15000', () => {
+    useSneakInStore.setState({ phase: 'playing', startTime: 1000, freezeUntilMs: 16_000 });
+    useSneakInStore.getState().endTimeFreeze();
+    const state = useSneakInStore.getState();
+    expect(state.freezeUntilMs).toBeNull();
+    expect(state.startTime).toBe(16_000); // 1000 + 15000
+  });
+
+  test('endTimeFreeze handles null startTime without crashing', () => {
+    useSneakInStore.setState({ phase: 'playing', startTime: null, freezeUntilMs: 16_000 });
+    useSneakInStore.getState().endTimeFreeze();
+    const state = useSneakInStore.getState();
+    expect(state.freezeUntilMs).toBeNull();
+    expect(state.startTime).toBeNull();
+  });
+
+  test('two consecutive time-freezes each shift startTime forward by 15000', () => {
+    useSneakInStore.setState({ phase: 'playing', startTime: 1000, freezeUntilMs: null });
+
+    jest.spyOn(Date, 'now').mockReturnValue(5000);
+    useSneakInStore.getState().activateTimeFreeze();
+    useSneakInStore.getState().endTimeFreeze();
+    expect(useSneakInStore.getState().startTime).toBe(16_000); // 1000 + 15000
+
+    jest.spyOn(Date, 'now').mockReturnValue(20_000);
+    useSneakInStore.getState().activateTimeFreeze();
+    useSneakInStore.getState().endTimeFreeze();
+    expect(useSneakInStore.getState().startTime).toBe(31_000); // 16000 + 15000
+  });
+
+  test('initGame resets freezeUntilMs to null', () => {
+    useSneakInStore.setState({ freezeUntilMs: 99_000 });
+    useSneakInStore.getState().initGame();
+    expect(useSneakInStore.getState().freezeUntilMs).toBeNull();
+  });
+
+  test('startTime shift from endTimeFreeze makes timeout fire at the right time', () => {
+    // Game started at t=1000. At t=6000 (5s elapsed) the player activates freeze.
+    // After the 15s freeze ends, startTime should shift to 1000 + 15000 = 16000.
+    // Timeout then fires at 16000 + 120000 = 136000 (not at 121000 without freeze).
+    useSneakInStore.setState({ phase: 'playing', startTime: 1_000, timeBonusMs: 0, freezeUntilMs: null });
+
+    jest.spyOn(Date, 'now').mockReturnValue(6_000);
+    useSneakInStore.getState().activateTimeFreeze(); // freezeUntilMs = 21000
+
+    useSneakInStore.getState().endTimeFreeze(); // startTime shifts to 16000
+    const { startTime } = useSneakInStore.getState();
+    expect(startTime).toBe(16_000);
+
+    // At t=136s: elapsed = 136000 - 16000 = 120000 = effectiveTotalMs → timeout
+    jest.spyOn(Date, 'now').mockReturnValue(136_000);
+    useSneakInStore.getState().timeoutGame();
+    expect(useSneakInStore.getState().phase).toBe('timeout');
   });
 
   test('selectCard swaps lifted cards and deselect returns lifted card', () => {

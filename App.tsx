@@ -212,6 +212,11 @@ export default function App() {
         elapsedSec <= 90 ? 150 :
         elapsedSec <= 120 ? 100 : 0;
     }
+    const inv = useInventoryStore.getState();
+    if (timingBonus > 0 && inv.items.some(e => e.itemId === 'bonus-cut')) {
+      timingBonus *= 2;
+      inv.removeItem('bonus-cut');
+    }
     setAct1TimeBonus(timingBonus);
     setAct1Record({ elapsedMs, timedOut, timingBonus, totalMoves: state.totalMoves });
     setGameFlow('act1-bridge');

@@ -145,6 +145,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   solution: null,
   timeBonusMs: 0,
   insideTipHint: null,
+  freezeUntilMs: null,
 
   initGame: () => {
     const { targets, hand, solution } = buildGame();
@@ -160,6 +161,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       solution,
       timeBonusMs: 0,
       insideTipHint: null,
+      freezeUntilMs: null,
     });
   },
 
@@ -405,5 +407,18 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
 
   clearInsideTipHint: () => {
     set({ insideTipHint: null });
+  },
+
+  activateTimeFreeze: () => {
+    if (get().phase !== 'playing') return;
+    set({ freezeUntilMs: Date.now() + 15_000 });
+  },
+
+  endTimeFreeze: () => {
+    const { startTime } = get();
+    set({
+      freezeUntilMs: null,
+      startTime: startTime ? startTime + 15_000 : null,
+    });
   },
 }));

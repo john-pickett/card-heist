@@ -8,4 +8,6 @@ export interface MarketItemDefinition {
   flavor: string;
   effect: string;
   cost: number | null;
+  goldUnlock?: number;
+  premiumTierId?: string;
 }

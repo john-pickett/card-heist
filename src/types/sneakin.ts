@@ -57,6 +57,7 @@ export interface SneakInState {
   solution: SneakInSolutionEntry[] | null;
   timeBonusMs: number;
   insideTipHint: InsideTipHint | null;
+  freezeUntilMs: number | null;
 }
 
 export interface SneakInActions {
@@ -72,4 +73,6 @@ export interface SneakInActions {
   activateFalseAlarm: () => void;
   activateInsideTip: (areaId: AreaId) => void;
   clearInsideTipHint: () => void;
+  activateTimeFreeze: () => void;
+  endTimeFreeze: () => void;
 }
