@@ -83,4 +83,5 @@ export interface SneakInActions {
   clearBlueprintHint: () => void;
   activateTimeFreeze: () => void;
   endTimeFreeze: () => void;
+  activateQuickFingers: (areaId: AreaId) => void;
 }

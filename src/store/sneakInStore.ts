@@ -437,6 +437,69 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
     set({ blueprintHint: null });
   },
 
+  activateQuickFingers: (areaId: AreaId) => {
+    const { solution, hand, areas, phase, startTime, totalMoves } = get();
+    if (!solution || phase === 'done' || phase === 'timeout') return;
+    const entry = solution[areaId];
+    if (!entry) return;
+    const area = areas[areaId];
+    if (area.isSolved || !area.isUnlocked) return;
+
+    const newHand = [...hand];
+    const newAreas = areas.map(a => ({ ...a, cards: [...a.cards] }));
+    const targetArea = newAreas[areaId];
+
+    // Step 1: return existing wrong cards to hand
+    newHand.push(...targetArea.cards);
+    targetArea.cards = [];
+
+    // Step 2: collect solution cards (hand preferred, then other areas)
+    const cardsToPlace: SneakInCard[] = [];
+    for (const rankVal of entry.cards) {
+      const handIdx = newHand.findIndex(sc => parseInt(sc.card.rank, 10) === rankVal);
+      if (handIdx !== -1) {
+        cardsToPlace.push(newHand[handIdx]);
+        newHand.splice(handIdx, 1);
+        continue;
+      }
+      let found = false;
+      for (const other of newAreas) {
+        if (other.id === areaId) continue;
+        const cardIdx = other.cards.findIndex(sc => parseInt(sc.card.rank, 10) === rankVal);
+        if (cardIdx !== -1) {
+          cardsToPlace.push(other.cards[cardIdx]);
+          other.cards.splice(cardIdx, 1);
+          other.isSolved = checkSolved(other.cards, other.target);
+          found = true;
+          break;
+        }
+      }
+      if (!found) return;
+    }
+
+    // Step 3: place in target area
+    targetArea.cards = cardsToPlace;
+    targetArea.isSolved = checkSolved(targetArea.cards, targetArea.target);
+
+    // Step 4: unlock next
+    if (targetArea.isSolved && areaId < 3) {
+      newAreas[areaId + 1].isUnlocked = true;
+    }
+
+    const now = Date.now();
+    const allSolved = newAreas.every(a => a.isSolved);
+    const newPhase: SneakInPhase = allSolved ? 'done' : phase === 'idle' ? 'playing' : phase;
+
+    set({
+      hand: newHand,
+      areas: newAreas,
+      startTime: startTime ?? now,
+      phase: newPhase,
+      totalMoves: totalMoves + 1,
+      ...(allSolved ? { endTime: now } : {}),
+    });
+  },
+
   activateTimeFreeze: () => {
     if (get().phase !== 'playing') return;
     set({ freezeUntilMs: Date.now() + 15_000 });

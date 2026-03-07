@@ -19,7 +19,7 @@ export interface Vault {
   targetRevealed: boolean;
 }
 
-export type ReckoningPhase = 'idle' | 'dealing' | 'assigning' | 'ace' | 'switch' | 'burn' | 'done';
+export type ReckoningPhase = 'idle' | 'dealing' | 'assigning' | 'ace' | 'switch' | 'burn' | 'double-agent' | 'done';
 
 export interface PendingAce {
   card: Card;
@@ -41,6 +41,7 @@ export interface ReckoningState {
   aceElevens: number;
   preBuffPhase: 'dealing' | 'assigning' | null;
   switchSource: { vaultId: 0 | 1 | 2; instanceId: string } | null;
+  fuzzyMathActive: boolean;
 }
 
 export interface ReckoningActions {
@@ -56,4 +57,7 @@ export interface ReckoningActions {
   cancelBurnEvidence: () => void;
   burnVaultCard: (vaultId: 0 | 1 | 2, instanceId: string) => void;
   burnCurrentCard: () => void;
+  activateDoubleAgent: () => void;
+  cancelDoubleAgent: () => void;
+  completeDoubleAgent: (vaultId: 0 | 1 | 2, instanceId: string) => void;
 }

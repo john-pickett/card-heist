@@ -565,6 +565,260 @@ describe('sneakInStore', () => {
     expect(state.blueprintHint?.areaId).toBe(1);
   });
 
+  // ---------------------------------------------------------------------------
+  // Quick Fingers buff
+  // ---------------------------------------------------------------------------
+
+  const QF_SOLUTION = [
+    { areaName: 'Outer Door', cards: [5, 3], target: 8 },
+    { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+    { areaName: 'Night Watchman', cards: [2, 3, 7], target: 12 },
+    { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+  ];
+
+  test('activateQuickFingers solves area using hand cards', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    const c9 = makeCard('9', 'c9');
+    resetSneakInStore([c5, c3, c9], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100 });
+    useSneakInStore.getState().activateQuickFingers(0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    expect(state.areas[0].cards).toHaveLength(2);
+    expect(state.hand).toHaveLength(1); // c9 remains
+    expect(state.hand[0].instanceId).toBe('c9');
+  });
+
+  test('activateQuickFingers starts timer when phase is idle', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'idle', solution: QF_SOLUTION, startTime: null });
+    jest.spyOn(Date, 'now').mockReturnValue(9999);
+    useSneakInStore.getState().activateQuickFingers(0);
+    const state = useSneakInStore.getState();
+    expect(state.startTime).toBe(9999);
+    expect(state.phase).toBe('playing');
+  });
+
+  test('activateQuickFingers phase stays playing when not all solved', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100 });
+    useSneakInStore.getState().activateQuickFingers(0);
+    expect(useSneakInStore.getState().phase).toBe('playing');
+  });
+
+  test('activateQuickFingers unlocks next area when target is solved', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100 });
+    useSneakInStore.getState().activateQuickFingers(0);
+    expect(useSneakInStore.getState().areas[1].isUnlocked).toBe(true);
+  });
+
+  test('activateQuickFingers completing last area sets phase done and endTime', () => {
+    const c6 = makeCard('6', 'c6');
+    const c8 = makeCard('8', 'c8');
+    const areas = [
+      { ...makeArea(0, 8, true), isSolved: true },
+      { ...makeArea(1, 10, true), isSolved: true },
+      { ...makeArea(2, 12, true), isSolved: true },
+      makeArea(3, 14, true),
+    ];
+    resetSneakInStore([c6, c8], areas);
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100 });
+    jest.spyOn(Date, 'now').mockReturnValue(5000);
+    useSneakInStore.getState().activateQuickFingers(3);
+    const state = useSneakInStore.getState();
+    expect(state.phase).toBe('done');
+    expect(state.endTime).toBe(5000);
+  });
+
+  test('activateQuickFingers falls back to other area when card not in hand', () => {
+    // c5 and c3 are in area 1, not hand; hand has only c9
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    const c9 = makeCard('9', 'c9');
+    const areas = [
+      makeArea(0, 8, true),
+      { ...makeArea(1, 10, true), cards: [c5, c3] },
+      makeArea(2, 12, false),
+      makeArea(3, 14, false),
+    ];
+    resetSneakInStore([c9], areas);
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100 });
+    useSneakInStore.getState().activateQuickFingers(0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    expect(state.areas[0].cards.map(c => c.instanceId).sort()).toEqual(['c3', 'c5']);
+  });
+
+  test('activateQuickFingers prefers hand over other areas for same rank', () => {
+    // rank 5 is in both hand (c5h) and area 1 (c5a); hand card should be used
+    const c5h = makeCard('5', 'c5h');
+    const c5a = makeCard('5', 'c5a');
+    const c3 = makeCard('3', 'c3');
+    const areas = [
+      makeArea(0, 8, true),
+      { ...makeArea(1, 10, true), cards: [c5a] },
+      makeArea(2, 12, false),
+      makeArea(3, 14, false),
+    ];
+    resetSneakInStore([c5h, c3], areas);
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100 });
+    useSneakInStore.getState().activateQuickFingers(0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    const usedId = state.areas[0].cards.find(c => parseInt(c.card.rank, 10) === 5)?.instanceId;
+    expect(usedId).toBe('c5h');
+    // area 1 should still have c5a untouched
+    expect(state.areas[1].cards.map(c => c.instanceId)).toContain('c5a');
+  });
+
+  test('activateQuickFingers returns wrong cards from target area to hand', () => {
+    const c2 = makeCard('2', 'c2');
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    // c2 is a wrong card sitting in area 0; solution needs [5, 3]
+    const areas = [
+      { ...makeArea(0, 8, true), cards: [c2] },
+      makeArea(1, 10, false),
+      makeArea(2, 12, false),
+      makeArea(3, 14, false),
+    ];
+    resetSneakInStore([c5, c3], areas);
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100 });
+    useSneakInStore.getState().activateQuickFingers(0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    expect(state.hand.map(c => c.instanceId)).toContain('c2');
+  });
+
+  test('activateQuickFingers marks source area unsolved when a card is taken from it', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    const c4 = makeCard('4', 'c4');
+    const c6 = makeCard('6', 'c6');
+    // area 1 has [c5, c3] and was "solved" — we'll steal c5 for area 0
+    const areas = [
+      makeArea(0, 8, true),
+      { ...makeArea(1, 8, true), cards: [c5, c3], isSolved: true },
+      makeArea(2, 12, false),
+      makeArea(3, 14, false),
+    ];
+    resetSneakInStore([c4, c6], areas);
+    // solution for area 0 needs rank 5 and 3; only available in area 1 (not hand)
+    useSneakInStore.setState({
+      phase: 'playing',
+      solution: [
+        { areaName: 'Outer Door', cards: [5, 3], target: 8 },
+        { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+        { areaName: 'Night Watchman', cards: [2, 3, 7], target: 12 },
+        { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+      ],
+      startTime: 100,
+    });
+    useSneakInStore.getState().activateQuickFingers(0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    expect(state.areas[1].isSolved).toBe(false);
+  });
+
+  test('activateQuickFingers handles duplicate rank requirement without reuse (both from hand)', () => {
+    const c5a = makeCard('5', 'c5a');
+    const c5b = makeCard('5', 'c5b');
+    const c9 = makeCard('9', 'c9');
+    resetSneakInStore([c5a, c5b, c9], defaultAreas());
+    useSneakInStore.setState({
+      phase: 'playing',
+      solution: [
+        { areaName: 'Outer Door', cards: [5, 5], target: 10 },
+        { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+        { areaName: 'Night Watchman', cards: [2, 3, 7], target: 12 },
+        { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+      ],
+      startTime: 100,
+      areas: [
+        makeArea(0, 10, true),
+        makeArea(1, 10, false),
+        makeArea(2, 12, false),
+        makeArea(3, 14, false),
+      ],
+    });
+    useSneakInStore.getState().activateQuickFingers(0);
+    const state = useSneakInStore.getState();
+    expect(state.areas[0].isSolved).toBe(true);
+    expect(state.areas[0].cards).toHaveLength(2);
+    expect(state.hand.map(c => c.instanceId)).toEqual(['c9']);
+  });
+
+  test('activateQuickFingers is blocked when phase is done', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'done', solution: QF_SOLUTION });
+    useSneakInStore.getState().activateQuickFingers(0);
+    expect(useSneakInStore.getState().areas[0].isSolved).toBe(false);
+  });
+
+  test('activateQuickFingers is blocked when phase is timeout', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'timeout', solution: QF_SOLUTION });
+    useSneakInStore.getState().activateQuickFingers(0);
+    expect(useSneakInStore.getState().areas[0].isSolved).toBe(false);
+  });
+
+  test('activateQuickFingers is blocked when solution is null', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: null });
+    useSneakInStore.getState().activateQuickFingers(0);
+    expect(useSneakInStore.getState().areas[0].isSolved).toBe(false);
+  });
+
+  test('activateQuickFingers is blocked when area is already solved', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    const areas = [
+      { ...makeArea(0, 8, true), isSolved: true, cards: [c5, c3] },
+      makeArea(1, 10, false),
+      makeArea(2, 12, false),
+      makeArea(3, 14, false),
+    ];
+    resetSneakInStore([], areas);
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION });
+    const handBefore = useSneakInStore.getState().hand;
+    useSneakInStore.getState().activateQuickFingers(0);
+    expect(useSneakInStore.getState().hand).toEqual(handBefore);
+    expect(useSneakInStore.getState().areas[0].isSolved).toBe(true);
+  });
+
+  test('activateQuickFingers is blocked when area is locked', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION });
+    useSneakInStore.getState().activateQuickFingers(1); // area 1 is locked
+    expect(useSneakInStore.getState().areas[1].isSolved).toBe(false);
+    expect(useSneakInStore.getState().hand).toHaveLength(2);
+  });
+
+  test('activateQuickFingers increments totalMoves by 1', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    resetSneakInStore([c5, c3], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: QF_SOLUTION, startTime: 100, totalMoves: 7 });
+    useSneakInStore.getState().activateQuickFingers(0);
+    expect(useSneakInStore.getState().totalMoves).toBe(8);
+  });
+
   test('selectCard swaps lifted cards and deselect returns lifted card', () => {
     const h1 = makeCard('2', 'h1');
     const h2 = makeCard('9', 'h2');
