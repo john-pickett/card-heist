@@ -154,12 +154,13 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const endTime = useSneakInStore(s => s.endTime);
   const timeBonusMs = useSneakInStore(s => s.timeBonusMs);
   const insideTipHint = useSneakInStore(s => s.insideTipHint);
+  const blueprintHint = useSneakInStore(s => s.blueprintHint);
   const freezeUntilMs = useSneakInStore(s => s.freezeUntilMs);
   const moveCard = useSneakInStore(s => s.moveCard);
   const returnAreaToHand = useSneakInStore(s => s.returnAreaToHand);
   const returnAllToHand = useSneakInStore(s => s.returnAllToHand);
   const timeoutGame = useSneakInStore(s => s.timeoutGame);
-  const { activateFalseAlarm, activateInsideTip, clearInsideTipHint, activateTimeFreeze, endTimeFreeze } = useSneakInStore.getState();
+  const { activateFalseAlarm, activateInsideTip, clearInsideTipHint, activatePeekBlueprint, clearBlueprintHint, activateTimeFreeze, endTimeFreeze } = useSneakInStore.getState();
 
   const inventoryItems = useInventoryStore(s => s.items);
   const { removeItem } = useInventoryStore.getState();
@@ -167,13 +168,16 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const falseAlarmQty = inventoryItems.find(e => e.itemId === 'false-alarm')?.quantity ?? 0;
   const insideTipQty = inventoryItems.find(e => e.itemId === 'inside-tip')?.quantity ?? 0;
   const timeFreezeQty = inventoryItems.find(e => e.itemId === 'time-freeze')?.quantity ?? 0;
+  const blueprintQty = inventoryItems.find(e => e.itemId === 'peek-blueprint')?.quantity ?? 0;
   const hasFalseAlarm = falseAlarmQty > 0;
   const hasInsideTip = insideTipQty > 0;
   const hasTimeFreeze = timeFreezeQty > 0;
-  const showBuffToolbar = hasFalseAlarm || hasInsideTip || hasTimeFreeze;
+  const hasBlueprint = blueprintQty > 0;
+  const showBuffToolbar = hasFalseAlarm || hasInsideTip || hasTimeFreeze || hasBlueprint;
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [pickingHintArea, setPickingHintArea] = useState(false);
+  const [pickingBlueprintArea, setPickingBlueprintArea] = useState(false);
   const { playTap } = useCardSound();
 
   // --- Screen-level drag state ---
@@ -421,6 +425,17 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
               </Text>
             </TouchableOpacity>
           )}
+          {hasBlueprint && (
+            <TouchableOpacity
+              style={styles.buffToolbarBtn}
+              onPress={() => setPickingBlueprintArea(true)}
+            >
+              <Text style={styles.buffToolbarBtnText}>
+                {'🗺️ Blueprint'}
+                <Text style={styles.buffToolbarBtnQtyText}> x{blueprintQty}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -479,6 +494,9 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                     </Text>
                     {insideTipHint?.areaId === area.id && !area.isSolved && (
                       <Text style={styles.areaHintLabel}>💡</Text>
+                    )}
+                    {blueprintHint?.areaId === area.id && !area.isSolved && (
+                      <Text style={styles.areaHintLabel}>🗺️</Text>
                     )}
 
                     {locked ? (
@@ -576,6 +594,11 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                 <Text style={styles.toolbarBtnText}>✕ hint</Text>
               </TouchableOpacity>
             )}
+            {blueprintHint && (
+              <TouchableOpacity style={styles.toolbarBtn} onPress={clearBlueprintHint}>
+                <Text style={styles.toolbarBtnText}>✕ map</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.toolbarBtn, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnDisabled]}
               disabled={!hasAnyReturnable || !!activeDrag}
@@ -598,12 +621,13 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                   {row.map(sc => {
                     const red = RED_SUITS.has(sc.card.suit);
                     const isHinted = insideTipHint?.card.instanceId === sc.instanceId;
+                    const isBlueprinted = blueprintHint?.cards.some(c => c.instanceId === sc.instanceId) ?? false;
                     return (
                       <DraggableCard
                         key={sc.instanceId}
                         card={sc}
                         source="hand"
-                        style={[styles.handCard, isHinted && styles.handCardHinted]}
+                        style={[styles.handCard, isHinted && styles.handCardHinted, isBlueprinted && styles.handCardBlueprinted]}
                         isDragging={activeDrag?.card.instanceId === sc.instanceId}
                         dragPan={dragPan}
                         onDragStart={handleDragStart}
@@ -624,6 +648,32 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
           )}
         </View>
       </View>
+
+      {pickingBlueprintArea && (
+        <View style={styles.hintPickerOverlay}>
+          <Text style={styles.hintPickerTitle}>Choose an area to reveal all cards:</Text>
+          {AREA_IDS.map(areaId => (
+            <TouchableOpacity
+              key={areaId}
+              style={styles.hintPickerCard}
+              onPress={() => {
+                activatePeekBlueprint(areaId);
+                removeItem('peek-blueprint');
+                setPickingBlueprintArea(false);
+              }}
+            >
+              <Text style={styles.hintPickerCardIcon}>{AREA_ICONS[areaId]}</Text>
+              <Text style={styles.hintPickerCardLabel}>{AREA_LABELS[areaId]}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={[styles.hintPickerCard, styles.hintPickerCancel]}
+            onPress={() => setPickingBlueprintArea(false)}
+          >
+            <Text style={styles.hintPickerCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {pickingHintArea && (
         <View style={styles.hintPickerOverlay}>
@@ -1181,6 +1231,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.colors.gold,
     shadowColor: theme.colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+
+  // Blueprint card highlight (ice-blue border)
+  handCardBlueprinted: {
+    borderWidth: 2,
+    borderColor: '#4dd0e1',
+    shadowColor: '#4dd0e1',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 6,

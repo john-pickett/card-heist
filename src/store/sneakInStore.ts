@@ -4,6 +4,7 @@ import { Rank } from '../types/card';
 import {
   AREA_LABELS,
   AreaId,
+  BlueprintHint,
   CardSource,
   InsideTipHint,
   SneakInActions,
@@ -145,6 +146,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   solution: null,
   timeBonusMs: 0,
   insideTipHint: null,
+  blueprintHint: null,
   freezeUntilMs: null,
 
   initGame: () => {
@@ -161,6 +163,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       solution,
       timeBonusMs: 0,
       insideTipHint: null,
+      blueprintHint: null,
       freezeUntilMs: null,
     });
   },
@@ -407,6 +410,31 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
 
   clearInsideTipHint: () => {
     set({ insideTipHint: null });
+  },
+
+  activatePeekBlueprint: (areaId: AreaId) => {
+    const { solution, hand, phase } = get();
+    if (!solution || phase === 'done' || phase === 'timeout') return;
+    const entry = solution[areaId];
+    if (!entry) return;
+
+    const revealedCards: SneakInCard[] = [];
+    const remaining = [...hand];
+    for (const rankVal of entry.cards) {
+      const idx = remaining.findIndex(sc => parseInt(sc.card.rank, 10) === rankVal);
+      if (idx !== -1) {
+        revealedCards.push(remaining[idx]);
+        remaining.splice(idx, 1);
+      }
+    }
+
+    if (revealedCards.length > 0) {
+      set({ blueprintHint: { areaId, cards: revealedCards } as BlueprintHint });
+    }
+  },
+
+  clearBlueprintHint: () => {
+    set({ blueprintHint: null });
   },
 
   activateTimeFreeze: () => {

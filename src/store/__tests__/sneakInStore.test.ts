@@ -37,6 +37,7 @@ function resetSneakInStore(hand: SneakInCard[], areas: SneakInArea[]): void {
     solution: null,
     timeBonusMs: 0,
     insideTipHint: null,
+    blueprintHint: null,
     freezeUntilMs: null,
   });
 }
@@ -443,6 +444,125 @@ describe('sneakInStore', () => {
     jest.spyOn(Date, 'now').mockReturnValue(136_000);
     useSneakInStore.getState().timeoutGame();
     expect(useSneakInStore.getState().phase).toBe('timeout');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Blueprint buff
+  // ---------------------------------------------------------------------------
+
+  const SOLUTION_FOUR_AREAS = [
+    { areaName: 'Outer Door', cards: [5, 3], target: 8 },
+    { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+    { areaName: 'Night Watchman', cards: [5, 7], target: 12 },
+    { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+  ];
+
+  test('activatePeekBlueprint reveals all matching hand cards for the area solution', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    const c9 = makeCard('9', 'c9');
+    resetSneakInStore([c5, c3, c9], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: SOLUTION_FOUR_AREAS });
+    useSneakInStore.getState().activatePeekBlueprint(0);
+    const hint = useSneakInStore.getState().blueprintHint;
+    expect(hint).not.toBeNull();
+    expect(hint?.areaId).toBe(0);
+    expect(hint?.cards.map(c => c.instanceId).sort()).toEqual(['c3', 'c5']);
+  });
+
+  test('activatePeekBlueprint only reveals cards currently in hand', () => {
+    // c5 is already placed in an area (not in hand); only c3 should appear
+    const c3 = makeCard('3', 'c3');
+    const c9 = makeCard('9', 'c9');
+    resetSneakInStore([c3, c9], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: SOLUTION_FOUR_AREAS });
+    useSneakInStore.getState().activatePeekBlueprint(0);
+    const hint = useSneakInStore.getState().blueprintHint;
+    expect(hint).not.toBeNull();
+    expect(hint?.cards).toHaveLength(1);
+    expect(hint?.cards[0].instanceId).toBe('c3');
+  });
+
+  test('activatePeekBlueprint does not match the same card to two ranks', () => {
+    // Solution needs ranks [5, 5] but hand has only one card with rank 5
+    const c5 = makeCard('5', 'c5');
+    resetSneakInStore([c5], defaultAreas());
+    useSneakInStore.setState({
+      phase: 'playing',
+      solution: [
+        { areaName: 'Outer Door', cards: [5, 5], target: 10 },
+        { areaName: 'Silent Alarm', cards: [4, 6], target: 10 },
+        { areaName: 'Night Watchman', cards: [5, 7], target: 12 },
+        { areaName: 'Vault Door', cards: [6, 8], target: 14 },
+      ],
+    });
+    useSneakInStore.getState().activatePeekBlueprint(0);
+    const hint = useSneakInStore.getState().blueprintHint;
+    expect(hint?.cards).toHaveLength(1);
+    expect(hint?.cards[0].instanceId).toBe('c5');
+  });
+
+  test('activatePeekBlueprint stores the correct areaId on the hint', () => {
+    const c4 = makeCard('4', 'c4');
+    const c6 = makeCard('6', 'c6');
+    resetSneakInStore([c4, c6], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: SOLUTION_FOUR_AREAS });
+    useSneakInStore.getState().activatePeekBlueprint(1);
+    expect(useSneakInStore.getState().blueprintHint?.areaId).toBe(1);
+  });
+
+  test('activatePeekBlueprint is blocked when phase is done', () => {
+    const c5 = makeCard('5', 'c5');
+    resetSneakInStore([c5], defaultAreas());
+    useSneakInStore.setState({ phase: 'done', solution: SOLUTION_FOUR_AREAS });
+    useSneakInStore.getState().activatePeekBlueprint(0);
+    expect(useSneakInStore.getState().blueprintHint).toBeNull();
+  });
+
+  test('activatePeekBlueprint is blocked when phase is timeout', () => {
+    const c5 = makeCard('5', 'c5');
+    resetSneakInStore([c5], defaultAreas());
+    useSneakInStore.setState({ phase: 'timeout', solution: SOLUTION_FOUR_AREAS });
+    useSneakInStore.getState().activatePeekBlueprint(0);
+    expect(useSneakInStore.getState().blueprintHint).toBeNull();
+  });
+
+  test('activatePeekBlueprint does nothing when solution is null', () => {
+    const c5 = makeCard('5', 'c5');
+    resetSneakInStore([c5], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: null });
+    useSneakInStore.getState().activatePeekBlueprint(0);
+    expect(useSneakInStore.getState().blueprintHint).toBeNull();
+  });
+
+  test('clearBlueprintHint sets blueprintHint to null', () => {
+    const c5 = makeCard('5', 'c5');
+    useSneakInStore.setState({ blueprintHint: { areaId: 0, cards: [c5] } });
+    useSneakInStore.getState().clearBlueprintHint();
+    expect(useSneakInStore.getState().blueprintHint).toBeNull();
+  });
+
+  test('initGame resets blueprintHint to null', () => {
+    const c5 = makeCard('5', 'c5');
+    useSneakInStore.setState({ blueprintHint: { areaId: 0, cards: [c5] } });
+    useSneakInStore.getState().initGame();
+    expect(useSneakInStore.getState().blueprintHint).toBeNull();
+  });
+
+  test('blueprintHint and insideTipHint can coexist in state', () => {
+    const c5 = makeCard('5', 'c5');
+    const c3 = makeCard('3', 'c3');
+    const c4 = makeCard('4', 'c4');
+    const c6 = makeCard('6', 'c6');
+    resetSneakInStore([c5, c3, c4, c6], defaultAreas());
+    useSneakInStore.setState({ phase: 'playing', solution: SOLUTION_FOUR_AREAS });
+    useSneakInStore.getState().activateInsideTip(0);
+    useSneakInStore.getState().activatePeekBlueprint(1);
+    const state = useSneakInStore.getState();
+    expect(state.insideTipHint).not.toBeNull();
+    expect(state.insideTipHint?.areaId).toBe(0);
+    expect(state.blueprintHint).not.toBeNull();
+    expect(state.blueprintHint?.areaId).toBe(1);
   });
 
   test('selectCard swaps lifted cards and deselect returns lifted card', () => {

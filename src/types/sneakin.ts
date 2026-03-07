@@ -45,6 +45,11 @@ export interface InsideTipHint {
   card: SneakInCard;
 }
 
+export interface BlueprintHint {
+  areaId: AreaId;
+  cards: SneakInCard[];
+}
+
 export interface SneakInState {
   phase: SneakInPhase;
   hand: SneakInCard[];
@@ -57,6 +62,7 @@ export interface SneakInState {
   solution: SneakInSolutionEntry[] | null;
   timeBonusMs: number;
   insideTipHint: InsideTipHint | null;
+  blueprintHint: BlueprintHint | null;
   freezeUntilMs: number | null;
 }
 
@@ -73,6 +79,8 @@ export interface SneakInActions {
   activateFalseAlarm: () => void;
   activateInsideTip: (areaId: AreaId) => void;
   clearInsideTipHint: () => void;
+  activatePeekBlueprint: (areaId: AreaId) => void;
+  clearBlueprintHint: () => void;
   activateTimeFreeze: () => void;
   endTimeFreeze: () => void;
 }
