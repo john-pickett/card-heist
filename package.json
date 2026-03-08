@@ -15,7 +15,7 @@
     "build:ios:local": "eas build --platform ios --local",
     "build:android:local": "eas build --platform android --local",
     "build:ios": "npm run bump && eas build --platform ios",
-    "build:android": "npm run bump && eas build --platform android",
+    "build:android": "eas build --platform android",
     "commit:version": "git add package.json app.json && git commit -m \"chore: bump to $(node -p \"require('./package.json').version\")\""
   },
   "dependencies": {
