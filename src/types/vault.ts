@@ -1,6 +1,6 @@
 import { Card } from './card';
 
-export type VaultTarget = 13 | 18 | 21;
+export type VaultTarget = 13 | 18 | 21 | 42;
 export type AceValue = 1 | 11;
 
 export interface VaultCard {
@@ -10,7 +10,7 @@ export interface VaultCard {
 }
 
 export interface Vault {
-  id: 0 | 1 | 2;
+  id: 0 | 1 | 2 | 3;
   target: VaultTarget;
   cards: VaultCard[];
   sum: number;
@@ -24,7 +24,7 @@ export type ReckoningPhase = 'idle' | 'dealing' | 'assigning' | 'ace' | 'switch'
 export interface PendingAce {
   card: Card;
   instanceId: string;
-  targetVaultId: 0 | 1 | 2;
+  targetVaultId: 0 | 1 | 2 | 3;
 }
 
 export interface ReckoningState {
@@ -40,24 +40,25 @@ export interface ReckoningState {
   aceOnes: number;
   aceElevens: number;
   preBuffPhase: 'dealing' | 'assigning' | null;
-  switchSource: { vaultId: 0 | 1 | 2; instanceId: string } | null;
+  switchSource: { vaultId: 0 | 1 | 2 | 3; instanceId: string } | null;
   fuzzyMathActive: boolean;
+  offshoreAccountActive: boolean;
 }
 
 export interface ReckoningActions {
   initGame: () => void;
   flipCard: () => void;
-  assignCard: (vaultId: 0 | 1 | 2) => void;
+  assignCard: (vaultId: 0 | 1 | 2 | 3) => void;
   chooseAceValue: (value: AceValue) => void;
-  standVault: (vaultId: 0 | 1 | 2) => void;
+  standVault: (vaultId: 0 | 1 | 2 | 3) => void;
   activateInsideSwitch: () => void;
   cancelInsideSwitch: () => void;
-  completeSwitchMove: (fromVaultId: 0 | 1 | 2, instanceId: string, toVaultId: 0 | 1 | 2) => void;
+  completeSwitchMove: (fromVaultId: 0 | 1 | 2 | 3, instanceId: string, toVaultId: 0 | 1 | 2 | 3) => void;
   activateBurnEvidence: () => void;
   cancelBurnEvidence: () => void;
-  burnVaultCard: (vaultId: 0 | 1 | 2, instanceId: string) => void;
+  burnVaultCard: (vaultId: 0 | 1 | 2 | 3, instanceId: string) => void;
   burnCurrentCard: () => void;
   activateDoubleAgent: () => void;
   cancelDoubleAgent: () => void;
-  completeDoubleAgent: (vaultId: 0 | 1 | 2, instanceId: string) => void;
+  completeDoubleAgent: (vaultId: 0 | 1 | 2 | 3, instanceId: string) => void;
 }

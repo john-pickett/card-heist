@@ -220,7 +220,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
 
   useEffect(() => {
     if (phase === 'done') {
-      if (exactHits === 3) {
+      if (exactHits === vaults.length) {
         if (perfectFinishTriggeredRef.current) return;
 
         perfectFinishTriggeredRef.current = true;
@@ -426,7 +426,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
     currentCard !== null;
 
   const canBurnCurrentCard = phase === 'burn' && currentCard !== null;
-  const showPerfectFinishOverlay = phase === 'done' && exactHits === 3 && holdPerfectFinish;
+  const showPerfectFinishOverlay = phase === 'done' && exactHits === vaults.length && holdPerfectFinish;
 
   const assignHint = inBuffMode
     ? phase === 'burn'

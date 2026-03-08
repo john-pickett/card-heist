@@ -11,7 +11,7 @@ function makeCard(rank: Rank, id: string, suit: Suit = 'spades'): Card {
   };
 }
 
-function makeVault(id: 0 | 1 | 2, target: 13 | 18 | 21): Vault {
+function makeVault(id: 0 | 1 | 2 | 3, target: 13 | 18 | 21 | 42): Vault {
   return {
     id,
     target,
@@ -39,6 +39,7 @@ function resetStore(overrides: Partial<ReturnType<typeof useReckoningStore.getSt
     preBuffPhase: null,
     switchSource: null,
     fuzzyMathActive: false,
+    offshoreAccountActive: false,
     ...overrides,
   });
 }
@@ -1298,6 +1299,114 @@ describe('vaultStore', () => {
       // Second game — no more fuzzy-math
       useReckoningStore.getState().initGame();
       expect(useReckoningStore.getState().fuzzyMathActive).toBe(false);
+    });
+  });
+
+  describe('offshore-account passive buff', () => {
+    beforeEach(() => {
+      useInventoryStore.setState({ items: [] });
+    });
+
+    test('initGame without offshore-account → 3 vaults, flag false', () => {
+      useInventoryStore.setState({ items: [] });
+      useReckoningStore.getState().initGame();
+      const state = useReckoningStore.getState();
+      expect(state.vaults).toHaveLength(3);
+      expect(state.vaults.map(v => v.target)).toEqual([13, 18, 21]);
+      expect(state.offshoreAccountActive).toBe(false);
+    });
+
+    test('initGame with offshore-account → 4 vaults, vault 3 target 42, flag true, item consumed', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'offshore-account', quantity: 1 }] });
+      const removeSpy = jest.spyOn(useInventoryStore.getState(), 'removeItem');
+      useReckoningStore.getState().initGame();
+      const state = useReckoningStore.getState();
+      expect(state.vaults).toHaveLength(4);
+      expect(state.vaults[3].target).toBe(42);
+      expect(state.vaults[3].id).toBe(3);
+      expect(state.offshoreAccountActive).toBe(true);
+      expect(useInventoryStore.getState().items.find(e => e.itemId === 'offshore-account')).toBeUndefined();
+      removeSpy.mockRestore();
+    });
+
+    test('game does not end until all 4 vaults are terminal', () => {
+      const v0 = makeVault(0, 13);
+      v0.isStood = true; v0.sum = 10;
+      const v1 = makeVault(1, 18);
+      v1.isStood = true; v1.sum = 15;
+      const v2 = makeVault(2, 21);
+      v2.isStood = true; v2.sum = 19;
+      const v3 = makeVault(3, 42);
+      v3.sum = 20;
+      resetStore({
+        phase: 'dealing',
+        deck: [makeCard('2', 'remain')],
+        vaults: [v0, v1, v2, v3],
+        offshoreAccountActive: true,
+      });
+
+      // v3 not terminal yet — game should not end after standVault on already-stood vaults
+      // Trigger a state change by standing v3
+      useReckoningStore.getState().standVault(3);
+      const state = useReckoningStore.getState();
+      expect(state.vaults[3].isStood).toBe(true);
+      expect(state.phase).toBe('done');
+    });
+
+    test('all 4 vaults not terminal — game continues', () => {
+      const v0 = makeVault(0, 13);
+      v0.isStood = true; v0.sum = 10;
+      const v1 = makeVault(1, 18);
+      v1.isStood = true; v1.sum = 15;
+      const v2 = makeVault(2, 21);
+      v2.isStood = true; v2.sum = 19;
+      const v3 = makeVault(3, 42);
+      v3.sum = 20;
+      resetStore({
+        phase: 'dealing',
+        deck: [makeCard('2', 'remain')],
+        vaults: [v0, v1, v2, v3],
+        offshoreAccountActive: true,
+      });
+
+      // v3 is not terminal, deck has a card → game should still be in dealing
+      // flipCard to check state is not done
+      useReckoningStore.getState().flipCard();
+      expect(useReckoningStore.getState().phase).toBe('assigning');
+    });
+
+    test('assignCard and standVault work on vault 3', () => {
+      const v3 = makeVault(3, 42);
+      resetStore({
+        phase: 'assigning',
+        currentCard: makeCard('K', 'cK'),
+        currentInstanceId: 'rec-K',
+        deck: [makeCard('2', 'remain')],
+        vaults: [makeVault(0, 13), makeVault(1, 18), makeVault(2, 21), v3],
+        offshoreAccountActive: true,
+      });
+
+      useReckoningStore.getState().assignCard(3);
+      const state = useReckoningStore.getState();
+      expect(state.vaults[3].cards).toHaveLength(1);
+      expect(state.vaults[3].sum).toBe(10);
+    });
+
+    test('checkGameEnd with deck empty fires regardless of 4 vaults', () => {
+      const v3 = makeVault(3, 42);
+      v3.sum = 20;
+      resetStore({
+        phase: 'assigning',
+        currentCard: makeCard('5', 'c5'),
+        currentInstanceId: 'rec-5',
+        deck: [],
+        vaults: [makeVault(0, 13), makeVault(1, 18), makeVault(2, 21), v3],
+        offshoreAccountActive: true,
+      });
+
+      useReckoningStore.getState().assignCard(3);
+      const state = useReckoningStore.getState();
+      expect(state.phase).toBe('done');
     });
   });
 });

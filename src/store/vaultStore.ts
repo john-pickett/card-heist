@@ -38,10 +38,11 @@ function isTerminal(vault: Vault): boolean {
 }
 
 const FIXED_TARGETS: VaultTarget[] = [13, 18, 21];
+const FOURTH_VAULT_TARGET = 42 as VaultTarget;
 
-function makeVaults(): Vault[] {
-  return [0, 1, 2].map((i) => ({
-    id: i as 0 | 1 | 2,
+function makeVaults(includeOffshore = false): Vault[] {
+  const base = [0, 1, 2].map((i) => ({
+    id: i as 0 | 1 | 2 | 3,
     target: FIXED_TARGETS[i],
     cards: [],
     sum: 0,
@@ -49,6 +50,8 @@ function makeVaults(): Vault[] {
     isBusted: false,
     targetRevealed: true,
   }));
+  if (!includeOffshore) return base;
+  return [...base, { id: 3 as const, target: FOURTH_VAULT_TARGET, cards: [], sum: 0, isStood: false, isBusted: false, targetRevealed: true }];
 }
 
 let instanceCounter = 0;
@@ -73,6 +76,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   preBuffPhase: null,
   switchSource: null,
   fuzzyMathActive: false,
+  offshoreAccountActive: false,
 
   initGame: () => {
     const inventoryItems = useInventoryStore.getState().items;
@@ -80,13 +84,17 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     if (hasFuzzyMath) {
       useInventoryStore.getState().removeItem('fuzzy-math');
     }
+    const hasOffshore = inventoryItems.some((e) => e.itemId === 'offshore-account');
+    if (hasOffshore) {
+      useInventoryStore.getState().removeItem('offshore-account');
+    }
     const shuffled = shuffleDeck(createDeck());
     set({
       phase: 'dealing',
       deck: shuffled,
       currentCard: null,
       currentInstanceId: null,
-      vaults: makeVaults(),
+      vaults: makeVaults(hasOffshore),
       pendingAce: null,
       finalScore: null,
       exactHits: 0,
@@ -96,6 +104,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       preBuffPhase: null,
       switchSource: null,
       fuzzyMathActive: hasFuzzyMath,
+      offshoreAccountActive: hasOffshore,
     });
   },
 
@@ -113,7 +122,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     });
   },
 
-  assignCard: (vaultId: 0 | 1 | 2) => {
+  assignCard: (vaultId: 0 | 1 | 2 | 3) => {
     const { currentCard, currentInstanceId, vaults, phase, exactHits, busts, fuzzyMathActive } = get();
     if (phase !== 'assigning' || !currentCard || !currentInstanceId) return;
 
@@ -205,7 +214,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     checkGameEnd(get, set, newVaults);
   },
 
-  standVault: (vaultId: 0 | 1 | 2) => {
+  standVault: (vaultId: 0 | 1 | 2 | 3) => {
     const { vaults } = get();
     const vault = vaults[vaultId];
     if (vault.isBusted || vault.isStood) return;
@@ -228,7 +237,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     set({ phase: preBuffPhase ?? 'dealing', preBuffPhase: null, switchSource: null });
   },
 
-  completeSwitchMove: (fromVaultId: 0 | 1 | 2, instanceId: string, toVaultId: 0 | 1 | 2) => {
+  completeSwitchMove: (fromVaultId: 0 | 1 | 2 | 3, instanceId: string, toVaultId: 0 | 1 | 2 | 3) => {
     const { phase, vaults, preBuffPhase, exactHits, busts, fuzzyMathActive } = get();
     if (phase !== 'switch') return;
     if (fromVaultId === toVaultId) return;
@@ -299,7 +308,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     set({ phase: preBuffPhase ?? 'dealing', preBuffPhase: null });
   },
 
-  burnVaultCard: (vaultId: 0 | 1 | 2, instanceId: string) => {
+  burnVaultCard: (vaultId: 0 | 1 | 2 | 3, instanceId: string) => {
     const { phase, vaults, preBuffPhase, fuzzyMathActive } = get();
     if (phase !== 'burn') return;
 
@@ -351,7 +360,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     set({ phase: preBuffPhase, preBuffPhase: null });
   },
 
-  completeDoubleAgent: (vaultId: 0 | 1 | 2, instanceId: string) => {
+  completeDoubleAgent: (vaultId: 0 | 1 | 2 | 3, instanceId: string) => {
     const { vaults, preBuffPhase, fuzzyMathActive } = get();
     const vault = vaults[vaultId];
     const cardIdx = vault.cards.findIndex((vc) => vc.instanceId === instanceId);

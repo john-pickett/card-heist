@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Act1BridgeScreen } from './src/screens/Act1BridgeScreen';
 import { Act2BridgeScreen } from './src/screens/Act2BridgeScreen';
 import { EscapeScreen } from './src/screens/EscapeScreen';
+import { GameOverScreen } from './src/screens/GameOverScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { BlackMarketIntroScreen } from './src/screens/BlackMarketIntroScreen';
@@ -43,11 +44,33 @@ import {
   TutorialSeen,
 } from './src/constants/tutorials';
 import { Act1Record, Act2Record, Act3Record, HeistRecord } from './src/types/history';
+import { InventoryEntry } from './src/store/inventoryStore';
 import theme from './src/theme';
 
 type Tab = 'home' | 'market' | 'history' | 'settings';
-type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3';
+type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3' | 'act3-gameover';
 type DevLaunchAct = 'act1' | 'act2' | 'act3' | null;
+type Act2VaultResult = {
+  id: number;
+  target: number;
+  sum: number;
+  result: 'exact' | 'busted' | 'under';
+  gold: number;
+};
+type UsedBuff = {
+  itemId: string;
+  icon: string;
+  title: string;
+  act: MarketAct;
+  quantity: number;
+};
+
+function toInventoryCounts(items: InventoryEntry[]): Record<string, number> {
+  return items.reduce<Record<string, number>>((acc, entry) => {
+    acc[entry.itemId] = entry.quantity;
+    return acc;
+  }, {});
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -62,6 +85,9 @@ export default function App() {
   const [tutorialsReady, setTutorialsReady] = useState(false);
   const [inventoryVisible, setInventoryVisible] = useState(false);
   const [devLaunchAct, setDevLaunchAct] = useState<DevLaunchAct>(null);
+  const [act3Won, setAct3Won] = useState<boolean | null>(null);
+  const [act2VaultResults, setAct2VaultResults] = useState<Act2VaultResult[]>([]);
+  const [heistStartInventory, setHeistStartInventory] = useState<Record<string, number> | null>(null);
 
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
   const spentGold = useHistoryStore(s => s.spentGold);
@@ -102,6 +128,31 @@ export default function App() {
   const otherInventoryRows = activeAct
     ? inventoryRows.filter(row => row.item.act !== activeAct)
     : inventoryRows;
+
+  const usedBuffs: UsedBuff[] = (() => {
+    if (!heistStartInventory) return [];
+    const currentCounts = toInventoryCounts(inventoryItems);
+    const usages: UsedBuff[] = [];
+    Object.entries(heistStartInventory).forEach(([itemId, startQty]) => {
+      const endQty = currentCounts[itemId] ?? 0;
+      const usedQty = startQty - endQty;
+      if (usedQty <= 0) return;
+      const item = MARKET_ITEMS.find(entry => entry.id === itemId);
+      if (!item) return;
+      usages.push({
+        itemId,
+        icon: item.icon,
+        title: item.title,
+        act: item.act,
+        quantity: usedQty,
+      });
+    });
+    return usages.sort((a, b) => {
+      const actSort = MARKET_ACT_ORDER.indexOf(a.act) - MARKET_ACT_ORDER.indexOf(b.act);
+      if (actSort !== 0) return actSort;
+      return a.title.localeCompare(b.title);
+    });
+  })();
 
   useEffect(() => {
     let mounted = true;
@@ -157,6 +208,7 @@ export default function App() {
 
   const handleStartGame = () => {
     setDevLaunchAct(null);
+    setHeistStartInventory(toInventoryCounts(useInventoryStore.getState().items));
     useSneakInStore.getState().initGame();
     setCampaignStartTime(Date.now());
     setGameFlow('act1');
@@ -166,6 +218,7 @@ export default function App() {
     setDevLaunchAct(act);
     setActiveTab('home');
     resetCampaignState();
+    setHeistStartInventory(toInventoryCounts(useInventoryStore.getState().items));
 
     if (act === 'act1') {
       useSneakInStore.getState().initGame();
@@ -230,7 +283,19 @@ export default function App() {
   const handleCrackTheVaultsEnd = () => {
     const state = useReckoningStore.getState();
     const score = state.finalScore ?? 0;
+    const vaultBreakdown: Act2VaultResult[] = state.vaults.map(vault => {
+      const result = vault.isBusted ? 'busted' : vault.sum === vault.target ? 'exact' : 'under';
+      const gold = vault.isBusted ? 0 : vault.sum === vault.target ? vault.sum * 2 * 10 : vault.sum * 10;
+      return {
+        id: vault.id + 1,
+        target: vault.target,
+        sum: vault.sum,
+        result,
+        gold,
+      };
+    });
     setAct2Score(score);
+    setAct2VaultResults(vaultBreakdown);
     setAct2Record({
       score,
       exactHits: state.exactHits,
@@ -243,6 +308,11 @@ export default function App() {
 
   const handleContinueToAct3 = () => {
     setGameFlow('act3');
+  };
+
+  const handleAct3GameOver = (won: boolean) => {
+    setAct3Won(won);
+    setGameFlow('act3-gameover');
   };
 
   const recordCurrentHeist = () => {
@@ -279,6 +349,9 @@ export default function App() {
     setCampaignStartTime(null);
     setAct1Record(null);
     setAct2Record(null);
+    setAct3Won(null);
+    setAct2VaultResults([]);
+    setHeistStartInventory(null);
   };
 
   const handlePlayAgain = () => {
@@ -342,10 +415,26 @@ export default function App() {
         return (
           <EscapeScreen
             totalScore={totalScore}
-            onPlayAgain={handlePlayAgain}
-            onHome={handleReturnHome}
+            onGameOver={handleAct3GameOver}
             showTutorial={tutorialsReady && !tutorialsSeen.act3}
             onDismissTutorial={() => dismissTutorial('act3')}
+          />
+        );
+      case 'act3-gameover':
+        const totalGoldWon = (act3Won ?? false) ? totalScore : Math.round(totalScore * 0.33);
+        return (
+          <GameOverScreen
+            totalScore={totalScore}
+            won={!!act3Won}
+            totalGoldWon={totalGoldWon}
+            act1Record={act1Record}
+            act1Gold={act1Bonus}
+            act2Record={act2Record}
+            act2Gold={act2Score}
+            act2VaultResults={act2VaultResults}
+            buffsUsed={usedBuffs}
+            onPlayAgain={handlePlayAgain}
+            onHome={handleReturnHome}
           />
         );
       default:

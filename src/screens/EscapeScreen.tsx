@@ -33,16 +33,14 @@ const RED_SUITS = new Set(['hearts', 'diamonds']);
 
 interface Props {
   totalScore: number;
-  onPlayAgain: () => void;
-  onHome: () => void;
+  onGameOver: (won: boolean) => void;
   showTutorial: boolean;
   onDismissTutorial: () => void;
 }
 
 export function EscapeScreen({
   totalScore,
-  onPlayAgain,
-  onHome,
+  onGameOver,
   showTutorial,
   onDismissTutorial,
 }: Props) {
@@ -117,6 +115,7 @@ export function EscapeScreen({
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
   const [lostConfirmed, setLostConfirmed] = useState(false);
   const [showWinSummary, setShowWinSummary] = useState(false);
+  const gameOverDispatched = useRef(false);
 
   useEffect(() => {
     if (phase === 'lost') setLostConfirmed(false);
@@ -131,6 +130,24 @@ export function EscapeScreen({
     const t = setTimeout(() => setShowWinSummary(true), WIN_SUMMARY_DELAY_MS);
     return () => clearTimeout(t);
   }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'player_turn') gameOverDispatched.current = false;
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'won' && showWinSummary && !gameOverDispatched.current) {
+      gameOverDispatched.current = true;
+      onGameOver(true);
+    }
+  }, [phase, showWinSummary, onGameOver]);
+
+  useEffect(() => {
+    if (phase === 'lost' && lostConfirmed && !gameOverDispatched.current) {
+      gameOverDispatched.current = true;
+      onGameOver(false);
+    }
+  }, [phase, lostConfirmed, onGameOver]);
 
   const { width: screenWidth } = useWindowDimensions();
   // 4 cards per row, 3 gaps of 8px, 16px padding each side
@@ -155,7 +172,6 @@ export function EscapeScreen({
           // Expo may dispose the native audio object before this cleanup runs.
         }
       });
-      useEscapeStore.getState().initGame();
     };
   }, [fanfarePlayer, winPlayer, losePlayer, notifyPlayer]);
 
@@ -223,52 +239,6 @@ export function EscapeScreen({
   const isPlayerTurn = phase === 'player_turn';
   const buttonsDisabled = !isPlayerTurn;
 
-  // ── Won ────────────────────────────────────────────────────────────────────
-  if (phase === 'won' && showWinSummary) {
-    return (
-      <View style={styles.screen}>
-        <Text style={[styles.heading, styles.headingGold]}>ESCAPED!</Text>
-        <Text style={styles.subheading}>You slipped past the police.</Text>
-        <View style={styles.panel}>
-          <Text style={styles.panelLabel}>You escape with:</Text>
-          <Text style={styles.goldAmount}>{totalScore} gold</Text>
-          {/* <Text style={styles.pctLabel}>(100% of campaign score)</Text> */}
-        </View>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
-            <Text style={styles.btnText}>Play Again</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
-            <Text style={[styles.btnText, styles.btnTextSecondary]}>Home</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // ── Lost (confirmed) ───────────────────────────────────────────────────────
-  if (phase === 'lost' && lostConfirmed) {
-    return (
-      <View style={styles.screen}>
-        <Text style={[styles.heading, styles.headingRed]}>CAUGHT!</Text>
-        <Text style={styles.subheading}>The police got too close, and you had to drop two of your bags to run. You managed to keep a portion of your loot.</Text>
-        <View style={styles.panel}>
-          <Text style={styles.panelLabel}>You escape with:</Text>
-          <Text style={[styles.goldAmount, styles.goldAmountRed]}>{Math.round(totalScore * 0.33)} gold</Text>
-          {/* <Text style={styles.pctLabel}>(1/3 of campaign score)</Text> */}
-        </View>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
-            <Text style={styles.btnText}>Play Again</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
-            <Text style={[styles.btnText, styles.btnTextSecondary]}>Home</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   // ── Status message ─────────────────────────────────────────────────────────
   const statusText = infoMessage
     ? infoMessage
@@ -296,7 +266,10 @@ export function EscapeScreen({
     'In Escape, you are racing to the exit while police pressure builds every turn. ' +
     'Play melds to move towards the exit. Melds are three (or four) cards of the same rank or a sequence of cards. Think: 7 - 7 - 7 or 4 - 5 - 6. ';
 
-  const showContinue = phase === 'awaiting_continue' || (phase === 'lost' && !lostConfirmed);
+  const showContinue =
+    phase === 'awaiting_continue' ||
+    (phase === 'lost' && !lostConfirmed) ||
+    (phase === 'won' && !showWinSummary);
   const alertSegmentsFilled = Math.min(ESCAPE_POLICE_ALERT_THRESHOLD, policeAlertLevel);
   const alertLevelColor =
     alertSegmentsFilled >= 3
