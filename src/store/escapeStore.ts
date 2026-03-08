@@ -152,6 +152,7 @@ const INITIAL_STATE: EscapeState = {
   turnLog: [],
   lastPlayerAction: null,
   pendingPoliceAlertAction: null,
+  smokeBombActive: false,
 };
 
 export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => ({
@@ -327,10 +328,11 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       lastPlayerAction,
       pendingPoliceAlertAction,
       policeAlertLevel,
+      smokeBombActive,
     } = get();
     const autoMoveChancePct = getEscapePoliceAutoMoveChancePct(turnsPlayed);
     const alreadyCaught = policePosition <= playerPosition;
-    const shouldAutoMove = !alreadyCaught && Math.random() < autoMoveChancePct / 100;
+    const shouldAutoMove = !alreadyCaught && !smokeBombActive && Math.random() < autoMoveChancePct / 100;
     const nextPolicePos = shouldAutoMove ? policePosition - 1 : policePosition;
     const caught = alreadyCaught || (shouldAutoMove && nextPolicePos <= playerPosition);
     const newPolicePos = caught ? playerPosition : nextPolicePos;
@@ -345,6 +347,10 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       policeActionParts.push(
         alreadyCaught ? `${pendingPoliceAlertAction} They've caught you!` : pendingPoliceAlertAction,
       );
+    }
+
+    if (smokeBombActive) {
+      policeActionParts.push('Smoke! The police lost track of you for a moment.');
     }
 
     if (!alreadyCaught) {
@@ -378,6 +384,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
         lastPlayerAction: null,
         lastMeldType: null,
         pendingPoliceAlertAction: null,
+        smokeBombActive: false,
         policeAlertLevel:
           policeAlertLevel >= ESCAPE_POLICE_ALERT_THRESHOLD ? 0 : policeAlertLevel,
         phase: 'lost',
@@ -391,6 +398,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       turnLog: newLog,
       lastPlayerAction: null,
       pendingPoliceAlertAction: null,
+      smokeBombActive: false,
       policeAlertLevel:
         policeAlertLevel >= ESCAPE_POLICE_ALERT_THRESHOLD ? 0 : policeAlertLevel,
       lastMeldType: null,
@@ -418,5 +426,11 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const { phase, policePosition } = get();
     if (phase !== 'player_turn') return;
     set({ policePosition: Math.min(ESCAPE_PATH_LENGTH, policePosition + 1) });
+  },
+
+  activateSmokeBomb: () => {
+    const { phase } = get();
+    if (phase !== 'player_turn') return;
+    set({ smokeBombActive: true });
   },
 }));

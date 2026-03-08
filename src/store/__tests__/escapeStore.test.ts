@@ -39,6 +39,7 @@ function resetEscapeStore(overrides: Partial<ReturnType<typeof useEscapeStore.ge
     turnLog: [],
     lastPlayerAction: null,
     pendingPoliceAlertAction: null,
+    smokeBombActive: false,
     ...overrides,
   });
 }
@@ -344,6 +345,93 @@ describe('escapeStore', () => {
     expect(state.phase).toBe('player_turn');
     expect(state.policeMessage).toBeNull();
     expect(state.lastMeldType).toBeNull();
+  });
+
+  describe('smoke-bomb buff', () => {
+    test('activateSmokeBomb sets smokeBombActive true', () => {
+      resetEscapeStore({ phase: 'player_turn' });
+
+      useEscapeStore.getState().activateSmokeBomb();
+      const state = useEscapeStore.getState();
+
+      expect(state.smokeBombActive).toBe(true);
+    });
+
+    test('activateSmokeBomb is no-op outside player_turn', () => {
+      resetEscapeStore({ phase: 'police_thinking' });
+
+      useEscapeStore.getState().activateSmokeBomb();
+      const state = useEscapeStore.getState();
+
+      expect(state.smokeBombActive).toBe(false);
+    });
+
+    test('activateSmokeBomb does not move police position', () => {
+      resetEscapeStore({ phase: 'player_turn', policePosition: 5 });
+
+      useEscapeStore.getState().activateSmokeBomb();
+      const state = useEscapeStore.getState();
+
+      expect(state.policePosition).toBe(5);
+    });
+
+    test('runPoliceTurn with smokeBombActive: police do not move', () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.99); // 100% move chance
+      resetEscapeStore({
+        smokeBombActive: true,
+        policePosition: 5,
+        playerPosition: 2,
+        turnsPlayed: 2,
+      });
+
+      useEscapeStore.getState().runPoliceTurn();
+      const state = useEscapeStore.getState();
+
+      expect(state.policePosition).toBe(5);
+    });
+
+    test('runPoliceTurn with smokeBombActive: clears the flag', () => {
+      resetEscapeStore({
+        smokeBombActive: true,
+        policePosition: 5,
+        playerPosition: 2,
+        turnsPlayed: 1,
+      });
+
+      useEscapeStore.getState().runPoliceTurn();
+      const state = useEscapeStore.getState();
+
+      expect(state.smokeBombActive).toBe(false);
+    });
+
+    test('runPoliceTurn with smokeBombActive: smoke message appears in policeEvents', () => {
+      resetEscapeStore({
+        smokeBombActive: true,
+        policePosition: 5,
+        playerPosition: 2,
+        turnsPlayed: 1,
+      });
+
+      useEscapeStore.getState().runPoliceTurn();
+      const state = useEscapeStore.getState();
+
+      const lastEntry = state.turnLog.at(-1);
+      expect(lastEntry?.policeEvents?.some(e => e.includes('Smoke!'))).toBe(true);
+    });
+
+    test('runPoliceTurn with smokeBombActive: does not prevent catch from alreadyCaught state', () => {
+      resetEscapeStore({
+        smokeBombActive: true,
+        policePosition: 2,
+        playerPosition: 3,
+        turnsPlayed: 1,
+      });
+
+      useEscapeStore.getState().runPoliceTurn();
+      const state = useEscapeStore.getState();
+
+      expect(state.phase).toBe('lost');
+    });
   });
 
   describe('activateFalseTrail', () => {

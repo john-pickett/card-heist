@@ -67,12 +67,18 @@ export function EscapeScreen({
     clearError,
     clearInfo,
     activateFalseTrail,
+    smokeBombActive,
+    activateSmokeBomb,
   } = useEscapeStore();
 
   const falseTrailQty = useInventoryStore(
     s => s.items.find(i => i.itemId === 'false-trail')?.quantity ?? 0,
   );
   const hasFalseTrail = falseTrailQty > 0;
+  const smokeBombQty = useInventoryStore(
+    s => s.items.find(i => i.itemId === 'smoke-bomb')?.quantity ?? 0,
+  );
+  const hasSmokeBomb = smokeBombQty > 0;
   const removeItem = useInventoryStore(s => s.removeItem);
 
   const fanfarePlayer  = useAudioPlayer(require('../../assets/sounds/fanfare.wav'));
@@ -294,18 +300,39 @@ export function EscapeScreen({
         </TouchableOpacity>
       </View>
 
-      {hasFalseTrail && (
+      {(hasFalseTrail || hasSmokeBomb || smokeBombActive) && (
         <View style={styles.buffToolbar}>
-          <TouchableOpacity
-            style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
-            onPress={isPlayerTurn ? () => { activateFalseTrail(); removeItem('false-trail'); } : undefined}
-            activeOpacity={isPlayerTurn ? 0.75 : 1}
-          >
-            <Text style={styles.toolbarBtnText}>
-              {'🧭 False Trail'}
-              <Text style={styles.toolbarBtnQtyText}> x{falseTrailQty}</Text>
-            </Text>
-          </TouchableOpacity>
+          {hasFalseTrail && (
+            <TouchableOpacity
+              style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
+              onPress={isPlayerTurn ? () => { activateFalseTrail(); removeItem('false-trail'); } : undefined}
+              activeOpacity={isPlayerTurn ? 0.75 : 1}
+            >
+              <Text style={styles.toolbarBtnText}>
+                {'🧭 False Trail'}
+                <Text style={styles.toolbarBtnQtyText}> x{falseTrailQty}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {hasSmokeBomb && !smokeBombActive && (
+            <TouchableOpacity
+              style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
+              onPress={isPlayerTurn ? () => { activateSmokeBomb(); removeItem('smoke-bomb'); } : undefined}
+              activeOpacity={isPlayerTurn ? 0.75 : 1}
+            >
+              <Text style={styles.toolbarBtnText}>
+                {'💨 Smoke Bomb'}
+                <Text style={styles.toolbarBtnQtyText}> x{smokeBombQty}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {smokeBombActive && (
+            <View style={[styles.toolbarBtn, styles.toolbarBtnSmokeBombActive]}>
+              <Text style={styles.toolbarBtnText}>💨 Smoke Active — police skip next turn</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -875,6 +902,10 @@ const styles = StyleSheet.create({
   },
   toolbarBtnDisabled: {
     opacity: 0.35,
+  },
+  toolbarBtnSmokeBombActive: {
+    borderColor: theme.colors.textMuted,
+    opacity: 0.75,
   },
   toolbarBtnText: {
     color: theme.colors.textPrimary,

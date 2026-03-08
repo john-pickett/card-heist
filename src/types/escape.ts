@@ -52,6 +52,7 @@ export interface EscapeState {
   turnLog: TurnLogEntry[];
   lastPlayerAction: string | null;
   pendingPoliceAlertAction: string | null;
+  smokeBombActive: boolean;
 }
 
 export interface EscapeActions {
@@ -64,4 +65,5 @@ export interface EscapeActions {
   clearError: () => void;
   clearInfo: () => void;
   activateFalseTrail: () => void;
+  activateSmokeBomb: () => void;
 }
