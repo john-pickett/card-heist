@@ -434,6 +434,72 @@ describe('escapeStore', () => {
     });
   });
 
+  describe('ex-machina buff', () => {
+    test('activateExMachina moves player one step forward', () => {
+      resetEscapeStore({ playerPosition: 4 });
+
+      useEscapeStore.getState().activateExMachina();
+      const state = useEscapeStore.getState();
+
+      expect(state.playerPosition).toBe(3);
+    });
+
+    test('activateExMachina is no-op outside player_turn', () => {
+      resetEscapeStore({ phase: 'police_thinking', playerPosition: 4 });
+
+      useEscapeStore.getState().activateExMachina();
+      const state = useEscapeStore.getState();
+
+      expect(state.playerPosition).toBe(4);
+    });
+
+    test('activateExMachina keeps phase as player_turn when not at exit', () => {
+      resetEscapeStore({ playerPosition: 3 });
+
+      useEscapeStore.getState().activateExMachina();
+      const state = useEscapeStore.getState();
+
+      expect(state.phase).toBe('player_turn');
+    });
+
+    test('activateExMachina does not increment turnsPlayed', () => {
+      resetEscapeStore({ turnsPlayed: 2, playerPosition: 4 });
+
+      useEscapeStore.getState().activateExMachina();
+      const state = useEscapeStore.getState();
+
+      expect(state.turnsPlayed).toBe(2);
+    });
+
+    test('activateExMachina does not change policeAlertLevel', () => {
+      resetEscapeStore({ policeAlertLevel: 1, playerPosition: 4 });
+
+      useEscapeStore.getState().activateExMachina();
+      const state = useEscapeStore.getState();
+
+      expect(state.policeAlertLevel).toBe(1);
+    });
+
+    test('activateExMachina does not change policePosition', () => {
+      resetEscapeStore({ policePosition: 5, playerPosition: 4 });
+
+      useEscapeStore.getState().activateExMachina();
+      const state = useEscapeStore.getState();
+
+      expect(state.policePosition).toBe(5);
+    });
+
+    test('activateExMachina wins the game when player reaches exit', () => {
+      resetEscapeStore({ playerPosition: 2 });
+
+      useEscapeStore.getState().activateExMachina();
+      const state = useEscapeStore.getState();
+
+      expect(state.playerPosition).toBe(1);
+      expect(state.phase).toBe('won');
+    });
+  });
+
   describe('activateFalseTrail', () => {
     test('moves police back one step', () => {
       resetEscapeStore({ policePosition: 4, playerPosition: 2, phase: 'player_turn' });

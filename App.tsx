@@ -17,6 +17,7 @@ import { EscapeScreen } from './src/screens/EscapeScreen';
 import { GameOverScreen } from './src/screens/GameOverScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { HideoutScreen } from './src/screens/HideoutScreen';
 import { BlackMarketIntroScreen } from './src/screens/BlackMarketIntroScreen';
 import { BlackMarketUnlockedScreen } from './src/screens/BlackMarketUnlockedScreen';
 import { MarketScreen } from './src/screens/MarketScreen';
@@ -47,7 +48,7 @@ import { Act1Record, Act2Record, Act3Record, HeistRecord } from './src/types/his
 import { InventoryEntry } from './src/store/inventoryStore';
 import theme from './src/theme';
 
-type Tab = 'home' | 'market' | 'history' | 'settings';
+type Tab = 'home' | 'market' | 'hideout' | 'settings';
 type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3' | 'act3-gameover';
 type DevLaunchAct = 'act1' | 'act2' | 'act3' | null;
 type Act2VaultResult = {
@@ -74,7 +75,7 @@ function toInventoryCounts(items: InventoryEntry[]): Record<string, number> {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
-  const [settingsScreen, setSettingsScreen] = useState<'main' | 'development'>('main');
+  const [settingsScreen, setSettingsScreen] = useState<'main' | 'history' | 'development'>('main');
   const [gameFlow, setGameFlow] = useState<GameFlow>('home');
   const [act1TimeBonus, setAct1TimeBonus] = useState(0);
   const [act2Score, setAct2Score] = useState(0);
@@ -453,6 +454,9 @@ export default function App() {
 
   const renderContent = () => {
     if (activeTab === 'settings') {
+      if (settingsScreen === 'history') {
+        return <HistoryScreen onBack={() => setSettingsScreen('main')} />;
+      }
       if (__DEV__ && settingsScreen === 'development') {
         return (
           <DevelopmentScreen
@@ -465,6 +469,7 @@ export default function App() {
       return (
         <SettingsScreen
           onResetTutorials={handleResetTutorials}
+          onOpenHistory={() => setSettingsScreen('history')}
           onOpenDevelopment={() => setSettingsScreen('development')}
         />
       );
@@ -494,7 +499,7 @@ export default function App() {
       }
       return <MarketScreen />;
     }
-    if (activeTab === 'history') return <HistoryScreen />;
+    if (activeTab === 'hideout') return <HideoutScreen />;
     return renderHomeTab();
   };
 
@@ -548,11 +553,11 @@ export default function App() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabItem, activeTab === 'history' && styles.tabItemActive]}
-              onPress={() => setActiveTab('history')}
+              style={[styles.tabItem, activeTab === 'hideout' && styles.tabItemActive]}
+              onPress={() => setActiveTab('hideout')}
             >
-              <Text style={[styles.tabLabel, activeTab === 'history' && styles.tabLabelActive]}>
-                History
+              <Text style={[styles.tabLabel, activeTab === 'hideout' && styles.tabLabelActive]}>
+                Hideout
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

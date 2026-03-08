@@ -433,4 +433,15 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     if (phase !== 'player_turn') return;
     set({ smokeBombActive: true });
   },
+
+  activateExMachina: () => {
+    const { phase, playerPosition } = get();
+    if (phase !== 'player_turn') return;
+    const newPosition = playerPosition - 1;
+    if (newPosition <= ESCAPE_EXIT_POSITION) {
+      set({ playerPosition: ESCAPE_EXIT_POSITION, phase: 'won' });
+    } else {
+      set({ playerPosition: newPosition });
+    }
+  },
 }));

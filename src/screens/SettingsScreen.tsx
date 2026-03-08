@@ -5,10 +5,11 @@ import theme from '../theme';
 
 interface Props {
   onResetTutorials: () => Promise<void>;
+  onOpenHistory: () => void;
   onOpenDevelopment: () => void;
 }
 
-export function SettingsScreen({ onResetTutorials, onOpenDevelopment }: Props) {
+export function SettingsScreen({ onResetTutorials, onOpenHistory, onOpenDevelopment }: Props) {
   const [tutorialMessage, setTutorialMessage] = useState<string | null>(null);
   const soundEnabled = useSettingsStore(s => s.soundEnabled);
   const setSoundEnabled = useSettingsStore(s => s.setSoundEnabled);
@@ -25,6 +26,14 @@ export function SettingsScreen({ onResetTutorials, onOpenDevelopment }: Props) {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>SETTINGS</Text>
+
+      <TouchableOpacity
+        style={styles.navButton}
+        onPress={onOpenHistory}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.navButtonText}>Heist Results</Text>
+      </TouchableOpacity>
 
       <View style={styles.panel}>
         <Text style={styles.settingTitle}>Sound Effects</Text>
@@ -100,6 +109,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderLight,
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   navButtonText: {
     color: theme.colors.textPrimary,

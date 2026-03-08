@@ -66,4 +66,5 @@ export interface EscapeActions {
   clearInfo: () => void;
   activateFalseTrail: () => void;
   activateSmokeBomb: () => void;
+  activateExMachina: () => void;
 }

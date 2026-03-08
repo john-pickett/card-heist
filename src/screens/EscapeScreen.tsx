@@ -69,6 +69,7 @@ export function EscapeScreen({
     activateFalseTrail,
     smokeBombActive,
     activateSmokeBomb,
+    activateExMachina,
   } = useEscapeStore();
 
   const falseTrailQty = useInventoryStore(
@@ -79,6 +80,10 @@ export function EscapeScreen({
     s => s.items.find(i => i.itemId === 'smoke-bomb')?.quantity ?? 0,
   );
   const hasSmokeBomb = smokeBombQty > 0;
+  const exMachinaQty = useInventoryStore(
+    s => s.items.find(i => i.itemId === 'ex-machina')?.quantity ?? 0,
+  );
+  const hasExMachina = exMachinaQty > 0;
   const removeItem = useInventoryStore(s => s.removeItem);
 
   const fanfarePlayer  = useAudioPlayer(require('../../assets/sounds/fanfare.wav'));
@@ -300,7 +305,7 @@ export function EscapeScreen({
         </TouchableOpacity>
       </View>
 
-      {(hasFalseTrail || hasSmokeBomb || smokeBombActive) && (
+      {(hasFalseTrail || hasSmokeBomb || smokeBombActive || hasExMachina) && (
         <View style={styles.buffToolbar}>
           {hasFalseTrail && (
             <TouchableOpacity
@@ -332,6 +337,19 @@ export function EscapeScreen({
             <View style={[styles.toolbarBtn, styles.toolbarBtnSmokeBombActive]}>
               <Text style={styles.toolbarBtnText}>💨 Smoke Active — police skip next turn</Text>
             </View>
+          )}
+
+          {hasExMachina && (
+            <TouchableOpacity
+              style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
+              onPress={isPlayerTurn ? () => { activateExMachina(); removeItem('ex-machina'); } : undefined}
+              activeOpacity={isPlayerTurn ? 0.75 : 1}
+            >
+              <Text style={styles.toolbarBtnText}>
+                {'🪄 Ex Machina'}
+                <Text style={styles.toolbarBtnQtyText}> x{exMachinaQty}</Text>
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       )}

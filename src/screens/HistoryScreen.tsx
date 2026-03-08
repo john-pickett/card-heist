@@ -1,7 +1,11 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { computeStats, useHistoryStore } from '../store/historyStore';
 import theme from '../theme';
+
+interface Props {
+  onBack?: () => void;
+}
 
 function fmtMs(ms: number | null): string {
   if (ms === null) return '—';
@@ -48,7 +52,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function HistoryScreen() {
+export function HistoryScreen({ onBack }: Props) {
   const records = useHistoryStore(s => s.records);
   const stats = computeStats(records);
   const { overall, act1, act2, act3 } = stats;
@@ -57,6 +61,11 @@ export function HistoryScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.headerTitle}>HEIST DOSSIER</Text>
+        {onBack && (
+          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.85}>
+            <Text style={styles.backButtonText}>Back to Settings</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.emptyText}>No heists on record yet.</Text>
         <Text style={styles.emptySubText}>Complete a campaign to see your stats.</Text>
       </View>
@@ -66,6 +75,11 @@ export function HistoryScreen() {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
       <Text style={styles.headerTitle}>HEIST DOSSIER</Text>
+      {onBack && (
+        <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.85}>
+          <Text style={styles.backButtonText}>Back to Settings</Text>
+        </TouchableOpacity>
+      )}
       <Text style={styles.headerSub}>{overall.totalHeists} heist{overall.totalHeists !== 1 ? 's' : ''} on record</Text>
 
       <Section title="Campaign Overview">
@@ -158,6 +172,21 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     textAlign: 'center',
     marginBottom: theme.spacing.xs,
+  },
+  backButton: {
+    alignSelf: 'center',
+    backgroundColor: theme.colors.bgPanel,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderLight,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+  },
+  backButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
   },
   emptyContainer: {
     flex: 1,
