@@ -27,23 +27,22 @@ function effectiveTarget(target: number, fuzzyMathActive: boolean): number {
   return target + (fuzzyMathActive ? 3 : 0);
 }
 
-function vaultScore(vault: Vault): number {
+function vaultScore(vault: Vault, allInActive: boolean): number {
   if (vault.isBusted) return 0;
-  if (vault.sum === vault.target) return vault.sum * 2 * 10;
-  return vault.sum * 10;
+  const multiplier = allInActive ? 2 : 1;
+  if (vault.sum === vault.target) return vault.sum * 2 * 10 * multiplier;
+  return vault.sum * 10 * multiplier;
 }
 
 function isTerminal(vault: Vault): boolean {
   return vault.isBusted || vault.isStood;
 }
 
-const FIXED_TARGETS: VaultTarget[] = [13, 18, 21];
-const FOURTH_VAULT_TARGET = 42 as VaultTarget;
-
-function makeVaults(includeOffshore = false): Vault[] {
+function makeVaults(includeOffshore = false, allIn = false): Vault[] {
+  const targets: VaultTarget[] = allIn ? [26, 36, 42] : [13, 18, 21];
   const base = [0, 1, 2].map((i) => ({
     id: i as 0 | 1 | 2 | 3,
-    target: FIXED_TARGETS[i],
+    target: targets[i],
     cards: [],
     sum: 0,
     isStood: false,
@@ -51,7 +50,8 @@ function makeVaults(includeOffshore = false): Vault[] {
     targetRevealed: true,
   }));
   if (!includeOffshore) return base;
-  return [...base, { id: 3 as const, target: FOURTH_VAULT_TARGET, cards: [], sum: 0, isStood: false, isBusted: false, targetRevealed: true }];
+  const offshoreTarget: VaultTarget = allIn ? 84 : 42;
+  return [...base, { id: 3 as const, target: offshoreTarget, cards: [], sum: 0, isStood: false, isBusted: false, targetRevealed: true }];
 }
 
 let instanceCounter = 0;
@@ -77,6 +77,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   switchSource: null,
   fuzzyMathActive: false,
   offshoreAccountActive: false,
+  allInActive: false,
 
   initGame: () => {
     const inventoryItems = useInventoryStore.getState().items;
@@ -88,13 +89,17 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     if (hasOffshore) {
       useInventoryStore.getState().removeItem('offshore-account');
     }
+    const hasAllIn = inventoryItems.some((e) => e.itemId === 'all-in');
+    if (hasAllIn) {
+      useInventoryStore.getState().removeItem('all-in');
+    }
     const shuffled = shuffleDeck(createDeck());
     set({
       phase: 'dealing',
       deck: shuffled,
       currentCard: null,
       currentInstanceId: null,
-      vaults: makeVaults(hasOffshore),
+      vaults: makeVaults(hasOffshore, hasAllIn),
       pendingAce: null,
       finalScore: null,
       exactHits: 0,
@@ -105,6 +110,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       switchSource: null,
       fuzzyMathActive: hasFuzzyMath,
       offshoreAccountActive: hasOffshore,
+      allInActive: hasAllIn,
     });
   },
 
@@ -393,12 +399,12 @@ function checkGameEnd(
   set: (partial: Partial<ReckoningStore>) => void,
   vaults: Vault[]
 ) {
-  const { deck } = get();
+  const { deck, allInActive } = get();
   const allTerminal = vaults.every(isTerminal);
   const deckEmpty = deck.length === 0;
 
   if (allTerminal || deckEmpty) {
-    const finalScore = vaults.reduce((sum, v) => sum + vaultScore(v), 0);
+    const finalScore = vaults.reduce((sum, v) => sum + vaultScore(v, allInActive), 0);
     set({ phase: 'done', finalScore });
   }
 }

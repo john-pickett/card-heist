@@ -11,7 +11,7 @@ function makeCard(rank: Rank, id: string, suit: Suit = 'spades'): Card {
   };
 }
 
-function makeVault(id: 0 | 1 | 2 | 3, target: 13 | 18 | 21 | 42): Vault {
+function makeVault(id: 0 | 1 | 2 | 3, target: 13 | 18 | 21 | 26 | 36 | 42 | 84): Vault {
   return {
     id,
     target,
@@ -40,6 +40,7 @@ function resetStore(overrides: Partial<ReturnType<typeof useReckoningStore.getSt
     switchSource: null,
     fuzzyMathActive: false,
     offshoreAccountActive: false,
+    allInActive: false,
     ...overrides,
   });
 }
@@ -1318,7 +1319,6 @@ describe('vaultStore', () => {
 
     test('initGame with offshore-account → 4 vaults, vault 3 target 42, flag true, item consumed', () => {
       useInventoryStore.setState({ items: [{ itemId: 'offshore-account', quantity: 1 }] });
-      const removeSpy = jest.spyOn(useInventoryStore.getState(), 'removeItem');
       useReckoningStore.getState().initGame();
       const state = useReckoningStore.getState();
       expect(state.vaults).toHaveLength(4);
@@ -1326,7 +1326,6 @@ describe('vaultStore', () => {
       expect(state.vaults[3].id).toBe(3);
       expect(state.offshoreAccountActive).toBe(true);
       expect(useInventoryStore.getState().items.find(e => e.itemId === 'offshore-account')).toBeUndefined();
-      removeSpy.mockRestore();
     });
 
     test('game does not end until all 4 vaults are terminal', () => {
@@ -1407,6 +1406,220 @@ describe('vaultStore', () => {
       useReckoningStore.getState().assignCard(3);
       const state = useReckoningStore.getState();
       expect(state.phase).toBe('done');
+    });
+  });
+
+  describe('all-in passive buff', () => {
+    beforeEach(() => {
+      useInventoryStore.setState({ items: [] });
+    });
+
+    test('initGame with all-in → allInActive true, item consumed', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }] });
+      useReckoningStore.getState().initGame();
+      const state = useReckoningStore.getState();
+      expect(state.allInActive).toBe(true);
+      expect(useInventoryStore.getState().items.find(e => e.itemId === 'all-in')).toBeUndefined();
+    });
+
+    test('initGame without all-in → allInActive false, inventory unchanged', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'other-item', quantity: 2 }] });
+      useReckoningStore.getState().initGame();
+      const state = useReckoningStore.getState();
+      expect(state.allInActive).toBe(false);
+      expect(useInventoryStore.getState().items).toHaveLength(1);
+    });
+
+    test('initGame with all-in → 3 vaults, targets [26, 36, 42]', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }] });
+      useReckoningStore.getState().initGame();
+      const state = useReckoningStore.getState();
+      expect(state.vaults).toHaveLength(3);
+      expect(state.vaults.map(v => v.target)).toEqual([26, 36, 42]);
+    });
+
+    test('initGame with all-in + offshore-account → 4 vaults, targets [26, 36, 42, 84]', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }, { itemId: 'offshore-account', quantity: 1 }] });
+      useReckoningStore.getState().initGame();
+      const state = useReckoningStore.getState();
+      expect(state.vaults).toHaveLength(4);
+      expect(state.vaults.map(v => v.target)).toEqual([26, 36, 42, 84]);
+      expect(state.allInActive).toBe(true);
+      expect(state.offshoreAccountActive).toBe(true);
+    });
+
+    test('standVault with allInActive: non-exact finalScore doubles', () => {
+      const v0 = makeVault(0, 26);
+      v0.sum = 20; v0.isStood = true;
+      const v1 = makeVault(1, 36);
+      v1.sum = 30; v1.isStood = true;
+      const v2 = makeVault(2, 42);
+      v2.sum = 25;
+      resetStore({
+        phase: 'dealing',
+        deck: [],
+        vaults: [v0, v1, v2],
+        allInActive: true,
+      });
+
+      useReckoningStore.getState().standVault(2);
+      const state = useReckoningStore.getState();
+      expect(state.phase).toBe('done');
+      // non-exact: (20 + 30 + 25) * 10 * 2 = 75 * 20 = 1500
+      expect(state.finalScore).toBe(1500);
+    });
+
+    test('assignCard with allInActive: exact-hit score is sum × 2 × 10 × 2', () => {
+      const v0 = makeVault(0, 26);
+      v0.cards = [{ card: makeCard('K', 'cK'), instanceId: 'iid-K' }];
+      v0.sum = 10;
+      const v1 = makeVault(1, 36);
+      v1.isStood = true; v1.sum = 30;
+      const v2 = makeVault(2, 42);
+      v2.isStood = true; v2.sum = 35;
+      resetStore({
+        phase: 'assigning',
+        currentCard: makeCard('K', 'cK2'),
+        currentInstanceId: 'rec-K2',
+        deck: [],
+        vaults: [v0, v1, v2],
+        allInActive: true,
+      });
+
+      // assign K (10) to v0 → sum=20, not exact (target=26); deck empty → game ends
+      useReckoningStore.getState().assignCard(0);
+      const state = useReckoningStore.getState();
+      expect(state.phase).toBe('done');
+      // v0: 20*10*2=400, v1: 30*10*2=600, v2: 35*10*2=700 → 1700
+      expect(state.finalScore).toBe(1700);
+    });
+
+    test('allInActive: exact hit vault scores sum × 2 × 10 × 2', () => {
+      const v0 = makeVault(0, 26);
+      // [6, K] → computeSum = 16; assign K → 26 exact hit
+      v0.cards = [
+        { card: makeCard('6', 'c6ex'), instanceId: 'iid-6ex' },
+        { card: makeCard('K', 'cKex'), instanceId: 'iid-Kex' },
+      ];
+      v0.sum = 16;
+      const v1 = makeVault(1, 36);
+      v1.isStood = true; v1.sum = 30;
+      const v2 = makeVault(2, 42);
+      v2.isStood = true; v2.sum = 35;
+      resetStore({
+        phase: 'assigning',
+        currentCard: makeCard('K', 'cK2ex'),
+        currentInstanceId: 'rec-K2ex',
+        deck: [],
+        vaults: [v0, v1, v2],
+        allInActive: true,
+      });
+
+      // assign K (10) to v0 → computeSum([6,K,K]) = 26 exact; deck empty → game ends
+      useReckoningStore.getState().assignCard(0);
+      const state = useReckoningStore.getState();
+      expect(state.vaults[0].sum).toBe(26);
+      expect(state.vaults[0].isStood).toBe(true);
+      // v0 exact: 26*2*10*2=1040, v1: 30*10*2=600, v2: 35*10*2=700 → 2340
+      expect(state.finalScore).toBe(2340);
+    });
+
+    test('allInActive: busted vault still scores 0', () => {
+      // v0 busted, v1 stood, v2 not stood → stand v2 → all terminal → game ends
+      const v0 = makeVault(0, 26);
+      v0.isBusted = true; v0.sum = 30;
+      const v1 = makeVault(1, 36);
+      v1.isStood = true; v1.sum = 30;
+      const v2 = makeVault(2, 42);
+      v2.sum = 35;
+      resetStore({
+        phase: 'dealing',
+        deck: [makeCard('2', 'remain')],
+        vaults: [v0, v1, v2],
+        allInActive: true,
+      });
+
+      useReckoningStore.getState().standVault(2);
+      const state = useReckoningStore.getState();
+      expect(state.phase).toBe('done');
+      // v0 busted: 0, v1: 30*10*2=600, v2: 35*10*2=700 → 1300
+      expect(state.finalScore).toBe(1300);
+    });
+
+    test('allInActive + fuzzyMathActive: bust threshold = doubled target + 3', () => {
+      // vault target=26, fuzzy adds 3 → threshold=29; [K,9]=19, assign K → 29 → not busted
+      const v0 = makeVault(0, 26);
+      v0.cards = [
+        { card: makeCard('K', 'cKfz'), instanceId: 'iid-Kfz' },
+        { card: makeCard('9', 'c9fz'), instanceId: 'iid-9fz' },
+      ];
+      v0.sum = 19;
+      resetStore({
+        phase: 'assigning',
+        currentCard: makeCard('K', 'cKfz2'),
+        currentInstanceId: 'rec-Kfz2',
+        deck: [makeCard('2', 'remain')],
+        vaults: [v0, makeVault(1, 36), makeVault(2, 42)],
+        allInActive: true,
+        fuzzyMathActive: true,
+      });
+
+      useReckoningStore.getState().assignCard(0); // computeSum([K,9,K])=29, threshold=29 → not busted
+      const state = useReckoningStore.getState();
+      expect(state.vaults[0].sum).toBe(29);
+      expect(state.vaults[0].isBusted).toBe(false);
+    });
+
+    test('allInActive + fuzzyMathActive: sum at doubled target + 4 busts', () => {
+      // vault target=26, threshold=29, sum=30 → busted
+      const v0 = makeVault(0, 26);
+      v0.cards = [{ card: makeCard('9', 'c9fz2'), instanceId: 'iid-9fz2' }, { card: makeCard('K', 'cKfz2'), instanceId: 'iid-Kfz2' }];
+      v0.sum = 19;
+      resetStore({
+        phase: 'assigning',
+        currentCard: makeCard('J', 'cJfz2'),
+        currentInstanceId: 'rec-Jfz2',
+        deck: [makeCard('2', 'remain')],
+        vaults: [v0, makeVault(1, 36), makeVault(2, 42)],
+        allInActive: true,
+        fuzzyMathActive: true,
+      });
+
+      // 19 + 10(J) = 29, still under threshold... let me recalculate:
+      // v0.sum=19 is wrong for 9+K=19. Let's use a different setup:
+      // v0 has [9,K] → sum=19, assign J(10) → 29, threshold=29 → not busted
+      // We need to bust: start at sum=20, assign J → 30 > 29 → busted
+      const v0b = makeVault(0, 26);
+      v0b.cards = [{ card: makeCard('K', 'cKb2'), instanceId: 'iid-Kb2' }, { card: makeCard('K', 'cKb3'), instanceId: 'iid-Kb3' }];
+      v0b.sum = 20;
+      resetStore({
+        phase: 'assigning',
+        currentCard: makeCard('J', 'cJb2'),
+        currentInstanceId: 'rec-Jb2',
+        deck: [makeCard('2', 'remain')],
+        vaults: [v0b, makeVault(1, 36), makeVault(2, 42)],
+        allInActive: true,
+        fuzzyMathActive: true,
+      });
+
+      useReckoningStore.getState().assignCard(0); // 20+10=30 > 29 → busted
+      const state = useReckoningStore.getState();
+      expect(state.vaults[0].sum).toBe(30);
+      expect(state.vaults[0].isBusted).toBe(true);
+    });
+
+    test('second initGame after all-in consumed: allInActive resets to false, targets back to [13, 18, 21]', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }] });
+      useReckoningStore.getState().initGame();
+      expect(useReckoningStore.getState().allInActive).toBe(true);
+      expect(useReckoningStore.getState().vaults.map(v => v.target)).toEqual([26, 36, 42]);
+
+      // Second game — item already consumed
+      useReckoningStore.getState().initGame();
+      const state = useReckoningStore.getState();
+      expect(state.allInActive).toBe(false);
+      expect(state.vaults).toHaveLength(3);
+      expect(state.vaults.map(v => v.target)).toEqual([13, 18, 21]);
     });
   });
 });

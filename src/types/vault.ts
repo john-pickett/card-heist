@@ -1,6 +1,6 @@
 import { Card } from './card';
 
-export type VaultTarget = 13 | 18 | 21 | 42;
+export type VaultTarget = 13 | 18 | 21 | 26 | 36 | 42 | 84;
 export type AceValue = 1 | 11;
 
 export interface VaultCard {
@@ -43,6 +43,7 @@ export interface ReckoningState {
   switchSource: { vaultId: 0 | 1 | 2 | 3; instanceId: string } | null;
   fuzzyMathActive: boolean;
   offshoreAccountActive: boolean;
+  allInActive: boolean;
 }
 
 export interface ReckoningActions {

@@ -11,6 +11,7 @@ interface VaultResultScreenProps {
 export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProps) {
   const vaults = useReckoningStore((s) => s.vaults);
   const finalScore = useReckoningStore((s) => s.finalScore) ?? 0;
+  const allInActive = useReckoningStore((s) => s.allInActive);
   const initGame = useReckoningStore((s) => s.initGame);
 
   const handlePlayAgain = () => {
@@ -18,8 +19,9 @@ export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProp
     onPlayAgain();
   };
 
-  const maxPossible = (13 + 18 + 21) * 10; // all 3 targets, 10x economy
-  const isMaxScore = finalScore >= (13 + 18 + 21) * 2 * 10;
+  const scoreMultiplier = allInActive ? 2 : 1;
+  const maxPossible = vaults.reduce((sum, v) => sum + v.target * 2 * 10 * scoreMultiplier, 0);
+  const isMaxScore = finalScore >= maxPossible;
 
   return (
     <View style={styles.screen}>
@@ -39,7 +41,7 @@ export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProp
           {vaults.map((vault) => {
             const isBusted = vault.isBusted;
             const isExact = !isBusted && vault.sum === vault.target;
-            const score = isBusted ? 0 : isExact ? vault.sum * 2 * 10 : vault.sum * 10;
+            const score = isBusted ? 0 : isExact ? vault.sum * 2 * 10 * scoreMultiplier : vault.sum * 10 * scoreMultiplier;
 
             const statusLabel = isBusted ? 'BUSTED' : isExact ? 'EXACT ×2' : 'UNDER';
             const statusColor = isBusted ? theme.colors.errorRed : isExact ? theme.colors.gold : theme.colors.textGreen;
@@ -76,7 +78,7 @@ export function VaultResultScreen({ onPlayAgain, onHome }: VaultResultScreenProp
           {isMaxScore && (
             <Text style={styles.perfectNote}>Perfect Reckoning!</Text>
           )}
-          <Text style={styles.maxNote}>Max possible: {maxPossible * 2}</Text>
+          <Text style={styles.maxNote}>Max possible: {maxPossible}</Text>
         </View>
 
         {/* Actions */}
