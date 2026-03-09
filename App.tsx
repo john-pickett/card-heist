@@ -308,6 +308,7 @@ export default function App() {
   };
 
   const handleContinueToAct3 = () => {
+    useEscapeStore.getState().initGame();
     setGameFlow('act3');
   };
 

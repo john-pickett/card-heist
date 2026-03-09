@@ -124,13 +124,7 @@ export function EscapeScreen({
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
-  const [lostConfirmed, setLostConfirmed] = useState(false);
   const [showWinSummary, setShowWinSummary] = useState(false);
-  const gameOverDispatched = useRef(false);
-
-  useEffect(() => {
-    if (phase === 'lost') setLostConfirmed(false);
-  }, [phase]);
 
   useEffect(() => {
     if (phase !== 'won') {
@@ -141,24 +135,6 @@ export function EscapeScreen({
     const t = setTimeout(() => setShowWinSummary(true), WIN_SUMMARY_DELAY_MS);
     return () => clearTimeout(t);
   }, [phase]);
-
-  useEffect(() => {
-    if (phase === 'player_turn') gameOverDispatched.current = false;
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase === 'won' && showWinSummary && !gameOverDispatched.current) {
-      gameOverDispatched.current = true;
-      onGameOver(true);
-    }
-  }, [phase, showWinSummary, onGameOver]);
-
-  useEffect(() => {
-    if (phase === 'lost' && lostConfirmed && !gameOverDispatched.current) {
-      gameOverDispatched.current = true;
-      onGameOver(false);
-    }
-  }, [phase, lostConfirmed, onGameOver]);
 
   const { width: screenWidth } = useWindowDimensions();
   // 4 cards per row, 3 gaps of 8px, 16px padding each side
@@ -279,8 +255,8 @@ export function EscapeScreen({
 
   const showContinue =
     phase === 'awaiting_continue' ||
-    (phase === 'lost' && !lostConfirmed) ||
-    (phase === 'won' && !showWinSummary);
+    phase === 'lost' ||
+    (phase === 'won' && showWinSummary);
   const alertSegmentsFilled = Math.min(ESCAPE_POLICE_ALERT_THRESHOLD, policeAlertLevel);
   const alertLevelColor =
     alertSegmentsFilled >= 3
@@ -456,7 +432,8 @@ export function EscapeScreen({
               style={[styles.btn, styles.btnContinue]}
               onPress={() => {
                 if (phase === 'awaiting_continue') endPoliceTurn();
-                else setLostConfirmed(true);
+                else if (phase === 'lost') onGameOver(false);
+                else if (phase === 'won') onGameOver(true);
               }}
             >
               <Text style={styles.btnText}>Continue</Text>
