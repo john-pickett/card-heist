@@ -142,11 +142,12 @@ function DraggableCard({
 
 interface Props {
   onGameEnd: () => void;
+  onCancelHeist: () => void;
   showTutorial: boolean;
   onDismissTutorial: () => void;
 }
 
-export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Props) {
+export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismissTutorial }: Props) {
   const phase = useSneakInStore(s => s.phase);
   const hand = useSneakInStore(s => s.hand);
   const areas = useSneakInStore(s => s.areas);
@@ -624,16 +625,27 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
 
         {(phase === 'playing' || phase === 'idle') && (
           <View style={styles.toolbar}>
-
-            <TouchableOpacity
-              style={[styles.toolbarBtn, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnDisabled]}
-              disabled={!hasAnyReturnable || !!activeDrag}
-              onPress={returnAllToHand}
-            >
-              <Text style={[styles.toolbarBtnText, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnTextDisabled]}>
-                ↩ Return All
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.toolbarLeft}>
+              {phase === 'idle' && (
+                <TouchableOpacity
+                  style={[styles.toolbarBtn, styles.cancelHeistBtn]}
+                  onPress={onCancelHeist}
+                >
+                  <Text style={styles.toolbarBtnText}>Cancel Heist</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.toolbarRight}>
+              <TouchableOpacity
+                style={[styles.toolbarBtn, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnDisabled]}
+                disabled={!hasAnyReturnable || !!activeDrag}
+                onPress={returnAllToHand}
+              >
+                <Text style={[styles.toolbarBtnText, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnTextDisabled]}>
+                  ↩ Return All
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -1200,8 +1212,20 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.md,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: theme.spacing.sm,
+  },
+  toolbarLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  toolbarRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  cancelHeistBtn: {
+    backgroundColor: theme.colors.gray,
   },
   toolbarBtn: {
     backgroundColor: theme.colors.greenSuccess,

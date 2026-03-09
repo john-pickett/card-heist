@@ -88,6 +88,7 @@ export default function App() {
   const spendGold = useHistoryStore(s => s.spendGold);
   const heistCount = useHistoryStore(s => s.records.length);
   const availableGold = lifetimeGold - spentGold;
+  const currentRunNumber = heistCount + 1;
   const inventoryItems = useInventoryStore(s => s.items);
   const blackMarketIntroSeen = useSettingsStore(s => s.blackMarketIntroSeen);
   const setBlackMarketIntroSeen = useSettingsStore(s => s.setBlackMarketIntroSeen);
@@ -373,12 +374,21 @@ export default function App() {
     setGameFlow('home');
   };
 
+  const handleCancelActOne = () => {
+    useSneakInStore.getState().initGame();
+    useReckoningStore.getState().initGame();
+    useEscapeStore.getState().initGame();
+    resetCampaignState();
+    setGameFlow('home');
+  };
+
   const renderHomeTab = () => {
     switch (gameFlow) {
       case 'act1':
         return (
           <SneakInScreen
             onGameEnd={handleSneakInEnd}
+            onCancelHeist={handleCancelActOne}
             showTutorial={tutorialsReady && !tutorialsSeen.act1}
             onDismissTutorial={() => dismissTutorial('act1')}
           />
@@ -429,6 +439,7 @@ export default function App() {
             totalScore={totalScore}
             won={!!act3Won}
             totalGoldWon={totalGoldWon}
+            runNumber={currentRunNumber}
             act1Record={act1Record}
             act1Gold={act1Bonus}
             act2Record={act2Record}

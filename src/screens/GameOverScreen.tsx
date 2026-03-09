@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Act1Record, Act2Record } from '../types/history';
 import { MarketAct } from '../types/market';
 import theme from '../theme';
@@ -21,6 +22,7 @@ type UsedBuff = {
 };
 
 interface Props {
+  runNumber: number;
   totalScore: number;
   totalGoldWon: number;
   won: boolean;
@@ -50,6 +52,7 @@ function vaultResultLabel(result: Act2VaultResult['result']): string {
 }
 
 export function GameOverScreen({
+  runNumber,
   totalScore,
   totalGoldWon,
   won,
@@ -63,6 +66,30 @@ export function GameOverScreen({
   onHome,
 }: Props) {
   const solvedAllAreas = act1Record ? !act1Record.timedOut : false;
+  const [copied, setCopied] = useState(false);
+  const act1Time = act1Record ? formatElapsed(act1Record.elapsedMs) : '—';
+
+  const copyResultsToClipboard = async () => {
+    const vaultLines = act2VaultResults.map(vault => {
+      const resultLabel = vaultResultLabel(vault.result).replace(/^[^\s]+\s/, '');
+      return `- Vault #${vault.id}: ${vault.sum}/${vault.target}, ${resultLabel}, ${vault.gold} gold`;
+    });
+
+    const payload = [
+      'Card Heist',
+      `Run #${runNumber}`,
+      `Total Gold Won: ${totalGoldWon}`,
+      `Escaped Police: ${won ? 'Yes' : 'No'}`,
+      `Act One Time: ${act1Time}`,
+      `Act One Gold: ${act1Gold}`,
+      `Act Two Gold: ${act2Gold}`,
+      'Act Two Vault Results:',
+      ...(vaultLines.length > 0 ? vaultLines : ['- No vault data']),
+    ].join('\n');
+
+    await Clipboard.setStringAsync(payload);
+    setCopied(true);
+  };
 
   return (
     <View style={styles.screen}>
@@ -83,6 +110,10 @@ export function GameOverScreen({
             {won ? '🏆 100% kept' : `🧯 33% kept from ${totalScore} total potential`}
           </Text>
         </View>
+        <TouchableOpacity style={styles.copyButton} onPress={copyResultsToClipboard}>
+          <Text style={styles.copyButtonText}>Share Results</Text>
+          {copied && <Text style={styles.copyCheckIcon}>✓</Text>}
+        </TouchableOpacity>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🧩 Act One: Sneak In</Text>
@@ -153,13 +184,15 @@ export function GameOverScreen({
         </View>
       </ScrollView>
 
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
-          <Text style={styles.btnText}>Play Again</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
-          <Text style={[styles.btnText, styles.btnTextSecondary]}>Home</Text>
-        </TouchableOpacity>
+      <View style={styles.buttonSheet}>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={[styles.btn, styles.btnGreen]} onPress={onPlayAgain}>
+            <Text style={styles.btnText}>Play Again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={onHome}>
+            <Text style={[styles.btnText, styles.btnTextSecondary]}>Home</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -320,11 +353,41 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xs,
     marginLeft: theme.spacing.sm,
   },
+  buttonSheet: {
+    paddingTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.sm,
+  },
+  copyButton: {
+    width: '60%',
+    alignSelf: 'center',
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.ten,
+    paddingHorizontal: theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.textPrimary,
+    backgroundColor: theme.colors.greenPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  copyButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.heavy,
+    letterSpacing: 0.2,
+  },
+  copyCheckIcon: {
+    color: theme.colors.greenPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.black,
+  },
   buttonRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
   },
   btn: {
     flex: 1,

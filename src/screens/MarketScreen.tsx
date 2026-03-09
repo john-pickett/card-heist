@@ -39,6 +39,7 @@ export function MarketScreen() {
   const availableGold = lifetimeGold - spentGold;
   const isUnlocked = heistCount >= MARKET_UNLOCK_HEISTS;
   const heistsRemaining = Math.max(0, MARKET_UNLOCK_HEISTS - heistCount);
+  const allPremiumTiersUnlocked = PREMIUM_TIERS.every(tier => unlockedPremiumTiers.includes(tier.key));
 
   function getOwnedQuantity(itemId: string): number {
     return inventoryItems.find(e => e.itemId === itemId)?.quantity ?? 0;
@@ -142,18 +143,20 @@ export function MarketScreen() {
               contentContainerStyle={styles.marketScrollContent}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.premiumExplainer}>
-                <Text style={styles.premiumExplainerText}>
-                  These items unlock after spending enough gold at the black market.
-                </Text>
-                <Text style={styles.premiumExplainerGold}>
-                  You've spent{' '}
-                  <Text style={styles.premiumExplainerGoldAmount}>
-                    {spentGold.toLocaleString()} gold
+              {!allPremiumTiersUnlocked && (
+                <View style={styles.premiumExplainer}>
+                  <Text style={styles.premiumExplainerText}>
+                    These items unlock after spending enough gold at the black market.
                   </Text>
-                  {' '}so far.
-                </Text>
-              </View>
+                  <Text style={styles.premiumExplainerGold}>
+                    You've spent{' '}
+                    <Text style={styles.premiumExplainerGoldAmount}>
+                      {spentGold.toLocaleString()} gold
+                    </Text>
+                    {' '}so far.
+                  </Text>
+                </View>
+              )}
 
               {PREMIUM_TIERS.map(tier => {
                 const tierItems = MARKET_ITEMS.filter(item => item.premiumTierId === tier.key);
