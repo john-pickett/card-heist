@@ -1,7 +1,8 @@
 export interface Act1Record {
   elapsedMs: number | null; // null = timeout
   timedOut: boolean;
-  timingBonus: number; // 0, 10, or 20
+  timingBonus: number; // final bonus after any bonus-cut multiplier
+  bonusCutApplied: boolean;
   totalMoves: number;
 }
 

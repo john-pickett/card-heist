@@ -101,6 +101,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const vaults = useReckoningStore((s) => s.vaults);
   const exactHits = useReckoningStore((s) => s.exactHits);
   const preBuffPhase = useReckoningStore((s) => s.preBuffPhase);
+  const fuzzyMathActive = useReckoningStore((s) => s.fuzzyMathActive);
 
   const initGame = useReckoningStore((s) => s.initGame);
   const flipCard = useReckoningStore((s) => s.flipCard);
@@ -452,10 +453,12 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>CRACK THE VAULTS</Text>
-        <View style={styles.drawBadge}>
-          <Text style={styles.drawText}>Draw: {deck.length}</Text>
-        </View>
+        <Text style={styles.title}>VAULTS</Text>
+        {fuzzyMathActive && (
+          <View style={styles.activeBuffsBadge}>
+            <Text style={styles.activeBuffsText}>FM</Text>
+          </View>
+        )}
         <View style={styles.scoreBadge}>
           <Text style={styles.scoreText}>Gold: {runningScore}</Text>
         </View>
@@ -538,6 +541,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
                 playTap();
               }}
               onStand={() => standVault(vault.id)}
+              fuzzyMathActive={fuzzyMathActive}
               isSwitchMode={phase === 'switch'}
               isBurnMode={phase === 'burn'}
               onBurnCard={(vid, instanceId) => {
@@ -797,18 +801,19 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     flex: 1,
   },
-  drawBadge: {
+  activeBuffsBadge: {
     backgroundColor: theme.colors.bgPanel,
     borderRadius: theme.radii.r8,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.three,
     borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.borderMedium,
+    borderColor: theme.colors.gold,
   },
-  drawText: {
-    color: theme.colors.text70,
+  activeBuffsText: {
+    color: theme.colors.gold,
     fontSize: theme.fontSizes.s,
-    fontWeight: theme.fontWeights.medium,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 0.5,
   },
   scoreBadge: {
     backgroundColor: theme.colors.greenPrimary,

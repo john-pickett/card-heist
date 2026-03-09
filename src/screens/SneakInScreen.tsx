@@ -160,7 +160,7 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const returnAreaToHand = useSneakInStore(s => s.returnAreaToHand);
   const returnAllToHand = useSneakInStore(s => s.returnAllToHand);
   const timeoutGame = useSneakInStore(s => s.timeoutGame);
-  const { activateFalseAlarm, activateInsideTip, clearInsideTipHint, activatePeekBlueprint, clearBlueprintHint, activateTimeFreeze, endTimeFreeze } = useSneakInStore.getState();
+  const { activateFalseAlarm, activateInsideTip, clearInsideTipHint, activatePeekBlueprint, clearBlueprintHint, activateTimeFreeze, endTimeFreeze, activateQuickFingers } = useSneakInStore.getState();
 
   const inventoryItems = useInventoryStore(s => s.items);
   const { removeItem } = useInventoryStore.getState();
@@ -169,15 +169,18 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
   const insideTipQty = inventoryItems.find(e => e.itemId === 'inside-tip')?.quantity ?? 0;
   const timeFreezeQty = inventoryItems.find(e => e.itemId === 'time-freeze')?.quantity ?? 0;
   const blueprintQty = inventoryItems.find(e => e.itemId === 'peek-blueprint')?.quantity ?? 0;
+  const quickFingersQty = inventoryItems.find(e => e.itemId === 'quick-fingers')?.quantity ?? 0;
   const hasFalseAlarm = falseAlarmQty > 0;
   const hasInsideTip = insideTipQty > 0;
   const hasTimeFreeze = timeFreezeQty > 0;
   const hasBlueprint = blueprintQty > 0;
-  const showBuffToolbar = hasFalseAlarm || hasInsideTip || hasTimeFreeze || hasBlueprint;
+  const hasQuickFingers = quickFingersQty > 0;
+  const showBuffToolbar = hasFalseAlarm || hasInsideTip || hasTimeFreeze || hasBlueprint || hasQuickFingers;
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [pickingHintArea, setPickingHintArea] = useState(false);
   const [pickingBlueprintArea, setPickingBlueprintArea] = useState(false);
+  const [pickingQuickFingersArea, setPickingQuickFingersArea] = useState(false);
   const { playTap } = useCardSound();
 
   // --- Screen-level drag state ---
@@ -433,6 +436,17 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
               <Text style={styles.buffToolbarBtnText}>
                 {'🗺️ Blueprint'}
                 <Text style={styles.buffToolbarBtnQtyText}> x{blueprintQty}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+          {hasQuickFingers && (
+            <TouchableOpacity
+              style={styles.buffToolbarBtn}
+              onPress={() => setPickingQuickFingersArea(true)}
+            >
+              <Text style={styles.buffToolbarBtnText}>
+                {'🖐️ Quick Fingers'}
+                <Text style={styles.buffToolbarBtnQtyText}> x{quickFingersQty}</Text>
               </Text>
             </TouchableOpacity>
           )}
@@ -705,6 +719,32 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
           <TouchableOpacity
             style={[styles.hintPickerCard, styles.hintPickerCancel]}
             onPress={() => setPickingHintArea(false)}
+          >
+            <Text style={styles.hintPickerCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {pickingQuickFingersArea && (
+        <View style={styles.hintPickerOverlay}>
+          <Text style={styles.hintPickerTitle}>Choose an area to instantly solve:</Text>
+          {AREA_IDS.map(areaId => (
+            <TouchableOpacity
+              key={areaId}
+              style={styles.hintPickerCard}
+              onPress={() => {
+                activateQuickFingers(areaId);
+                removeItem('quick-fingers');
+                setPickingQuickFingersArea(false);
+              }}
+            >
+              <Text style={styles.hintPickerCardIcon}>{AREA_ICONS[areaId]}</Text>
+              <Text style={styles.hintPickerCardLabel}>{AREA_LABELS[areaId]}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={[styles.hintPickerCard, styles.hintPickerCancel]}
+            onPress={() => setPickingQuickFingersArea(false)}
           >
             <Text style={styles.hintPickerCancelText}>Cancel</Text>
           </TouchableOpacity>

@@ -267,12 +267,13 @@ export default function App() {
         elapsedSec <= 120 ? 100 : 0;
     }
     const inv = useInventoryStore.getState();
-    if (timingBonus > 0 && inv.items.some(e => e.itemId === 'bonus-cut')) {
+    const bonusCutApplied = timingBonus > 0 && inv.items.some(e => e.itemId === 'bonus-cut');
+    if (bonusCutApplied) {
       timingBonus *= 2;
       inv.removeItem('bonus-cut');
     }
     setAct1TimeBonus(timingBonus);
-    setAct1Record({ elapsedMs, timedOut, timingBonus, totalMoves: state.totalMoves });
+    setAct1Record({ elapsedMs, timedOut, timingBonus, bonusCutApplied, totalMoves: state.totalMoves });
     setGameFlow('act1-bridge');
   };
 
@@ -392,6 +393,7 @@ export default function App() {
             elapsedMs={act1Record?.elapsedMs ?? null}
             timedOut={act1Record?.timedOut ?? false}
             timingBonus={act1Record?.timingBonus ?? 0}
+            bonusCutApplied={act1Record?.bonusCutApplied ?? false}
             cumulativeGold={act1Bonus}
             onContinue={handleContinueToAct2}
           />

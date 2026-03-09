@@ -350,7 +350,8 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     }
 
     if (smokeBombActive) {
-      policeActionParts.push('Smoke! The police lost track of you for a moment.');
+      // policeActionParts.push('Smoke! The police lost track of you for a moment.');
+      policeActionParts.push('You throw the smoke bomb — the police are blinded for this turn.');
     }
 
     if (!alreadyCaught) {

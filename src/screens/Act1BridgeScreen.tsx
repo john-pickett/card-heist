@@ -38,11 +38,12 @@ interface Props {
   elapsedMs: number | null;
   timedOut: boolean;
   timingBonus: number;
+  bonusCutApplied: boolean;
   cumulativeGold: number;
   onContinue: () => void;
 }
 
-export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, cumulativeGold, onContinue }: Props) {
+export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, bonusCutApplied, cumulativeGold, onContinue }: Props) {
   const rating = getTimingRating(elapsedMs ?? 0, timedOut);
   const solution = useSneakInStore(s => s.solution);
   const areas = useSneakInStore(s => s.areas);
@@ -67,9 +68,26 @@ export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, cumulativeG
           <Text style={[styles.perfGrade, { color: GRADE_COLORS[rating.grade] }]}>
             {rating.label}
           </Text>
-          <Text style={styles.perfBonus}>
-            {timingBonus > 0 ? `+${timingBonus} gold bonus` : 'No gold bonus'}
-          </Text>
+          {bonusCutApplied ? (
+            <View style={styles.bonusCutBreakdown}>
+              <View style={styles.bonusCutRow}>
+                <Text style={styles.bonusCutLabel}>Base bonus</Text>
+                <Text style={styles.bonusCutValue}>+{timingBonus / 2} gold</Text>
+              </View>
+              <View style={styles.bonusCutRow}>
+                <Text style={styles.bonusCutLabel}>💰 Bonus Cut</Text>
+                <Text style={styles.bonusCutMultiplier}>×2</Text>
+              </View>
+              <View style={[styles.bonusCutRow, styles.bonusCutTotalRow]}>
+                <Text style={styles.bonusCutTotalLabel}>Total bonus</Text>
+                <Text style={styles.bonusCutTotal}>+{timingBonus} gold</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.perfBonus}>
+              {timingBonus > 0 ? `+${timingBonus} gold bonus` : 'No gold bonus'}
+            </Text>
+          )}
         </View>
 
         <View style={styles.storyBox}>
@@ -195,6 +213,47 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: theme.fontSizes.md,
     fontWeight: theme.fontWeights.medium,
+  },
+  bonusCutBreakdown: {
+    width: '100%',
+    marginTop: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  bonusCutRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bonusCutTotalRow: {
+    borderTopWidth: theme.borderWidths.thin,
+    borderTopColor: theme.colors.borderFaint,
+    paddingTop: theme.spacing.xs,
+    marginTop: theme.spacing.two,
+  },
+  bonusCutLabel: {
+    color: theme.colors.textSoft,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.medium,
+  },
+  bonusCutValue: {
+    color: theme.colors.textSoft,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.medium,
+  },
+  bonusCutMultiplier: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.black,
+  },
+  bonusCutTotalLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.heavy,
+  },
+  bonusCutTotal: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.title,
+    fontWeight: theme.fontWeights.black,
   },
   storyBox: {
     width: '100%',

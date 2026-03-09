@@ -107,6 +107,7 @@ interface VaultColumnProps {
   isDragTarget: boolean;
   onAssign: () => void;
   onStand: () => void;
+  fuzzyMathActive?: boolean;
   isSwitchMode?: boolean;
   isBurnMode?: boolean;
   onBurnCard?: (vaultId: 0 | 1 | 2, instanceId: string) => void;
@@ -129,6 +130,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
       isDragTarget,
       onAssign,
       onStand,
+      fuzzyMathActive,
       isSwitchMode,
       isBurnMode,
       onBurnCard,
@@ -170,7 +172,12 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
         <View style={styles.header}>
           <Text style={styles.vaultLabel}>Vault {vault.id + 1}</Text>
           <View style={styles.targetBadge}>
-            <Text style={styles.targetText}>{vault.target}</Text>
+            <Text style={styles.targetText}>
+              {vault.target}
+              {fuzzyMathActive && (
+                <Text style={styles.targetExpanded}> ({vault.target + 3})</Text>
+              )}
+            </Text>
           </View>
         </View>
 
@@ -338,6 +345,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.md,
     fontWeight: theme.fontWeights.heavy,
+  },
+  targetExpanded: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.medium,
   },
   sumRow: {
     flexDirection: 'row',

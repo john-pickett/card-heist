@@ -281,7 +281,7 @@ export function EscapeScreen({
         </TouchableOpacity>
       </View>
 
-      {(hasFalseTrail || hasSmokeBomb || smokeBombActive || hasExMachina) && (
+      {(hasFalseTrail || hasSmokeBomb || hasExMachina) && (
         <View style={styles.buffToolbar}>
           {hasFalseTrail && (
             <TouchableOpacity
@@ -296,23 +296,17 @@ export function EscapeScreen({
             </TouchableOpacity>
           )}
 
-          {hasSmokeBomb && !smokeBombActive && (
+          {hasSmokeBomb && (
             <TouchableOpacity
-              style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
-              onPress={isPlayerTurn ? () => { activateSmokeBomb(); removeItem('smoke-bomb'); } : undefined}
-              activeOpacity={isPlayerTurn ? 0.75 : 1}
+              style={[styles.toolbarBtn, (!isPlayerTurn || smokeBombActive) && styles.toolbarBtnDisabled]}
+              onPress={isPlayerTurn && !smokeBombActive ? () => { activateSmokeBomb(); removeItem('smoke-bomb'); } : undefined}
+              activeOpacity={isPlayerTurn && !smokeBombActive ? 0.75 : 1}
             >
               <Text style={styles.toolbarBtnText}>
                 {'💨 Smoke Bomb'}
                 <Text style={styles.toolbarBtnQtyText}> x{smokeBombQty}</Text>
               </Text>
             </TouchableOpacity>
-          )}
-
-          {smokeBombActive && (
-            <View style={[styles.toolbarBtn, styles.toolbarBtnSmokeBombActive]}>
-              <Text style={styles.toolbarBtnText}>💨 Smoke Active — police skip next turn</Text>
-            </View>
           )}
 
           {hasExMachina && (
@@ -398,11 +392,18 @@ export function EscapeScreen({
       </View>
 
       {/* Recent Police Activity */}
-      {turnLog.length > 0 && (
+      {(turnLog.length > 0 || smokeBombActive) && (
         <View style={styles.turnLogPanel}>
-          <Text style={styles.turnLogTitle}>POLICE ACTIVITY</Text>
+          <Text style={styles.turnLogTitle}>ACTIVITY</Text>
+          {smokeBombActive && (
+            <View style={styles.turnLogRow}>
+              <Text style={styles.turnLogActionSmokeBomb}>
+                💨 Smoke bomb primed — deploys on the police turn
+              </Text>
+            </View>
+          )}
           {[...turnLog].slice(-2).reverse().map((entry, i) => (
-            <View key={entry.turn} style={[styles.turnLogRow, i > 0 && styles.turnLogRowOld]}>
+            <View key={entry.turn} style={[styles.turnLogRow, (i > 0 || smokeBombActive) && styles.turnLogRowOld]}>
               <View style={styles.turnLogActions}>
                 {(entry.policeEvents ?? [entry.policeAction]).map((event, eventIdx) => (
                   <Text
@@ -742,6 +743,11 @@ const styles = StyleSheet.create({
   },
   turnLogActionPolice: {
     color: theme.colors.gold,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: 14,
+  },
+  turnLogActionSmokeBomb: {
+    color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.caption,
     lineHeight: 14,
   },
