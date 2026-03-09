@@ -102,6 +102,9 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const exactHits = useReckoningStore((s) => s.exactHits);
   const preBuffPhase = useReckoningStore((s) => s.preBuffPhase);
   const fuzzyMathActive = useReckoningStore((s) => s.fuzzyMathActive);
+  const offshoreAccountActive = useReckoningStore((s) => s.offshoreAccountActive);
+  const allInActive = useReckoningStore((s) => s.allInActive);
+  const busts = useReckoningStore((s) => s.busts);
 
   const initGame = useReckoningStore((s) => s.initGame);
   const flipCard = useReckoningStore((s) => s.flipCard);
@@ -209,6 +212,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const switchFromVaultIdRef = useRef<0 | 1 | 2 | null>(null);
   const switchDragInstanceIdRef = useRef<string | null>(null);
   const [holdPerfectFinish, setHoldPerfectFinish] = useState(false);
+  const [holdBustEnd, setHoldBustEnd] = useState(false);
   const [coinParticles, setCoinParticles] = useState<CoinParticle[]>([]);
   const coinBurstAnim = useRef(new Animated.Value(0)).current;
   const perfectFinishTriggeredRef = useRef(false);
@@ -241,14 +245,19 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         }
         return;
       }
+      if (busts > 0) {
+        setHoldBustEnd(true);
+        return;
+      }
       onGameEnd();
     }
-  }, [phase, exactHits, vaultRects, coinBurstAnim, onGameEnd, celebrationPlayer, soundEnabled]);
+  }, [phase, exactHits, busts, vaultRects, coinBurstAnim, onGameEnd, celebrationPlayer, soundEnabled]);
 
   useEffect(() => {
     if (phase !== 'done') {
       perfectFinishTriggeredRef.current = false;
       setHoldPerfectFinish(false);
+      setHoldBustEnd(false);
       setCoinParticles([]);
       coinBurstAnim.stopAnimation();
       coinBurstAnim.setValue(0);
@@ -454,9 +463,23 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>VAULTS</Text>
-        {fuzzyMathActive && (
-          <View style={styles.activeBuffsBadge}>
-            <Text style={styles.activeBuffsText}>FM</Text>
+        {(allInActive || offshoreAccountActive || fuzzyMathActive) && (
+          <View style={styles.activeBuffsRow}>
+            {allInActive && (
+              <View style={styles.activeBuffsBadge}>
+                <Text style={styles.activeBuffsText}>AI</Text>
+              </View>
+            )}
+            {offshoreAccountActive && (
+              <View style={styles.activeBuffsBadge}>
+                <Text style={styles.activeBuffsText}>OA</Text>
+              </View>
+            )}
+            {fuzzyMathActive && (
+              <View style={styles.activeBuffsBadge}>
+                <Text style={styles.activeBuffsText}>FM</Text>
+              </View>
+            )}
           </View>
         )}
         <View style={styles.scoreBadge}>
@@ -542,6 +565,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
               }}
               onStand={() => standVault(vault.id)}
               fuzzyMathActive={fuzzyMathActive}
+              offshoreAccountActive={offshoreAccountActive}
               isSwitchMode={phase === 'switch'}
               isBurnMode={phase === 'burn'}
               onBurnCard={(vid, instanceId) => {
@@ -637,15 +661,25 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
           <Text style={styles.assignHint}>{assignHint}</Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.flipBtn, (!canFlip || inBuffMode) && styles.flipBtnDisabled]}
-          onPress={canFlip && !inBuffMode ? flipCard : undefined}
-          activeOpacity={canFlip && !inBuffMode ? 0.75 : 1}
-        >
-          <Text style={styles.flipBtnText}>
-            {deck.length === 0 ? 'DECK EMPTY' : 'FLIP CARD'}
-          </Text>
-        </TouchableOpacity>
+        {holdBustEnd ? (
+          <TouchableOpacity
+            style={styles.flipBtn}
+            onPress={onGameEnd}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.flipBtnText}>Continue →</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.flipBtn, (!canFlip || inBuffMode) && styles.flipBtnDisabled]}
+            onPress={canFlip && !inBuffMode ? flipCard : undefined}
+            activeOpacity={canFlip && !inBuffMode ? 0.75 : 1}
+          >
+            <Text style={styles.flipBtnText}>
+              {deck.length === 0 ? 'DECK EMPTY' : 'FLIP CARD'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Ghost card for current card drag */}
@@ -800,6 +834,10 @@ const styles = StyleSheet.create({
     fontWeight: theme.fontWeights.black,
     letterSpacing: 2,
     flex: 1,
+  },
+  activeBuffsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
   },
   activeBuffsBadge: {
     backgroundColor: theme.colors.bgPanel,

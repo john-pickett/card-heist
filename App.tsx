@@ -44,20 +44,13 @@ import {
   TutorialAct,
   TutorialSeen,
 } from './src/constants/tutorials';
-import { Act1Record, Act2Record, Act3Record, HeistRecord } from './src/types/history';
+import { Act1Record, Act2Record, Act2VaultResult, Act3Record, HeistRecord } from './src/types/history';
 import { InventoryEntry } from './src/store/inventoryStore';
 import theme from './src/theme';
 
 type Tab = 'home' | 'market' | 'hideout' | 'settings';
 type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3' | 'act3-gameover';
 type DevLaunchAct = 'act1' | 'act2' | 'act3' | null;
-type Act2VaultResult = {
-  id: number;
-  target: number;
-  sum: number;
-  result: 'exact' | 'busted' | 'under';
-  gold: number;
-};
 type UsedBuff = {
   itemId: string;
   icon: string;
@@ -304,6 +297,9 @@ export default function App() {
       busts: state.busts,
       aceOnes: state.aceOnes,
       aceElevens: state.aceElevens,
+      allInActive: state.allInActive,
+      offshoreAccountActive: state.offshoreAccountActive,
+      fuzzyMathActive: state.fuzzyMathActive,
     });
     setGameFlow('act2-bridge');
   };
@@ -412,6 +408,8 @@ export default function App() {
             act1Gold={act1Bonus}
             act2Gold={act2Score}
             cumulativeGold={totalScore}
+            vaultResults={act2VaultResults}
+            act2Record={act2Record}
             onContinue={handleContinueToAct3}
           />
         );

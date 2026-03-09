@@ -6,12 +6,23 @@ export interface Act1Record {
   totalMoves: number;
 }
 
+export interface Act2VaultResult {
+  id: number;
+  target: number;
+  sum: number;
+  result: 'exact' | 'busted' | 'under';
+  gold: number;
+}
+
 export interface Act2Record {
   score: number;
   exactHits: number;
   busts: number;
   aceOnes: number;
   aceElevens: number;
+  allInActive: boolean;
+  offshoreAccountActive: boolean;
+  fuzzyMathActive: boolean;
 }
 
 export interface Act3Record {

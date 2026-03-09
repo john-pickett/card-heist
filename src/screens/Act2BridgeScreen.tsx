@@ -1,11 +1,14 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Act2Record, Act2VaultResult } from '../types/history';
 import theme from '../theme';
 
 interface Props {
   act1Gold: number;
   act2Gold: number;
   cumulativeGold: number;
+  vaultResults: Act2VaultResult[];
+  act2Record: Act2Record | null;
   onContinue: () => void;
 }
 
@@ -13,8 +16,13 @@ export function Act2BridgeScreen({
   act1Gold,
   act2Gold,
   cumulativeGold,
+  vaultResults,
+  act2Record,
   onContinue,
 }: Props) {
+  const anyBuffActive =
+    act2Record?.allInActive || act2Record?.offshoreAccountActive || act2Record?.fuzzyMathActive;
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -34,6 +42,77 @@ export function Act2BridgeScreen({
           </Text>
         </View>
 
+        {/* Per-vault breakdown */}
+        {vaultResults.length > 0 && (
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>VAULT RESULTS</Text>
+            {vaultResults.map((vr) => (
+              <View key={vr.id} style={styles.vaultRow}>
+                <View style={styles.vaultRowLeft}>
+                  <Text style={styles.vaultRowLabel}>Vault {vr.id}</Text>
+                  <Text style={styles.vaultRowSub}>
+                    {vr.sum} / {vr.target}
+                  </Text>
+                </View>
+                <View style={styles.vaultRowRight}>
+                  {vr.result === 'exact' && (
+                    <View style={[styles.resultBadge, styles.resultBadgeExact]}>
+                      <Text style={styles.resultBadgeTextExact}>EXACT ×2</Text>
+                    </View>
+                  )}
+                  {vr.result === 'busted' && (
+                    <View style={[styles.resultBadge, styles.resultBadgeBust]}>
+                      <Text style={styles.resultBadgeTextBust}>BUST</Text>
+                    </View>
+                  )}
+                  {vr.result === 'under' && (
+                    <View style={[styles.resultBadge, styles.resultBadgeUnder]}>
+                      <Text style={styles.resultBadgeTextUnder}>STOOD</Text>
+                    </View>
+                  )}
+                  <Text
+                    style={[
+                      styles.vaultGold,
+                      vr.result === 'exact' && styles.vaultGoldExact,
+                      vr.result === 'busted' && styles.vaultGoldBust,
+                    ]}
+                  >
+                    {vr.gold > 0 ? `+${vr.gold}` : '0'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Active buffs panel */}
+        {anyBuffActive && (
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>BUFFS ACTIVE</Text>
+            {act2Record?.allInActive && (
+              <View style={styles.buffRow}>
+                <Text style={styles.buffIcon}>🃏</Text>
+                <Text style={styles.buffLabel}>All In</Text>
+                <Text style={styles.buffDesc}>Extra cards in each vault</Text>
+              </View>
+            )}
+            {act2Record?.offshoreAccountActive && (
+              <View style={styles.buffRow}>
+                <Text style={styles.buffIcon}>🏦</Text>
+                <Text style={styles.buffLabel}>Offshore Account</Text>
+                <Text style={styles.buffDesc}>Vault labels hidden</Text>
+              </View>
+            )}
+            {act2Record?.fuzzyMathActive && (
+              <View style={styles.buffRow}>
+                <Text style={styles.buffIcon}>🧮</Text>
+                <Text style={styles.buffLabel}>Fuzzy Math</Text>
+                <Text style={styles.buffDesc}>+3 to each vault target</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.panel}>
           <View style={styles.row}>
             <Text style={styles.label}>Act 1 gold</Text>
@@ -43,6 +122,7 @@ export function Act2BridgeScreen({
             <Text style={styles.label}>Act 2 gold</Text>
             <Text style={styles.value}>{act2Gold}</Text>
           </View>
+          <View style={styles.divider} />
           <View style={styles.row}>
             <Text style={styles.label}>Run total so far</Text>
             <Text style={styles.bonus}>{cumulativeGold} gold</Text>
@@ -137,6 +217,111 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderFaint,
     gap: theme.spacing.fourteen,
     marginBottom: theme.spacing.fourteen,
+  },
+  panelTitle: {
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  vaultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  vaultRowLeft: {
+    gap: theme.spacing.two,
+  },
+  vaultRowLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
+  },
+  vaultRowSub: {
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSizes.sm,
+    fontVariant: ['tabular-nums'],
+  },
+  vaultRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  resultBadge: {
+    borderRadius: theme.radii.r5,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.two,
+  },
+  resultBadgeExact: {
+    backgroundColor: 'rgba(244,208,63,0.15)',
+    borderWidth: 1,
+    borderColor: theme.colors.gold,
+  },
+  resultBadgeBust: {
+    backgroundColor: 'rgba(231,76,60,0.15)',
+    borderWidth: 1,
+    borderColor: theme.colors.errorRed,
+  },
+  resultBadgeUnder: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: theme.colors.borderFaint,
+  },
+  resultBadgeTextExact: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 0.5,
+  },
+  resultBadgeTextBust: {
+    color: theme.colors.errorRed,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 0.5,
+  },
+  resultBadgeTextUnder: {
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
+    letterSpacing: 0.5,
+  },
+  vaultGold: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.title,
+    fontWeight: theme.fontWeights.black,
+    fontVariant: ['tabular-nums'],
+    minWidth: 40,
+    textAlign: 'right',
+  },
+  vaultGoldExact: {
+    color: theme.colors.gold,
+  },
+  vaultGoldBust: {
+    color: theme.colors.textDisabled,
+  },
+  buffRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  buffIcon: {
+    fontSize: theme.fontSizes.basePlus,
+  },
+  buffLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
+    flex: 1,
+  },
+  buffDesc: {
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSizes.sm,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.borderFaint,
+    marginVertical: theme.spacing.two,
   },
   row: {
     flexDirection: 'row',

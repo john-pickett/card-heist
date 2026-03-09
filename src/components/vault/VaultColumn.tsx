@@ -108,6 +108,7 @@ interface VaultColumnProps {
   onAssign: () => void;
   onStand: () => void;
   fuzzyMathActive?: boolean;
+  offshoreAccountActive?: boolean;
   isSwitchMode?: boolean;
   isBurnMode?: boolean;
   onBurnCard?: (vaultId: 0 | 1 | 2, instanceId: string) => void;
@@ -131,6 +132,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
       onAssign,
       onStand,
       fuzzyMathActive,
+      offshoreAccountActive,
       isSwitchMode,
       isBurnMode,
       onBurnCard,
@@ -170,7 +172,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.vaultLabel}>Vault {vault.id + 1}</Text>
+          {!offshoreAccountActive && <Text style={styles.vaultLabel}>Vault {vault.id + 1}</Text>}
           <View style={styles.targetBadge}>
             <Text style={styles.targetText}>
               {vault.target}
@@ -192,6 +194,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
           style={styles.cardsScroll}
           showsVerticalScrollIndicator={false}
           scrollEnabled={!buffModeActive}
+          nestedScrollEnabled
         >
           {vault.cards.map((vc) => {
             const isRed = RED_SUITS.has(vc.card.suit);
