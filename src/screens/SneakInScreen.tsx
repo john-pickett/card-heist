@@ -492,12 +492,6 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                     <Text style={[styles.areaLabel, locked && styles.dimmed]}>
                       {AREA_LABELS[area.id].toUpperCase()}
                     </Text>
-                    {insideTipHint?.areaId === area.id && !area.isSolved && (
-                      <Text style={styles.areaHintLabel}>💡</Text>
-                    )}
-                    {blueprintHint?.areaId === area.id && !area.isSolved && (
-                      <Text style={styles.areaHintLabel}>🗺️</Text>
-                    )}
 
                     {locked ? (
                       <Text style={styles.lockedLabel}>LOCKED</Text>
@@ -572,6 +566,33 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                       )}
                     </View>
                   )}
+
+                  {insideTipHint && insideTipHint.areaId === area.id && !area.isSolved && (
+                    <View style={styles.hintGhostOverlay} pointerEvents="none">
+                      <View style={[styles.hintGhostCard, styles.hintGhostCardGold]}>
+                        <Text style={[styles.hintGhostRank, RED_SUITS.has(insideTipHint.card.card.suit) && styles.hintGhostTextRed]}>
+                          {insideTipHint.card.card.rank}
+                        </Text>
+                        <Text style={[styles.hintGhostSuit, RED_SUITS.has(insideTipHint.card.card.suit) && styles.hintGhostTextRed]}>
+                          {SUIT_SYMBOL[insideTipHint.card.card.suit]}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {blueprintHint && blueprintHint.areaId === area.id && !area.isSolved && (
+                    <View style={styles.hintGhostOverlay} pointerEvents="none">
+                      {blueprintHint.cards.map(bc => {
+                        const red = RED_SUITS.has(bc.card.suit);
+                        return (
+                          <View key={bc.instanceId} style={[styles.hintGhostCard, styles.hintGhostCardBlue]}>
+                            <Text style={[styles.hintGhostRank, red && styles.hintGhostTextRed]}>{bc.card.rank}</Text>
+                            <Text style={[styles.hintGhostSuit, red && styles.hintGhostTextRed]}>{SUIT_SYMBOL[bc.card.suit]}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
               );
             })}
@@ -589,16 +610,7 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
 
         {(phase === 'playing' || phase === 'idle') && (
           <View style={styles.toolbar}>
-            {insideTipHint && (
-              <TouchableOpacity style={styles.toolbarBtn} onPress={clearInsideTipHint}>
-                <Text style={styles.toolbarBtnText}>✕ hint</Text>
-              </TouchableOpacity>
-            )}
-            {blueprintHint && (
-              <TouchableOpacity style={styles.toolbarBtn} onPress={clearBlueprintHint}>
-                <Text style={styles.toolbarBtnText}>✕ map</Text>
-              </TouchableOpacity>
-            )}
+
             <TouchableOpacity
               style={[styles.toolbarBtn, (!hasAnyReturnable || !!activeDrag) && styles.toolbarBtnDisabled]}
               disabled={!hasAnyReturnable || !!activeDrag}
@@ -620,14 +632,12 @@ export function SneakInScreen({ onGameEnd, showTutorial, onDismissTutorial }: Pr
                 <View key={`hand-row-${rowIndex}`} style={styles.handRow}>
                   {row.map(sc => {
                     const red = RED_SUITS.has(sc.card.suit);
-                    const isHinted = insideTipHint?.card.instanceId === sc.instanceId;
-                    const isBlueprinted = blueprintHint?.cards.some(c => c.instanceId === sc.instanceId) ?? false;
                     return (
                       <DraggableCard
                         key={sc.instanceId}
                         card={sc}
                         source="hand"
-                        style={[styles.handCard, isHinted && styles.handCardHinted, isBlueprinted && styles.handCardBlueprinted]}
+                        style={styles.handCard}
                         isDragging={activeDrag?.card.instanceId === sc.instanceId}
                         dragPan={dragPan}
                         onDragStart={handleDragStart}
@@ -892,21 +902,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: theme.borderWidths.medium,
     borderColor: theme.colors.borderSubtle,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
     overflow: 'visible',
     position: 'relative',
   },
-  areaCardActive: {
-    borderColor: theme.colors.areaGlowBorder,
-    shadowColor: theme.colors.areaGlowShadow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 22,
-    elevation: 18,
+  areaCardActive: { // disabling this to see if i like it
+    // borderColor: theme.colors.areaGlowBorder,
+    // shadowColor: theme.colors.areaGlowShadow,
+    // shadowOffset: { width: 0, height: 0 },
+    // shadowOpacity: 0.9,
+    // shadowRadius: 22,
+    // elevation: 18,
   },
   areaCardSolved: {
     borderColor: theme.colors.gold,
@@ -1226,33 +1231,53 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing.two,
   },
 
-  // Hint card highlight (gold border)
-  handCardHinted: {
+  // Hint ghost card overlay shown in the area when inside-tip or peek-blueprint is active
+  hintGhostOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    borderRadius: theme.radii.xl,
+  },
+  hintGhostCard: {
+    width: 46,
+    height: 60,
+    borderRadius: theme.radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(12, 11, 18, 0.88)',
     borderWidth: 2,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  hintGhostCardGold: {
     borderColor: theme.colors.gold,
     shadowColor: theme.colors.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
-    elevation: 6,
   },
-
-  // Blueprint card highlight (ice-blue border)
-  handCardBlueprinted: {
-    borderWidth: 2,
+  hintGhostCardBlue: {
     borderColor: '#4dd0e1',
     shadowColor: '#4dd0e1',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
-    elevation: 6,
   },
-
-  // Small 💡 label under hinted area name
-  areaHintLabel: {
-    color: theme.colors.gold,
-    fontSize: theme.fontSizes.sm,
-    marginTop: theme.spacing.two,
+  hintGhostRank: {
+    color: theme.colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 24,
+  },
+  hintGhostSuit: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  hintGhostTextRed: {
+    color: theme.colors.red,
   },
 
   // Full-screen overlay for Inside Tip area picker
