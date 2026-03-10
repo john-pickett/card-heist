@@ -70,7 +70,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     title: 'Peek the Blueprint',
     flavor: 'You get a quick glance at the security layout.',
     effect: 'Reveal both cards from an area.',
-    cost: 30,
+    cost: 300,
     goldUnlock: PREMIUM_UNLOCK_TIER_1,
     premiumTierId: 'tier1',
   },

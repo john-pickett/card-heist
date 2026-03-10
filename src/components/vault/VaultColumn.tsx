@@ -111,7 +111,9 @@ interface VaultColumnProps {
   offshoreAccountActive?: boolean;
   isSwitchMode?: boolean;
   isBurnMode?: boolean;
+  isDoubleAgentMode?: boolean;
   onBurnCard?: (vaultId: 0 | 1 | 2, instanceId: string) => void;
+  onDoubleAgentCard?: (vaultId: 0 | 1 | 2, instanceId: string) => void;
   onSwitchCardDragStart?: (
     vaultId: 0 | 1 | 2,
     instanceId: string,
@@ -135,7 +137,9 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
       offshoreAccountActive,
       isSwitchMode,
       isBurnMode,
+      isDoubleAgentMode,
       onBurnCard,
+      onDoubleAgentCard,
       onSwitchCardDragStart,
       onSwitchCardDragMove,
       onSwitchCardDragEnd,
@@ -153,7 +157,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
       ? theme.colors.orange
       : theme.colors.textPrimary;
 
-    const buffModeActive = isSwitchMode || isBurnMode;
+    const buffModeActive = isSwitchMode || isBurnMode || isDoubleAgentMode;
 
     return (
       <TouchableOpacity
@@ -166,6 +170,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
           isTerminal && !isExact && styles.columnTerminal,
           isBurnMode && styles.columnBurnMode,
           isSwitchMode && !vault.isStood && !vault.isBusted && styles.columnSwitchMode,
+          isDoubleAgentMode && styles.columnDoubleAgentMode,
         ]}
         onPress={isAssignable ? onAssign : undefined}
         activeOpacity={isAssignable ? 0.75 : 1}
@@ -209,6 +214,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
                 <TouchableOpacity
                   key={vc.instanceId}
                   style={styles.cardTile}
+                  // @ts-ignore
                   onPress={() => onBurnCard?.(vault.id, vc.instanceId)}
                   activeOpacity={0.7}
                 >
@@ -221,11 +227,32 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
               );
             }
 
+            if (isDoubleAgentMode) {
+              const isAce = vc.card.rank === 'A';
+              return (
+                <TouchableOpacity
+                  key={vc.instanceId}
+                  style={styles.cardTile}
+                  onPress={isAce ? () => onDoubleAgentCard?.(vault.id as 0 | 1 | 2, vc.instanceId) : undefined}
+                  activeOpacity={isAce ? 0.7 : 1}
+                >
+                  <Text style={[styles.cardRank, isRed && styles.red]}>{displayRank}</Text>
+                  <Text style={[styles.cardSuit, isRed && styles.red]}>{symbol}</Text>
+                  {isAce && (
+                    <View style={styles.doubleAgentBadge}>
+                      <Text style={styles.doubleAgentBadgeText}>🔄</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            }
+
             if (isSwitchMode) {
               return (
                 <SwitchCardTile
                   key={vc.instanceId}
                   vc={vc}
+                  // @ts-ignore
                   vaultId={vault.id}
                   vaultIsStood={vault.isStood}
                   onSwitchCardDragStart={onSwitchCardDragStart}
@@ -324,6 +351,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.gold,
     borderWidth: 2,
   },
+  columnDoubleAgentMode: {
+    borderColor: theme.colors.greenPrimary,
+    borderWidth: 2,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,6 +434,12 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   burnBadgeText: {
+    fontSize: theme.fontSizes.sm,
+  },
+  doubleAgentBadge: {
+    marginLeft: 'auto',
+  },
+  doubleAgentBadgeText: {
     fontSize: theme.fontSizes.sm,
   },
   dragHandle: {

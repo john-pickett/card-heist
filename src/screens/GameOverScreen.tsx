@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import React from 'react';
+import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Act1Record, Act2Record } from '../types/history';
 import { MarketAct } from '../types/market';
 import theme from '../theme';
@@ -51,6 +50,21 @@ function vaultResultLabel(result: Act2VaultResult['result']): string {
   return '🪙 Under';
 }
 
+function act1Medal(elapsedMs: number | null, timedOut: boolean): string {
+  if (timedOut || elapsedMs === null) return '';
+  if (elapsedMs < 20_000) return ' 🥇';
+  if (elapsedMs < 30_000) return ' 🥈';
+  if (elapsedMs < 60_000) return ' 🥉';
+  return '';
+}
+
+function act2GoldMedal(gold: number): string {
+  if (gold > 1_000) return ' 🥇';
+  if (gold > 700) return ' 🥈';
+  if (gold > 250) return ' 🥉';
+  return '';
+}
+
 export function GameOverScreen({
   runNumber,
   totalScore,
@@ -66,29 +80,23 @@ export function GameOverScreen({
   onHome,
 }: Props) {
   const solvedAllAreas = act1Record ? !act1Record.timedOut : false;
-  const [copied, setCopied] = useState(false);
   const act1Time = act1Record ? formatElapsed(act1Record.elapsedMs) : '—';
+  const act1TimeWithMedal = act1Record
+    ? `${act1Time}${act1Medal(act1Record.elapsedMs, act1Record.timedOut)}`
+    : act1Time;
+  const act2GoldWithMedal = `${act2Gold}${act2GoldMedal(act2Gold)}`;
 
-  const copyResultsToClipboard = async () => {
-    const vaultLines = act2VaultResults.map(vault => {
-      const resultLabel = vaultResultLabel(vault.result).replace(/^[^\s]+\s/, '');
-      return `- Vault #${vault.id}: ${vault.sum}/${vault.target}, ${resultLabel}, ${vault.gold} gold`;
-    });
-
+  const shareResults = async () => {
     const payload = [
-      'Card Heist',
+      '🏦 Card Heist',
       `Run #${runNumber}`,
       `Total Gold Won: ${totalGoldWon}`,
-      `Escaped Police: ${won ? 'Yes' : 'No'}`,
-      `Act One Time: ${act1Time}`,
-      `Act One Gold: ${act1Gold}`,
-      `Act Two Gold: ${act2Gold}`,
-      'Act Two Vault Results:',
-      ...(vaultLines.length > 0 ? vaultLines : ['- No vault data']),
+      `Escaped Police: ${won ? 'Yes ✅' : 'No 🚨'}`,
+      `Act One Time: ${act1TimeWithMedal}`,
+      `Act Two Gold: ${act2GoldWithMedal}`,
     ].join('\n');
 
-    await Clipboard.setStringAsync(payload);
-    setCopied(true);
+    await Share.share({ message: payload });
   };
 
   return (
@@ -110,9 +118,8 @@ export function GameOverScreen({
             {won ? '🏆 100% kept' : `🧯 33% kept from ${totalScore} total potential`}
           </Text>
         </View>
-        <TouchableOpacity style={styles.copyButton} onPress={copyResultsToClipboard}>
+        <TouchableOpacity style={styles.copyButton} onPress={shareResults}>
           <Text style={styles.copyButtonText}>Share Results</Text>
-          {copied && <Text style={styles.copyCheckIcon}>✓</Text>}
         </TouchableOpacity>
 
         <View style={styles.section}>

@@ -117,14 +117,19 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const cancelBurnEvidence = useReckoningStore((s) => s.cancelBurnEvidence);
   const burnVaultCard = useReckoningStore((s) => s.burnVaultCard);
   const burnCurrentCard = useReckoningStore((s) => s.burnCurrentCard);
+  const activateDoubleAgent = useReckoningStore((s) => s.activateDoubleAgent);
+  const cancelDoubleAgent = useReckoningStore((s) => s.cancelDoubleAgent);
+  const completeDoubleAgent = useReckoningStore((s) => s.completeDoubleAgent);
 
   // Inventory
   const inventoryItems = useInventoryStore((s) => s.items);
   const removeItem = useInventoryStore((s) => s.removeItem);
   const insideSwitchQty = inventoryItems.find((e) => e.itemId === 'inside-switch')?.quantity ?? 0;
   const burnEvidenceQty = inventoryItems.find((e) => e.itemId === 'burn-evidence')?.quantity ?? 0;
+  const doubleAgentQty = inventoryItems.find((e) => e.itemId === 'double-agent')?.quantity ?? 0;
   const hasInsideSwitch = insideSwitchQty > 0;
   const hasBurnEvidence = burnEvidenceQty > 0;
+  const hasDoubleAgent = doubleAgentQty > 0;
 
   // Running score from vaults already in play
   const runningScore = useMemo(() => {
@@ -140,7 +145,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   useEffect(() => {
     const prev = prevPhaseRef.current;
     prevPhaseRef.current = phase;
-    const fromBuffPhase = prev === 'switch' || prev === 'burn';
+    const fromBuffPhase = prev === 'switch' || prev === 'burn' || prev === 'double-agent';
     if (
       (prev === 'assigning' || prev === 'ace' || fromBuffPhase) &&
       phase === 'dealing' &&
@@ -162,7 +167,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         duration: 350,
         useNativeDriver: true,
       }).start();
-    } else if ((phase === 'switch' || phase === 'burn') && currentCard !== null) {
+    } else if ((phase === 'switch' || phase === 'burn' || phase === 'double-agent') && currentCard !== null) {
       // Card was in-hand when buff was activated — keep it visible
       flipAnim.setValue(1);
     } else {
@@ -423,8 +428,8 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   // ── Derived state ─────────────────────────────────────────────────────────
 
   const showToolbar =
-    hasInsideSwitch || hasBurnEvidence || phase === 'switch' || phase === 'burn';
-  const inBuffMode = phase === 'switch' || phase === 'burn';
+    hasInsideSwitch || hasBurnEvidence || hasDoubleAgent || phase === 'switch' || phase === 'burn' || phase === 'double-agent';
+  const inBuffMode = phase === 'switch' || phase === 'burn' || phase === 'double-agent';
 
   const switchIsRed = switchDragCard ? RED_SUITS.has(switchDragCard.card.suit) : false;
   const switchSymbol = switchDragCard ? (SUIT_SYMBOL[switchDragCard.card.suit] ?? '') : '';
@@ -432,7 +437,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   // Show current card during buff phases if it was active during activation
   const showCurrentCard =
     (phase === 'assigning' ||
-      ((phase === 'switch' || phase === 'burn') && currentCard !== null)) &&
+      ((phase === 'switch' || phase === 'burn' || phase === 'double-agent') && currentCard !== null)) &&
     currentCard !== null;
 
   const canBurnCurrentCard = phase === 'burn' && currentCard !== null;
@@ -441,6 +446,8 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const assignHint = inBuffMode
     ? phase === 'burn'
       ? 'Tap 🔥 on a card to destroy it'
+      : phase === 'double-agent'
+      ? 'Tap 🔄 on an Ace to flip its value'
       : 'Drag a card to a different vault'
     : isDragging
     ? 'Drop on a vault'
@@ -496,7 +503,13 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
           {inBuffMode ? (
             <TouchableOpacity
               style={styles.toolbarCancelBtn}
-              onPress={phase === 'switch' ? cancelInsideSwitch : cancelBurnEvidence}
+              onPress={
+                phase === 'switch'
+                  ? cancelInsideSwitch
+                  : phase === 'double-agent'
+                  ? cancelDoubleAgent
+                  : cancelBurnEvidence
+              }
             >
               <Text style={styles.toolbarCancelText}>✕ Cancel</Text>
             </TouchableOpacity>
@@ -540,6 +553,25 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
                   </Text>
                 </TouchableOpacity>
               )}
+              {hasDoubleAgent && (
+                <TouchableOpacity
+                  style={[
+                    styles.toolbarBtn,
+                    !(phase === 'dealing' || phase === 'assigning') && styles.toolbarBtnDisabled,
+                  ]}
+                  onPress={
+                    phase === 'dealing' || phase === 'assigning'
+                      ? activateDoubleAgent
+                      : undefined
+                  }
+                  activeOpacity={phase === 'dealing' || phase === 'assigning' ? 0.75 : 1}
+                >
+                  <Text style={styles.toolbarBtnText}>
+                    {'🔄 Flip Ace'}
+                    <Text style={styles.toolbarBtnQtyText}> x{doubleAgentQty}</Text>
+                  </Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -568,9 +600,14 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
               offshoreAccountActive={offshoreAccountActive}
               isSwitchMode={phase === 'switch'}
               isBurnMode={phase === 'burn'}
+              isDoubleAgentMode={phase === 'double-agent'}
               onBurnCard={(vid, instanceId) => {
                 burnVaultCard(vid, instanceId);
                 removeItem('burn-evidence');
+              }}
+              onDoubleAgentCard={(vid, instanceId) => {
+                completeDoubleAgent(vid, instanceId);
+                removeItem('double-agent');
               }}
               onSwitchCardDragStart={onSwitchCardDragStart}
               onSwitchCardDragMove={onSwitchCardDragMove}
