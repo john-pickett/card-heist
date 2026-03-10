@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Act1Record, Act2Record } from '../types/history';
 import { MarketAct } from '../types/market';
+import { MARKET_ITEMS } from '../data/marketItems';
 import theme from '../theme';
 
 type Act2VaultResult = {
@@ -79,6 +80,12 @@ export function GameOverScreen({
   onPlayAgain,
   onHome,
 }: Props) {
+  const totalBuffInvestment = buffsUsed.reduce((sum, buff) => {
+    const item = MARKET_ITEMS.find(m => m.id === buff.itemId);
+    return sum + (item?.cost ?? 0) * buff.quantity;
+  }, 0);
+  const netResult = totalGoldWon - totalBuffInvestment;
+
   const solvedAllAreas = act1Record ? !act1Record.timedOut : false;
   const act1Time = act1Record ? formatElapsed(act1Record.elapsedMs) : '—';
   const act1TimeWithMedal = act1Record
@@ -177,16 +184,38 @@ export function GameOverScreen({
           {buffsUsed.length === 0 ? (
             <Text style={styles.noBuffs}>No buffs were consumed this run.</Text>
           ) : (
-            <View style={styles.buffList}>
-              {buffsUsed.map(buff => (
-                <View key={buff.itemId} style={styles.buffChip}>
-                  <Text style={styles.buffText}>
-                    {buff.icon} {buff.title} x{buff.quantity}
-                  </Text>
-                  <Text style={styles.buffAct}>{buff.act}</Text>
-                </View>
-              ))}
-            </View>
+            <>
+              <View style={styles.buffList}>
+                {buffsUsed.map(buff => {
+                  const item = MARKET_ITEMS.find(m => m.id === buff.itemId);
+                  const lineCost = (item?.cost ?? 0) * buff.quantity;
+                  return (
+                    <View key={buff.itemId} style={styles.buffChip}>
+                      <Text style={styles.buffText}>
+                        {buff.icon} {buff.title} x{buff.quantity}
+                      </Text>
+                      <Text style={styles.buffAct}>{buff.act}</Text>
+                      <Text style={styles.buffRowCost}>−{lineCost}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Buff investment</Text>
+                <Text style={styles.investmentValue}>−{totalBuffInvestment} gold</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Take this run</Text>
+                <Text style={styles.statGold}>+{totalGoldWon} gold</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Net this run</Text>
+                <Text style={[styles.netValue, netResult >= 0 ? styles.netPositive : styles.netNegative]}>
+                  {netResult >= 0 ? '+' : '−'}{Math.abs(netResult)} gold
+                </Text>
+              </View>
+            </>
           )}
         </View>
       </ScrollView>
@@ -359,6 +388,34 @@ const styles = StyleSheet.create({
     color: theme.colors.text60,
     fontSize: theme.fontSizes.xs,
     marginLeft: theme.spacing.sm,
+  },
+  buffRowCost: {
+    color: theme.colors.dangerMuted,
+    fontSize: theme.fontSizes.xs,
+    fontWeight: theme.fontWeights.bold,
+    marginLeft: theme.spacing.sm,
+    minWidth: 36,
+    textAlign: 'right',
+  },
+  divider: {
+    height: theme.borderWidths.thin,
+    backgroundColor: theme.colors.borderFaint,
+    marginVertical: theme.spacing.sm,
+  },
+  investmentValue: {
+    color: theme.colors.dangerMuted,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.black,
+  },
+  netValue: {
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.black,
+  },
+  netPositive: {
+    color: theme.colors.successTeal,
+  },
+  netNegative: {
+    color: theme.colors.errorRed,
   },
   buttonSheet: {
     paddingTop: theme.spacing.lg,

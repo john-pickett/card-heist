@@ -18,6 +18,9 @@ import { useInventoryStore } from '../store/inventoryStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useCardSound } from '../hooks/useCardSound';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
+import { BuffChipBar, BuffChip } from '../components/BuffChipBar';
+import { BuffInfoModal, BuffInfo } from '../components/BuffInfoModal';
+import { MARKET_ITEMS } from '../data/marketItems';
 import { VaultCard } from '../types/vault';
 import theme from '../theme';
 
@@ -90,6 +93,7 @@ interface VaultScreenProps {
 
 export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: VaultScreenProps) {
   const [helpVisible, setHelpVisible] = useState(false);
+  const [buffInfoVisible, setBuffInfoVisible] = useState(false);
   const { playTap, playLootGain, playLootLoss } = useCardSound();
   const celebrationPlayer = useAudioPlayer(require('../../assets/sounds/fanfare.wav'));
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
@@ -427,8 +431,6 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
 
   // ── Derived state ─────────────────────────────────────────────────────────
 
-  const showToolbar =
-    hasInsideSwitch || hasBurnEvidence || hasDoubleAgent || phase === 'switch' || phase === 'burn' || phase === 'double-agent';
   const inBuffMode = phase === 'switch' || phase === 'burn' || phase === 'double-agent';
 
   const switchIsRed = switchDragCard ? RED_SUITS.has(switchDragCard.card.suit) : false;
@@ -470,25 +472,6 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>VAULTS</Text>
-        {(allInActive || offshoreAccountActive || fuzzyMathActive) && (
-          <View style={styles.activeBuffsRow}>
-            {allInActive && (
-              <View style={styles.activeBuffsBadge}>
-                <Text style={styles.activeBuffsText}>AI</Text>
-              </View>
-            )}
-            {offshoreAccountActive && (
-              <View style={styles.activeBuffsBadge}>
-                <Text style={styles.activeBuffsText}>OA</Text>
-              </View>
-            )}
-            {fuzzyMathActive && (
-              <View style={styles.activeBuffsBadge}>
-                <Text style={styles.activeBuffsText}>FM</Text>
-              </View>
-            )}
-          </View>
-        )}
         <View style={styles.scoreBadge}>
           <Text style={styles.scoreText}>Gold: {runningScore}</Text>
         </View>
@@ -497,85 +480,23 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         </TouchableOpacity>
       </View>
 
-      {/* Buff toolbar */}
-      {showToolbar && (
-        <View style={styles.toolbar}>
-          {inBuffMode ? (
-            <TouchableOpacity
-              style={styles.toolbarCancelBtn}
-              onPress={
-                phase === 'switch'
-                  ? cancelInsideSwitch
-                  : phase === 'double-agent'
-                  ? cancelDoubleAgent
-                  : cancelBurnEvidence
-              }
-            >
-              <Text style={styles.toolbarCancelText}>✕ Cancel</Text>
-            </TouchableOpacity>
-          ) : (
-            <>
-              {hasInsideSwitch && (
-                <TouchableOpacity
-                  style={[
-                    styles.toolbarBtn,
-                    !(phase === 'dealing' || phase === 'assigning') && styles.toolbarBtnDisabled,
-                  ]}
-                  onPress={
-                    phase === 'dealing' || phase === 'assigning'
-                      ? activateInsideSwitch
-                      : undefined
-                  }
-                  activeOpacity={phase === 'dealing' || phase === 'assigning' ? 0.75 : 1}
-                >
-                  <Text style={styles.toolbarBtnText}>
-                    {'🧰 Switch'}
-                    <Text style={styles.toolbarBtnQtyText}> x{insideSwitchQty}</Text>
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {hasBurnEvidence && (
-                <TouchableOpacity
-                  style={[
-                    styles.toolbarBtn,
-                    !(phase === 'dealing' || phase === 'assigning') && styles.toolbarBtnDisabled,
-                  ]}
-                  onPress={
-                    phase === 'dealing' || phase === 'assigning'
-                      ? activateBurnEvidence
-                      : undefined
-                  }
-                  activeOpacity={phase === 'dealing' || phase === 'assigning' ? 0.75 : 1}
-                >
-                  <Text style={styles.toolbarBtnText}>
-                    {'🔥 Burn'}
-                    <Text style={styles.toolbarBtnQtyText}> x{burnEvidenceQty}</Text>
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {hasDoubleAgent && (
-                <TouchableOpacity
-                  style={[
-                    styles.toolbarBtn,
-                    !(phase === 'dealing' || phase === 'assigning') && styles.toolbarBtnDisabled,
-                  ]}
-                  onPress={
-                    phase === 'dealing' || phase === 'assigning'
-                      ? activateDoubleAgent
-                      : undefined
-                  }
-                  activeOpacity={phase === 'dealing' || phase === 'assigning' ? 0.75 : 1}
-                >
-                  <Text style={styles.toolbarBtnText}>
-                    {'🔄 Flip Ace'}
-                    <Text style={styles.toolbarBtnQtyText}> x{doubleAgentQty}</Text>
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-      )}
+      {/* Buff chip bar */}
+      {(() => {
+        const canActivate = phase === 'dealing' || phase === 'assigning';
+        const chips: BuffChip[] = [];
+        if (insideSwitchQty > 0) chips.push({ id: 'inside-switch', initials: 'IS', isActive: phase === 'switch', isPassive: false, isDisabled: !canActivate && phase !== 'switch', onPress: phase === 'switch' ? cancelInsideSwitch : activateInsideSwitch });
+        if (burnEvidenceQty > 0) chips.push({ id: 'burn-evidence', initials: 'BE', isActive: phase === 'burn', isPassive: false, isDisabled: !canActivate && phase !== 'burn', onPress: phase === 'burn' ? cancelBurnEvidence : activateBurnEvidence });
+        if (doubleAgentQty > 0) chips.push({ id: 'double-agent', initials: 'DA', isActive: phase === 'double-agent', isPassive: false, isDisabled: !canActivate && phase !== 'double-agent', onPress: phase === 'double-agent' ? cancelDoubleAgent : activateDoubleAgent });
+        if (fuzzyMathActive) chips.push({ id: 'fuzzy-math', initials: 'FM', isActive: true, isPassive: true, isDisabled: false });
+        if (offshoreAccountActive) chips.push({ id: 'offshore-account', initials: 'OA', isActive: true, isPassive: true, isDisabled: false });
+        if (allInActive) chips.push({ id: 'all-in', initials: 'AI', isActive: true, isPassive: true, isDisabled: false });
+        if (chips.length === 0) return null;
+        return (
+          <View style={styles.buffChipBarWrapper}>
+            <BuffChipBar chips={chips} onInfoPress={() => setBuffInfoVisible(true)} />
+          </View>
+        );
+      })()}
 
       {/* Vaults */}
       <View style={styles.vaultsRow} onLayout={measureVaultRects}>
@@ -834,6 +755,17 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
 
       <AceModal />
       <ReckoningHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      {buffInfoVisible && (() => {
+        const ACT_TWO_IDS = ['inside-switch', 'burn-evidence', 'double-agent', 'fuzzy-math', 'offshore-account', 'all-in'];
+        const INITIALS: Record<string, string> = { 'inside-switch': 'IS', 'burn-evidence': 'BE', 'double-agent': 'DA', 'fuzzy-math': 'FM', 'offshore-account': 'OA', 'all-in': 'AI' };
+        const PASSIVE_IDS = new Set(['fuzzy-math', 'offshore-account', 'all-in']);
+        const passiveActive = new Set(['fuzzy-math', 'offshore-account', 'all-in'].filter(id => (id === 'fuzzy-math' ? fuzzyMathActive : id === 'offshore-account' ? offshoreAccountActive : allInActive)));
+        const ownedActiveIds = new Set(inventoryItems.filter(e => e.quantity > 0).map(e => e.itemId));
+        const buffList: BuffInfo[] = MARKET_ITEMS
+          .filter(item => ACT_TWO_IDS.includes(item.id) && (ownedActiveIds.has(item.id) || passiveActive.has(item.id)))
+          .map(item => ({ initials: INITIALS[item.id], name: item.title, effect: item.effect, isPassive: PASSIVE_IDS.has(item.id) }));
+        return <BuffInfoModal visible actTitle="Vaults" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
+      })()}
       {showTutorial && (
         <ActTutorialOverlay
           title="Act 2 Tutorial: Crack the Vaults"
@@ -872,23 +804,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     flex: 1,
   },
-  activeBuffsRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.xs,
-  },
-  activeBuffsBadge: {
-    backgroundColor: theme.colors.bgPanel,
-    borderRadius: theme.radii.r8,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.three,
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.gold,
-  },
-  activeBuffsText: {
-    color: theme.colors.gold,
-    fontSize: theme.fontSizes.s,
-    fontWeight: theme.fontWeights.black,
-    letterSpacing: 0.5,
+  buffChipBarWrapper: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
   },
   scoreBadge: {
     backgroundColor: theme.colors.greenPrimary,
@@ -911,47 +829,6 @@ const styles = StyleSheet.create({
   },
   helpBtnText: {
     color: theme.colors.text75,
-    fontSize: theme.fontSizes.s,
-    fontWeight: theme.fontWeights.bold,
-  },
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
-  toolbarBtn: {
-    backgroundColor: theme.colors.bgPanel,
-    borderRadius: theme.radii.r8,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.borderMedium,
-  },
-  toolbarBtnDisabled: {
-    opacity: 0.4,
-  },
-  toolbarBtnText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.s,
-    fontWeight: theme.fontWeights.bold,
-  },
-  toolbarBtnQtyText: {
-    color: theme.colors.text70,
-    fontSize: theme.fontSizes.s,
-    fontWeight: theme.fontWeights.medium,
-  },
-  toolbarCancelBtn: {
-    backgroundColor: theme.colors.bgPanel,
-    borderRadius: theme.radii.r8,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.errorRed,
-  },
-  toolbarCancelText: {
-    color: theme.colors.errorRed,
     fontSize: theme.fontSizes.s,
     fontWeight: theme.fontWeights.bold,
   },

@@ -416,7 +416,7 @@ describe('escapeStore', () => {
       const state = useEscapeStore.getState();
 
       const lastEntry = state.turnLog.at(-1);
-      expect(lastEntry?.policeEvents?.some(e => e.includes('Smoke!'))).toBe(true);
+      expect(lastEntry?.policeEvents?.some(e => e.includes('smoke bomb'))).toBe(true);
     });
 
     test('runPoliceTurn with smokeBombActive: does not prevent catch from alreadyCaught state', () => {

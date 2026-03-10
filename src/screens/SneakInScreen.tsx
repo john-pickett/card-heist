@@ -18,6 +18,9 @@ import {
   SneakInCard,
 } from '../types/sneakin';
 import { SneakInHelpModal } from '../components/SneakInHelpModal';
+import { BuffChipBar, BuffChip } from '../components/BuffChipBar';
+import { BuffInfoModal, BuffInfo } from '../components/BuffInfoModal';
+import { MARKET_ITEMS } from '../data/marketItems';
 import { useCardSound } from '../hooks/useCardSound';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import theme from '../theme';
@@ -171,14 +174,10 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
   const timeFreezeQty = inventoryItems.find(e => e.itemId === 'time-freeze')?.quantity ?? 0;
   const blueprintQty = inventoryItems.find(e => e.itemId === 'peek-blueprint')?.quantity ?? 0;
   const quickFingersQty = inventoryItems.find(e => e.itemId === 'quick-fingers')?.quantity ?? 0;
-  const hasFalseAlarm = falseAlarmQty > 0;
-  const hasInsideTip = insideTipQty > 0;
-  const hasTimeFreeze = timeFreezeQty > 0;
-  const hasBlueprint = blueprintQty > 0;
-  const hasQuickFingers = quickFingersQty > 0;
-  const showBuffToolbar = hasFalseAlarm || hasInsideTip || hasTimeFreeze || hasBlueprint || hasQuickFingers;
+  const bonusCutQty = inventoryItems.find(e => e.itemId === 'bonus-cut')?.quantity ?? 0;
 
   const [helpVisible, setHelpVisible] = useState(false);
+  const [buffInfoVisible, setBuffInfoVisible] = useState(false);
   const [pickingHintArea, setPickingHintArea] = useState(false);
   const [pickingBlueprintArea, setPickingBlueprintArea] = useState(false);
   const [pickingQuickFingersArea, setPickingQuickFingersArea] = useState(false);
@@ -386,73 +385,21 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
         </TouchableOpacity>
       </View>
 
-      {showBuffToolbar && (
-        <View style={styles.buffToolbar}>
-          {hasFalseAlarm && (
-            <TouchableOpacity
-              style={styles.buffToolbarBtn}
-              onPress={() => {
-                activateFalseAlarm();
-                removeItem('false-alarm');
-              }}
-            >
-              <Text style={styles.buffToolbarBtnText}>
-                {'🚨 +1:00'}
-                <Text style={styles.buffToolbarBtnQtyText}> x{falseAlarmQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-          {hasInsideTip && (
-            <TouchableOpacity
-              style={styles.buffToolbarBtn}
-              onPress={() => setPickingHintArea(true)}
-            >
-              <Text style={styles.buffToolbarBtnText}>
-                {'🕵️ Hint'}
-                <Text style={styles.buffToolbarBtnQtyText}> x{insideTipQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-          {hasTimeFreeze && (
-            <TouchableOpacity
-              style={[styles.buffToolbarBtn, isFrozen && styles.buffToolbarBtnDisabled]}
-              onPress={() => {
-                if (isFrozen) return;
-                activateTimeFreeze();
-                removeItem('time-freeze');
-              }}
-              disabled={isFrozen}
-            >
-              <Text style={styles.buffToolbarBtnText}>
-                {'🧊 Freeze'}
-                <Text style={styles.buffToolbarBtnQtyText}> x{timeFreezeQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-          {hasBlueprint && (
-            <TouchableOpacity
-              style={styles.buffToolbarBtn}
-              onPress={() => setPickingBlueprintArea(true)}
-            >
-              <Text style={styles.buffToolbarBtnText}>
-                {'🗺️ Blueprint'}
-                <Text style={styles.buffToolbarBtnQtyText}> x{blueprintQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-          {hasQuickFingers && (
-            <TouchableOpacity
-              style={styles.buffToolbarBtn}
-              onPress={() => setPickingQuickFingersArea(true)}
-            >
-              <Text style={styles.buffToolbarBtnText}>
-                {'🖐️ Quick Fingers'}
-                <Text style={styles.buffToolbarBtnQtyText}> x{quickFingersQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      {(() => {
+        const chips: BuffChip[] = [];
+        if (insideTipQty > 0) chips.push({ id: 'inside-tip', initials: 'IT', isActive: pickingHintArea, isPassive: false, isDisabled: false, onPress: () => setPickingHintArea(v => !v) });
+        if (falseAlarmQty > 0) chips.push({ id: 'false-alarm', initials: 'FA', isActive: false, isPassive: false, isDisabled: false, onPress: () => { activateFalseAlarm(); removeItem('false-alarm'); } });
+        if (timeFreezeQty > 0) chips.push({ id: 'time-freeze', initials: 'TF', isActive: false, isPassive: false, isDisabled: isFrozen, onPress: () => { if (!isFrozen) { activateTimeFreeze(); removeItem('time-freeze'); } } });
+        if (blueprintQty > 0) chips.push({ id: 'peek-blueprint', initials: 'PB', isActive: pickingBlueprintArea, isPassive: false, isDisabled: false, onPress: () => setPickingBlueprintArea(v => !v) });
+        if (quickFingersQty > 0) chips.push({ id: 'quick-fingers', initials: 'QF', isActive: pickingQuickFingersArea, isPassive: false, isDisabled: false, onPress: () => setPickingQuickFingersArea(v => !v) });
+        if (bonusCutQty > 0) chips.push({ id: 'bonus-cut', initials: 'BC', isActive: true, isPassive: true, isDisabled: false });
+        if (chips.length === 0) return null;
+        return (
+          <View style={styles.buffChipBarWrapper}>
+            <BuffChipBar chips={chips} onInfoPress={() => setBuffInfoVisible(true)} />
+          </View>
+        );
+      })()}
 
       {/* Areas grid */}
       <View style={styles.areasGrid} onLayout={scheduleMeasure}>
@@ -764,6 +711,16 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
       )}
 
       <SneakInHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      {buffInfoVisible && (() => {
+        const ACT_ONE_IDS = ['inside-tip', 'false-alarm', 'time-freeze', 'peek-blueprint', 'quick-fingers', 'bonus-cut'];
+        const INITIALS: Record<string, string> = { 'inside-tip': 'IT', 'false-alarm': 'FA', 'time-freeze': 'TF', 'peek-blueprint': 'PB', 'quick-fingers': 'QF', 'bonus-cut': 'BC' };
+        const PASSIVE_IDS = new Set(['bonus-cut']);
+        const ownedIds = new Set(inventoryItems.filter(e => e.quantity > 0).map(e => e.itemId));
+        const buffList: BuffInfo[] = MARKET_ITEMS
+          .filter(item => ACT_ONE_IDS.includes(item.id) && ownedIds.has(item.id))
+          .map(item => ({ initials: INITIALS[item.id], name: item.title, effect: item.effect, isPassive: PASSIVE_IDS.has(item.id) }));
+        return <BuffInfoModal visible actTitle="Sneak In" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
+      })()}
 
       {/* Ghost card — rendered last so it paints above everything */}
       {activeDrag &&
@@ -911,33 +868,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     overflow: 'visible',
   },
-  buffToolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  buffChipBarWrapper: {
     paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
-  buffToolbarBtn: {
-    backgroundColor: theme.colors.bgPanel,
-    borderRadius: theme.radii.r8,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.borderMedium,
-  },
-  buffToolbarBtnText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.s,
-    fontWeight: theme.fontWeights.bold,
-  },
-  buffToolbarBtnQtyText: {
-    color: theme.colors.text70,
-    fontSize: theme.fontSizes.s,
-    fontWeight: theme.fontWeights.medium,
-  },
-  buffToolbarBtnDisabled: {
-    opacity: 0.4,
   },
   areasRow: {
     flex: 1,

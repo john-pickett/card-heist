@@ -21,6 +21,9 @@ import {
   ESCAPE_POLICE_ALERT_THRESHOLD,
 } from '../constants/escapeBalance';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
+import { BuffChipBar, BuffChip } from '../components/BuffChipBar';
+import { BuffInfoModal, BuffInfo } from '../components/BuffInfoModal';
+import { MARKET_ITEMS } from '../data/marketItems';
 import theme from '../theme';
 
 const SUIT_SYMBOL: Record<string, string> = {
@@ -123,6 +126,7 @@ export function EscapeScreen({
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [helpVisible, setHelpVisible] = useState(false);
+  const [buffInfoVisible, setBuffInfoVisible] = useState(false);
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
   const [showWinSummary, setShowWinSummary] = useState(false);
 
@@ -281,48 +285,18 @@ export function EscapeScreen({
         </TouchableOpacity>
       </View>
 
-      {(hasFalseTrail || hasSmokeBomb || hasExMachina) && (
-        <View style={styles.buffToolbar}>
-          {hasFalseTrail && (
-            <TouchableOpacity
-              style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
-              onPress={isPlayerTurn ? () => { activateFalseTrail(); removeItem('false-trail'); } : undefined}
-              activeOpacity={isPlayerTurn ? 0.75 : 1}
-            >
-              <Text style={styles.toolbarBtnText}>
-                {'🧭 False Trail'}
-                <Text style={styles.toolbarBtnQtyText}> x{falseTrailQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {hasSmokeBomb && (
-            <TouchableOpacity
-              style={[styles.toolbarBtn, (!isPlayerTurn || smokeBombActive) && styles.toolbarBtnDisabled]}
-              onPress={isPlayerTurn && !smokeBombActive ? () => { activateSmokeBomb(); removeItem('smoke-bomb'); } : undefined}
-              activeOpacity={isPlayerTurn && !smokeBombActive ? 0.75 : 1}
-            >
-              <Text style={styles.toolbarBtnText}>
-                {'💨 Smoke Bomb'}
-                <Text style={styles.toolbarBtnQtyText}> x{smokeBombQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {hasExMachina && (
-            <TouchableOpacity
-              style={[styles.toolbarBtn, !isPlayerTurn && styles.toolbarBtnDisabled]}
-              onPress={isPlayerTurn ? () => { activateExMachina(); removeItem('ex-machina'); } : undefined}
-              activeOpacity={isPlayerTurn ? 0.75 : 1}
-            >
-              <Text style={styles.toolbarBtnText}>
-                {'🪄 Ex Machina'}
-                <Text style={styles.toolbarBtnQtyText}> x{exMachinaQty}</Text>
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      {(() => {
+        const chips: BuffChip[] = [];
+        if (falseTrailQty > 0) chips.push({ id: 'false-trail', initials: 'FT', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateFalseTrail(); removeItem('false-trail'); } });
+        if (smokeBombQty > 0) chips.push({ id: 'smoke-bomb', initials: 'SB', isActive: smokeBombActive, isPassive: false, isDisabled: !isPlayerTurn || smokeBombActive, onPress: () => { activateSmokeBomb(); removeItem('smoke-bomb'); } });
+        if (exMachinaQty > 0) chips.push({ id: 'ex-machina', initials: 'EM', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateExMachina(); removeItem('ex-machina'); } });
+        if (chips.length === 0) return null;
+        return (
+          <View style={styles.buffChipBarWrapper}>
+            <BuffChipBar chips={chips} onInfoPress={() => setBuffInfoVisible(true)} />
+          </View>
+        );
+      })()}
 
       {/* Path Track */}
       <View style={styles.trackContainer}>
@@ -513,6 +487,14 @@ export function EscapeScreen({
       </View>
 
       <EscapeHelpModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      {buffInfoVisible && (() => {
+        const INITIALS: Record<string, string> = { 'false-trail': 'FT', 'smoke-bomb': 'SB', 'ex-machina': 'EM' };
+        const ownedQtys: Record<string, number> = { 'false-trail': falseTrailQty, 'smoke-bomb': smokeBombQty, 'ex-machina': exMachinaQty };
+        const buffList: BuffInfo[] = MARKET_ITEMS
+          .filter(item => ['false-trail', 'smoke-bomb', 'ex-machina'].includes(item.id) && (ownedQtys[item.id] ?? 0) > 0)
+          .map(item => ({ initials: INITIALS[item.id], name: item.title, effect: item.effect }));
+        return <BuffInfoModal visible actTitle="Escape" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
+      })()}
       <EscapeDiscardModal
         visible={discardModalVisible}
         onClose={() => setDiscardModalVisible(false)}
@@ -885,40 +867,8 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.two,
   },
 
-  // Buff toolbar
-  buffToolbar: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
+  buffChipBarWrapper: {
     marginBottom: theme.spacing.sm,
-  },
-  toolbarBtn: {
-    borderRadius: theme.radii.lg,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.bgPanel,
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.borderBright,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toolbarBtnDisabled: {
-    opacity: 0.35,
-  },
-  toolbarBtnSmokeBombActive: {
-    borderColor: theme.colors.textMuted,
-    opacity: 0.75,
-  },
-  toolbarBtnText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.heavy,
-    letterSpacing: 0.3,
-  },
-  toolbarBtnQtyText: {
-    color: theme.colors.text60,
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.medium,
-    letterSpacing: 0.2,
   },
 
   // Result screens

@@ -20,6 +20,7 @@ function makeRecord(overrides: Partial<HeistRecord> = {}): HeistRecord {
       elapsedMs: 14000,
       timedOut: false,
       timingBonus: 50,
+      bonusCutApplied: false,
       totalMoves: 10,
     },
     act2: {
@@ -28,6 +29,9 @@ function makeRecord(overrides: Partial<HeistRecord> = {}): HeistRecord {
       busts: 0,
       aceOnes: 1,
       aceElevens: 0,
+      allInActive: false,
+      offshoreAccountActive: false,
+      fuzzyMathActive: false,
     },
     act3: {
       won: true,
@@ -121,12 +125,12 @@ describe('computeStats', () => {
 
   test('computes act1 timing tiers and timeout counters at boundaries', () => {
     const records: HeistRecord[] = [
-      makeRecord({ id: 'e', act1: { elapsedMs: 15000, timedOut: false, timingBonus: 50, totalMoves: 1 } }),
-      makeRecord({ id: 's', act1: { elapsedMs: 30000, timedOut: false, timingBonus: 40, totalMoves: 2 } }),
-      makeRecord({ id: 'g', act1: { elapsedMs: 60000, timedOut: false, timingBonus: 25, totalMoves: 3 } }),
-      makeRecord({ id: 'so', act1: { elapsedMs: 90000, timedOut: false, timingBonus: 15, totalMoves: 4 } }),
-      makeRecord({ id: 'nb', act1: { elapsedMs: 90001, timedOut: false, timingBonus: 10, totalMoves: 5 } }),
-      makeRecord({ id: 'to', act1: { elapsedMs: null, timedOut: true, timingBonus: 0, totalMoves: 6 } }),
+      makeRecord({ id: 'e', act1: { elapsedMs: 15000, timedOut: false, timingBonus: 50, bonusCutApplied: false, totalMoves: 1 } }),
+      makeRecord({ id: 's', act1: { elapsedMs: 30000, timedOut: false, timingBonus: 40, bonusCutApplied: false, totalMoves: 2 } }),
+      makeRecord({ id: 'g', act1: { elapsedMs: 60000, timedOut: false, timingBonus: 25, bonusCutApplied: false, totalMoves: 3 } }),
+      makeRecord({ id: 'so', act1: { elapsedMs: 90000, timedOut: false, timingBonus: 15, bonusCutApplied: false, totalMoves: 4 } }),
+      makeRecord({ id: 'nb', act1: { elapsedMs: 90001, timedOut: false, timingBonus: 10, bonusCutApplied: false, totalMoves: 5 } }),
+      makeRecord({ id: 'to', act1: { elapsedMs: null, timedOut: true, timingBonus: 0, bonusCutApplied: false, totalMoves: 6 } }),
     ];
 
     const stats = computeStats(records);
@@ -148,17 +152,17 @@ describe('computeStats', () => {
     const records: HeistRecord[] = [
       makeRecord({
         id: 'a',
-        act2: { score: 20, exactHits: 1, busts: 0, aceOnes: 0, aceElevens: 1 },
+        act2: { score: 20, exactHits: 1, busts: 0, aceOnes: 0, aceElevens: 1, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false },
         act3: { won: true, playerMelds: 2, playerSets: 1, playerRuns: 1, playerCardsDrawn: 5, policeMelds: 0, policeCardsDrawn: 2, turnsPlayed: 7 },
       }),
       makeRecord({
         id: 'b',
-        act2: { score: 40, exactHits: 0, busts: 2, aceOnes: 2, aceElevens: 0 },
+        act2: { score: 40, exactHits: 0, busts: 2, aceOnes: 2, aceElevens: 0, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false },
         act3: { won: false, playerMelds: 4, playerSets: 2, playerRuns: 2, playerCardsDrawn: 9, policeMelds: 2, policeCardsDrawn: 4, turnsPlayed: 10 },
       }),
       makeRecord({
         id: 'c',
-        act2: { score: 10, exactHits: 3, busts: 1, aceOnes: 1, aceElevens: 1 },
+        act2: { score: 10, exactHits: 3, busts: 1, aceOnes: 1, aceElevens: 1, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false },
         act3: null,
       }),
     ];
