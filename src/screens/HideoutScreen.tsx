@@ -7,9 +7,9 @@ export function HideoutScreen() {
     <View style={styles.screen}>
       <Text style={styles.title}>HIDEOUT</Text>
       <View style={styles.noticeCard}>
-        <Text style={styles.noticeTitle}>COMING SOON</Text>
+        {/* <Text style={styles.noticeTitle}>COMING SOON</Text> */}
         <Text style={styles.noticeBody}>
-          The Hideout is under construction. Check back soon.
+          The Hideout is not available just yet. Check back soon.
         </Text>
       </View>
     </View>

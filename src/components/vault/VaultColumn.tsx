@@ -177,7 +177,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
       >
         {/* Header */}
         <View style={styles.header}>
-          {!offshoreAccountActive && <Text style={styles.vaultLabel}>Vault {vault.id + 1}</Text>}
+          {/* {!offshoreAccountActive && <Text style={styles.vaultLabel}>Vault {vault.id + 1}</Text>} */}
           <View style={styles.targetBadge}>
             <Text style={styles.targetText}>
               {vault.target}
