@@ -287,9 +287,9 @@ export function EscapeScreen({
 
       {(() => {
         const chips: BuffChip[] = [];
-        if (falseTrailQty > 0) chips.push({ id: 'false-trail', initials: 'FT', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateFalseTrail(); removeItem('false-trail'); } });
-        if (smokeBombQty > 0) chips.push({ id: 'smoke-bomb', initials: 'SB', isActive: smokeBombActive, isPassive: false, isDisabled: !isPlayerTurn || smokeBombActive, onPress: () => { activateSmokeBomb(); removeItem('smoke-bomb'); } });
-        if (exMachinaQty > 0) chips.push({ id: 'ex-machina', initials: 'EM', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateExMachina(); removeItem('ex-machina'); } });
+        if (falseTrailQty > 0) chips.push({ id: 'false-trail', icon: '🧭', initials: 'FT', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateFalseTrail(); removeItem('false-trail'); } });
+        if (smokeBombQty > 0) chips.push({ id: 'smoke-bomb', icon: '💨', initials: 'SB', isActive: smokeBombActive, isPassive: false, isDisabled: !isPlayerTurn || smokeBombActive, onPress: () => { activateSmokeBomb(); removeItem('smoke-bomb'); } });
+        if (exMachinaQty > 0) chips.push({ id: 'ex-machina', icon: '🪄', initials: 'EM', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateExMachina(); removeItem('ex-machina'); } });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>

@@ -387,12 +387,12 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
 
       {(() => {
         const chips: BuffChip[] = [];
-        if (insideTipQty > 0) chips.push({ id: 'inside-tip', initials: 'IT', isActive: pickingHintArea, isPassive: false, isDisabled: false, onPress: () => setPickingHintArea(v => !v) });
-        if (falseAlarmQty > 0) chips.push({ id: 'false-alarm', initials: 'FA', isActive: false, isPassive: false, isDisabled: false, onPress: () => { activateFalseAlarm(); removeItem('false-alarm'); } });
-        if (timeFreezeQty > 0) chips.push({ id: 'time-freeze', initials: 'TF', isActive: false, isPassive: false, isDisabled: isFrozen, onPress: () => { if (!isFrozen) { activateTimeFreeze(); removeItem('time-freeze'); } } });
-        if (blueprintQty > 0) chips.push({ id: 'peek-blueprint', initials: 'PB', isActive: pickingBlueprintArea, isPassive: false, isDisabled: false, onPress: () => setPickingBlueprintArea(v => !v) });
-        if (quickFingersQty > 0) chips.push({ id: 'quick-fingers', initials: 'QF', isActive: pickingQuickFingersArea, isPassive: false, isDisabled: false, onPress: () => setPickingQuickFingersArea(v => !v) });
-        if (bonusCutQty > 0) chips.push({ id: 'bonus-cut', initials: 'BC', isActive: true, isPassive: true, isDisabled: false });
+        if (insideTipQty > 0) chips.push({ id: 'inside-tip', icon: '🕵️', initials: 'IT', isActive: pickingHintArea, isPassive: false, isDisabled: false, onPress: () => setPickingHintArea(v => !v) });
+        if (falseAlarmQty > 0) chips.push({ id: 'false-alarm', icon: '🚨', initials: 'FA', isActive: false, isPassive: false, isDisabled: false, onPress: () => { activateFalseAlarm(); removeItem('false-alarm'); } });
+        if (timeFreezeQty > 0) chips.push({ id: 'time-freeze', icon: '🧊', initials: 'TF', isActive: false, isPassive: false, isDisabled: isFrozen, onPress: () => { if (!isFrozen) { activateTimeFreeze(); removeItem('time-freeze'); } } });
+        if (blueprintQty > 0) chips.push({ id: 'peek-blueprint', icon: '🗺️', initials: 'PB', isActive: pickingBlueprintArea, isPassive: false, isDisabled: false, onPress: () => setPickingBlueprintArea(v => !v) });
+        if (quickFingersQty > 0) chips.push({ id: 'quick-fingers', icon: '🖐️', initials: 'QF', isActive: pickingQuickFingersArea, isPassive: false, isDisabled: false, onPress: () => setPickingQuickFingersArea(v => !v) });
+        if (bonusCutQty > 0) chips.push({ id: 'bonus-cut', icon: '💰', initials: 'BC', isActive: true, isPassive: true, isDisabled: false });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>

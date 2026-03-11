@@ -484,12 +484,12 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
       {(() => {
         const canActivate = phase === 'dealing' || phase === 'assigning';
         const chips: BuffChip[] = [];
-        if (insideSwitchQty > 0) chips.push({ id: 'inside-switch', initials: 'IS', isActive: phase === 'switch', isPassive: false, isDisabled: !canActivate && phase !== 'switch', onPress: phase === 'switch' ? cancelInsideSwitch : activateInsideSwitch });
-        if (burnEvidenceQty > 0) chips.push({ id: 'burn-evidence', initials: 'BE', isActive: phase === 'burn', isPassive: false, isDisabled: !canActivate && phase !== 'burn', onPress: phase === 'burn' ? cancelBurnEvidence : activateBurnEvidence });
-        if (doubleAgentQty > 0) chips.push({ id: 'double-agent', initials: 'DA', isActive: phase === 'double-agent', isPassive: false, isDisabled: !canActivate && phase !== 'double-agent', onPress: phase === 'double-agent' ? cancelDoubleAgent : activateDoubleAgent });
-        if (fuzzyMathActive) chips.push({ id: 'fuzzy-math', initials: 'FM', isActive: true, isPassive: true, isDisabled: false });
-        if (offshoreAccountActive) chips.push({ id: 'offshore-account', initials: 'OA', isActive: true, isPassive: true, isDisabled: false });
-        if (allInActive) chips.push({ id: 'all-in', initials: 'AI', isActive: true, isPassive: true, isDisabled: false });
+        if (insideSwitchQty > 0) chips.push({ id: 'inside-switch', icon: '🧰', initials: 'IS', isActive: phase === 'switch', isPassive: false, isDisabled: !canActivate && phase !== 'switch', onPress: phase === 'switch' ? cancelInsideSwitch : activateInsideSwitch });
+        if (burnEvidenceQty > 0) chips.push({ id: 'burn-evidence', icon: '🔥', initials: 'BE', isActive: phase === 'burn', isPassive: false, isDisabled: !canActivate && phase !== 'burn', onPress: phase === 'burn' ? cancelBurnEvidence : activateBurnEvidence });
+        if (doubleAgentQty > 0) chips.push({ id: 'double-agent', icon: '🎭', initials: 'DA', isActive: phase === 'double-agent', isPassive: false, isDisabled: !canActivate && phase !== 'double-agent', onPress: phase === 'double-agent' ? cancelDoubleAgent : activateDoubleAgent });
+        if (fuzzyMathActive) chips.push({ id: 'fuzzy-math', icon: '🧮', initials: 'FM', isActive: true, isPassive: true, isDisabled: false });
+        if (offshoreAccountActive) chips.push({ id: 'offshore-account', icon: '🏝️', initials: 'OA', isActive: true, isPassive: true, isDisabled: false });
+        if (allInActive) chips.push({ id: 'all-in', icon: '🎰', initials: 'AI', isActive: true, isPassive: true, isDisabled: false });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>

@@ -4,6 +4,7 @@ import theme from '../theme';
 
 export interface BuffChip {
   id: string;
+  icon: string;
   initials: string;
   isActive: boolean;
   isPassive: boolean;
@@ -35,6 +36,7 @@ export function BuffChipBar({ chips, onInfoPress }: BuffChipBarProps) {
                 chip.isDisabled && !chip.isActive && styles.chipDisabled,
               ]}
             >
+              <Text style={styles.chipIcon}>{chip.icon}</Text>
               <Text style={[styles.chipText, chip.isActive && styles.chipTextActive]}>
                 {chip.initials}
               </Text>
@@ -74,6 +76,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 36,
+    gap: 2,
+  },
+  chipIcon: {
+    fontSize: theme.fontSizes.md,
+    lineHeight: 16,
   },
   chipActive: {
     borderColor: theme.colors.gold,
