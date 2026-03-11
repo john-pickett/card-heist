@@ -763,7 +763,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         const ownedActiveIds = new Set(inventoryItems.filter(e => e.quantity > 0).map(e => e.itemId));
         const buffList: BuffInfo[] = MARKET_ITEMS
           .filter(item => ACT_TWO_IDS.includes(item.id) && (ownedActiveIds.has(item.id) || passiveActive.has(item.id)))
-          .map(item => ({ initials: INITIALS[item.id], name: item.title, effect: item.effect, isPassive: PASSIVE_IDS.has(item.id) }));
+          .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect, isPassive: PASSIVE_IDS.has(item.id) }));
         return <BuffInfoModal visible actTitle="Vaults" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
       })()}
       {showTutorial && (

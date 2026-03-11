@@ -3,6 +3,7 @@ import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import theme from '../theme';
 
 export interface BuffInfo {
+  icon: string;
   initials: string;
   name: string;
   effect: string;
@@ -41,6 +42,7 @@ export function BuffInfoModal({ visible, onClose, actTitle, buffList }: BuffInfo
             {buffList.map(buff => (
               <View key={buff.initials} style={styles.buffRow}>
                 <View style={styles.initialsChip}>
+                  <Text style={styles.chipIcon}>{buff.icon}</Text>
                   <Text style={styles.initialsText}>{buff.initials}</Text>
                 </View>
                 <View style={styles.buffInfo}>
@@ -140,6 +142,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
+    gap: 2,
+  },
+  chipIcon: {
+    fontSize: theme.fontSizes.md,
+    lineHeight: 16,
   },
   initialsText: {
     color: theme.colors.textPrimary,

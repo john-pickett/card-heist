@@ -492,7 +492,7 @@ export function EscapeScreen({
         const ownedQtys: Record<string, number> = { 'false-trail': falseTrailQty, 'smoke-bomb': smokeBombQty, 'ex-machina': exMachinaQty };
         const buffList: BuffInfo[] = MARKET_ITEMS
           .filter(item => ['false-trail', 'smoke-bomb', 'ex-machina'].includes(item.id) && (ownedQtys[item.id] ?? 0) > 0)
-          .map(item => ({ initials: INITIALS[item.id], name: item.title, effect: item.effect }));
+          .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect }));
         return <BuffInfoModal visible actTitle="Escape" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
       })()}
       <EscapeDiscardModal
