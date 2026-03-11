@@ -93,21 +93,21 @@ export function Act2BridgeScreen({
               <View style={styles.buffRow}>
                 <Text style={styles.buffIcon}>🃏</Text>
                 <Text style={styles.buffLabel}>All In</Text>
-                <Text style={styles.buffDesc}>Extra cards in each vault</Text>
+                <Text style={styles.buffDesc}>Double value for each vault</Text>
               </View>
             )}
             {act2Record?.offshoreAccountActive && (
               <View style={styles.buffRow}>
                 <Text style={styles.buffIcon}>🏦</Text>
                 <Text style={styles.buffLabel}>Offshore Account</Text>
-                <Text style={styles.buffDesc}>Vault labels hidden</Text>
+                <Text style={styles.buffDesc}>Unlock a new vault</Text>
               </View>
             )}
             {act2Record?.fuzzyMathActive && (
               <View style={styles.buffRow}>
                 <Text style={styles.buffIcon}>🧮</Text>
                 <Text style={styles.buffLabel}>Fuzzy Math</Text>
-                <Text style={styles.buffDesc}>+3 to each vault target</Text>
+                <Text style={styles.buffDesc}>+3 bust grace zone</Text>
               </View>
             )}
           </View>
