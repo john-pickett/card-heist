@@ -14,6 +14,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     flavor: 'A leak from someone on the inside.',
     effect: 'Reveal one card from an area.',
     cost: 250,
+    type: 'tool'
   },
   {
     id: 'false-alarm',
@@ -23,6 +24,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     flavor: 'Authorities ignore the initial report.',
     effect: 'Extend timer by one minute.',
     cost: 300,
+    type: 'tool'
   },
   {
     id: 'inside-switch',
@@ -32,6 +34,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     flavor: 'Slide the cash to a better lockbox.',
     effect: 'Move card from one vault to another.',
     cost: 350,
+    type: 'tool'
   },
   {
     id: 'burn-evidence',
@@ -41,6 +44,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     flavor: 'Card? What card?',
     effect: 'Discard one card (drawn now or already played).',
     cost: 350,
+    type: 'tool'
   },
   {
     id: 'false-trail',
@@ -50,6 +54,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     flavor: 'Can this be right?',
     effect: 'Move police back one step.',
     cost: 400,
+    type: 'tool'
   },
   // Premium tier 1 (2000 gold spent)
   {
@@ -62,6 +67,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 250,
     goldUnlock: PREMIUM_UNLOCK_TIER_1,
     premiumTierId: 'tier1',
+    type: 'tool'
   },
   {
     id: 'peek-blueprint',
@@ -73,6 +79,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 300,
     goldUnlock: PREMIUM_UNLOCK_TIER_1,
     premiumTierId: 'tier1',
+    type: 'tool'
   },
   {
     id: 'double-agent',
@@ -84,6 +91,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 250,
     goldUnlock: PREMIUM_UNLOCK_TIER_1,
     premiumTierId: 'tier1',
+    type: 'tool'
   },
   {
     id: 'fuzzy-math',
@@ -95,6 +103,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 400,
     goldUnlock: PREMIUM_UNLOCK_TIER_1,
     premiumTierId: 'tier1',
+    type: 'perk'
   },
   {
     id: 'smoke-bomb',
@@ -106,6 +115,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 400,
     goldUnlock: PREMIUM_UNLOCK_TIER_1,
     premiumTierId: 'tier1',
+    type: 'tool'
   },
   // Premium tier 2 (5000 gold spent)
   {
@@ -118,6 +128,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 350,
     goldUnlock: PREMIUM_UNLOCK_TIER_2,
     premiumTierId: 'tier2',
+    type: 'tool'
   },
   {
     id: 'bonus-cut',
@@ -129,6 +140,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 400,
     goldUnlock: PREMIUM_UNLOCK_TIER_2,
     premiumTierId: 'tier2',
+    type: 'perk'
   },
   {
     id: 'offshore-account',
@@ -140,6 +152,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 400,
     goldUnlock: PREMIUM_UNLOCK_TIER_2,
     premiumTierId: 'tier2',
+    type: 'perk'
   },
   {
     id: 'all-in',
@@ -151,6 +164,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 500,
     goldUnlock: PREMIUM_UNLOCK_TIER_2,
     premiumTierId: 'tier2',
+    type: 'perk'
   },
   {
     id: 'ex-machina',
@@ -162,6 +176,7 @@ export const MARKET_ITEMS: MarketItemDefinition[] = [
     cost: 500,
     goldUnlock: PREMIUM_UNLOCK_TIER_2,
     premiumTierId: 'tier2',
+    type: 'tool'
   },
 ];
 

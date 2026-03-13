@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import {
   MARKET_ACT_ORDER,
@@ -35,6 +35,7 @@ export function MarketScreen() {
   const { playPurchase } = useCardSound();
 
   const [tab, setTab] = useState<'standard' | 'premium'>('standard');
+  const [infoVisible, setInfoVisible] = useState(false);
 
   const availableGold = lifetimeGold - spentGold;
   const isUnlocked = heistCount >= MARKET_UNLOCK_HEISTS;
@@ -54,7 +55,35 @@ export function MarketScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>BLACK MARKET</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>BLACK MARKET</Text>
+        <TouchableOpacity style={styles.infoButton} onPress={() => setInfoVisible(true)} activeOpacity={0.7}>
+          <Text style={styles.infoButtonText}>ⓘ</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={infoVisible} transparent animationType="fade" onRequestClose={() => setInfoVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setInfoVisible(false)}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>How Items Work</Text>
+            <View style={styles.modalSection}>
+              <Text style={styles.modalTypeLabel}>🔧 Tool</Text>
+              <Text style={styles.modalTypeDesc}>
+                Tools are used for one specific purpose during the game. You choose when to activate them.
+              </Text>
+            </View>
+            <View style={styles.modalSection}>
+              <Text style={styles.modalTypeLabel}>✨ Perk</Text>
+              <Text style={styles.modalTypeDesc}>
+                Perks affect an entire act. At the start of each act, you choose which perks to have active or inactive.
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setInfoVisible(false)} activeOpacity={0.7}>
+              <Text style={styles.modalCloseText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {!isUnlocked ? (
         <View style={styles.lockedCard}>
@@ -124,6 +153,10 @@ export function MarketScreen() {
                                 BUY
                               </Text>
                             </TouchableOpacity>
+
+                            <Text style={[styles.typeBadge, item.type === 'tool' ? styles.typeBadgeTool : styles.typeBadgePerk]}>
+                              {item.type === 'tool' ? 'TOOL' : 'PERK'}
+                            </Text>
                             {owned > 0 && (
                               <Text style={styles.ownedLabel}>Owned: {owned}</Text>
                             )}
@@ -226,9 +259,13 @@ export function MarketScreen() {
                                       BUY
                                     </Text>
                                   </TouchableOpacity>
+                                  <Text style={[styles.typeBadge, item.type === 'tool' ? styles.typeBadgeTool : styles.typeBadgePerk]}>
+                                    {item.type === 'tool' ? 'TOOL' : 'PERK'}
+                                  </Text>
                                   {owned > 0 && (
                                     <Text style={styles.ownedLabel}>Owned: {owned}</Text>
                                   )}
+                                  
                                 </View>
                               </View>
                               <Text style={styles.itemFlavor}>{item.flavor}</Text>
@@ -257,13 +294,95 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.fourteen,
     paddingHorizontal: theme.spacing.xxl,
   },
+  titleRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.fourteen,
+    position: 'relative',
+  },
   title: {
     color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.xl,
     fontWeight: theme.fontWeights.black,
     letterSpacing: 3,
-    marginBottom: theme.spacing.fourteen,
     textAlign: 'center',
+  },
+  infoButton: {
+    position: 'absolute',
+    right: 0,
+    padding: theme.spacing.xs,
+  },
+  infoButtonText: {
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSizes.lg,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayModal,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.bgPanel,
+    borderRadius: theme.radii.xl,
+    padding: theme.spacing.xl,
+    width: '100%',
+    gap: theme.spacing.md,
+    borderWidth: theme.borderWidths.thin,
+    borderColor: theme.colors.borderSubtle,
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.subtitle,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 1,
+    marginBottom: theme.spacing.xs,
+  },
+  modalSection: {
+    gap: theme.spacing.xs,
+  },
+  modalTypeLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.heavy,
+  },
+  modalTypeDesc: {
+    color: theme.colors.text85,
+    fontSize: theme.fontSizes.md,
+    lineHeight: 20,
+  },
+  modalClose: {
+    backgroundColor: theme.colors.gold,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+    marginTop: theme.spacing.xs,
+  },
+  modalCloseText: {
+    color: theme.colors.bgDeep,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 0.5,
+  },
+  typeBadge: {
+    fontSize: theme.fontSizes.s,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 0.8,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: theme.spacing.two,
+    borderRadius: theme.radii.xs,
+    overflow: 'hidden',
+  },
+  typeBadgeTool: {
+    color: theme.colors.successTeal,
+    backgroundColor: 'rgba(26,188,156,0.12)',
+  },
+  typeBadgePerk: {
+    color: theme.colors.gold,
+    backgroundColor: 'rgba(244,208,63,0.12)',
   },
   tabRow: {
     flexDirection: 'row',
@@ -387,7 +506,7 @@ const styles = StyleSheet.create({
   },
   ownedLabel: {
     color: theme.colors.textSoft,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.s,
     fontWeight: theme.fontWeights.bold,
     letterSpacing: 0.2,
   },

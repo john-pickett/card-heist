@@ -10,4 +10,5 @@ export interface MarketItemDefinition {
   cost: number | null;
   goldUnlock?: number;
   premiumTierId?: string;
+  type: 'perk' | 'tool';
 }
