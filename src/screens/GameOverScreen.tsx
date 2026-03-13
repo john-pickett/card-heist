@@ -180,9 +180,9 @@ export function GameOverScreen({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🧰 Buffs Used</Text>
+          <Text style={styles.sectionTitle}>🧰 Items Used</Text>
           {buffsUsed.length === 0 ? (
-            <Text style={styles.noBuffs}>No buffs were consumed this run.</Text>
+            <Text style={styles.noBuffs}>No items were consumed this run.</Text>
           ) : (
             <>
               <View style={styles.buffList}>
@@ -202,7 +202,7 @@ export function GameOverScreen({
               </View>
               <View style={styles.divider} />
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Buff investment</Text>
+                <Text style={styles.statLabel}>Tool and Perk Investment</Text>
                 <Text style={styles.investmentValue}>−{totalBuffInvestment} gold</Text>
               </View>
               <View style={styles.statRow}>

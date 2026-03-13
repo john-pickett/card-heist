@@ -135,12 +135,14 @@ export function MarketScreen() {
                     return (
                       <View key={item.id} style={styles.itemCard}>
                         <View style={styles.itemHeader}>
-                          <Text style={styles.itemIcon}>{item.icon}</Text>
-                          <View style={styles.itemTitleWrap}>
-                            <Text style={styles.itemTitle}>{item.title}</Text>
-                            <Text style={styles.itemCost}>
-                              {item.cost === null ? 'Cost: TBD' : `${item.cost} Gold`}
-                            </Text>
+                          <View style={styles.itemHeaderLeft}>
+                            <Text style={styles.itemIcon}>{item.icon}</Text>
+                            <View style={styles.itemTitleWrap}>
+                              <Text style={styles.itemTitle}>{item.title}</Text>
+                              <Text style={styles.itemCost}>
+                                {item.cost === null ? 'Cost: TBD' : `${item.cost} Gold`}
+                              </Text>
+                            </View>
                           </View>
                           <View style={styles.buyColumn}>
                             <TouchableOpacity
@@ -153,7 +155,14 @@ export function MarketScreen() {
                                 BUY
                               </Text>
                             </TouchableOpacity>
-
+                          </View>
+                        </View>
+                        <View style={styles.itemBody}>
+                          <View style={styles.itemTextWrap}>
+                            <Text style={styles.itemFlavor}>{item.flavor}</Text>
+                            <Text style={styles.itemEffect}>{item.effect}</Text>
+                          </View>
+                          <View style={styles.itemMeta}>
                             <Text style={[styles.typeBadge, item.type === 'tool' ? styles.typeBadgeTool : styles.typeBadgePerk]}>
                               {item.type === 'tool' ? 'TOOL' : 'PERK'}
                             </Text>
@@ -162,8 +171,6 @@ export function MarketScreen() {
                             )}
                           </View>
                         </View>
-                        <Text style={styles.itemFlavor}>{item.flavor}</Text>
-                        <Text style={styles.itemEffect}>{item.effect}</Text>
                       </View>
                     );
                   })}
@@ -241,12 +248,14 @@ export function MarketScreen() {
                           return (
                             <View key={item.id} style={styles.itemCard}>
                               <View style={styles.itemHeader}>
-                                <Text style={styles.itemIcon}>{item.icon}</Text>
-                                <View style={styles.itemTitleWrap}>
-                                  <Text style={styles.itemTitle}>{item.title}</Text>
-                                  <Text style={styles.itemCost}>
-                                    {item.cost === null ? 'Cost: TBD' : `${item.cost} Gold`}
-                                  </Text>
+                                <View style={styles.itemHeaderLeft}>
+                                  <Text style={styles.itemIcon}>{item.icon}</Text>
+                                  <View style={styles.itemTitleWrap}>
+                                    <Text style={styles.itemTitle}>{item.title}</Text>
+                                    <Text style={styles.itemCost}>
+                                      {item.cost === null ? 'Cost: TBD' : `${item.cost} Gold`}
+                                    </Text>
+                                  </View>
                                 </View>
                                 <View style={styles.buyColumn}>
                                   <TouchableOpacity
@@ -259,17 +268,22 @@ export function MarketScreen() {
                                       BUY
                                     </Text>
                                   </TouchableOpacity>
+                                </View>
+                              </View>
+                              <View style={styles.itemBody}>
+                                <View style={styles.itemTextWrap}>
+                                  <Text style={styles.itemFlavor}>{item.flavor}</Text>
+                                  <Text style={styles.itemEffect}>{item.effect}</Text>
+                                </View>
+                                <View style={styles.itemMeta}>
                                   <Text style={[styles.typeBadge, item.type === 'tool' ? styles.typeBadgeTool : styles.typeBadgePerk]}>
                                     {item.type === 'tool' ? 'TOOL' : 'PERK'}
                                   </Text>
                                   {owned > 0 && (
                                     <Text style={styles.ownedLabel}>Owned: {owned}</Text>
                                   )}
-                                  
                                 </View>
                               </View>
-                              <Text style={styles.itemFlavor}>{item.flavor}</Text>
-                              <Text style={styles.itemEffect}>{item.effect}</Text>
                             </View>
                           );
                         })}
@@ -470,6 +484,12 @@ const styles = StyleSheet.create({
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  itemHeaderLeft: {
+    flex: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.spacing.md,
   },
   itemIcon: {
@@ -501,8 +521,24 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   buyColumn: {
+    flex: 1,
     alignItems: 'center',
-    gap: theme.spacing.two,
+  },
+  itemBody: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
+  },
+  itemTextWrap: {
+    flex: 4,
+    gap: theme.spacing.xs,
+  },
+  itemMeta: {
+    flex: 1,
+    alignItems: 'center',
+    textAlign: 'center',
+    gap: theme.spacing.three,
+    paddingTop: theme.spacing.two,
   },
   ownedLabel: {
     color: theme.colors.textSoft,
@@ -529,6 +565,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.black,
     letterSpacing: 1,
+    textAlign: 'center',
   },
   buyButtonTextDisabled: {
     color: theme.colors.textDisabled,

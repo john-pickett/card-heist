@@ -37,7 +37,8 @@ import {
   MARKET_ITEMS,
   MARKET_UNLOCK_HEISTS,
 } from './src/data/marketItems';
-import { MarketAct } from './src/types/market';
+import { MarketAct, MarketItemDefinition } from './src/types/market';
+import { PerkSelectionModal } from './src/components/PerkSelectionModal';
 import {
   DEFAULT_TUTORIALS,
   TUTORIALS_STORAGE_KEY,
@@ -82,6 +83,11 @@ export default function App() {
   const [act3Won, setAct3Won] = useState<boolean | null>(null);
   const [act2VaultResults, setAct2VaultResults] = useState<Act2VaultResult[]>([]);
   const [heistStartInventory, setHeistStartInventory] = useState<Record<string, number> | null>(null);
+  const [perkModalConfig, setPerkModalConfig] = useState<{
+    act: 'act1' | 'act2' | 'act3';
+    perks: MarketItemDefinition[];
+  } | null>(null);
+  const [act1ActivePerkIds, setAct1ActivePerkIds] = useState<string[]>([]);
 
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
   const spentGold = useHistoryStore(s => s.spentGold);
@@ -201,12 +207,26 @@ export default function App() {
     setActiveTab('settings');
   };
 
+  function getActPerksInInventory(act: MarketItemDefinition['act']): MarketItemDefinition[] {
+    const inventory = useInventoryStore.getState().items;
+    return MARKET_ITEMS.filter(
+      item => item.type === 'perk'
+        && item.act === act
+        && inventory.some(e => e.itemId === item.id && e.quantity > 0)
+    );
+  }
+
   const handleStartGame = () => {
     setDevLaunchAct(null);
     setHeistStartInventory(toInventoryCounts(useInventoryStore.getState().items));
-    useSneakInStore.getState().initGame();
     setCampaignStartTime(Date.now());
-    setGameFlow('act1');
+    const perks = getActPerksInInventory('Act One');
+    if (perks.length > 0) {
+      setPerkModalConfig({ act: 'act1', perks });
+    } else {
+      useSneakInStore.getState().initGame();
+      setGameFlow('act1');
+    }
   };
 
   const handleLaunchActForTesting = (act: 'act1' | 'act2' | 'act3') => {
@@ -216,6 +236,8 @@ export default function App() {
     setHeistStartInventory(toInventoryCounts(useInventoryStore.getState().items));
 
     if (act === 'act1') {
+      const act1PerkIds = getActPerksInInventory('Act One').map(p => p.id);
+      setAct1ActivePerkIds(act1PerkIds);
       useSneakInStore.getState().initGame();
       setCampaignStartTime(Date.now());
       setGameFlow('act1');
@@ -223,7 +245,8 @@ export default function App() {
     }
 
     if (act === 'act2') {
-      useReckoningStore.getState().initGame();
+      const act2PerkIds = getActPerksInInventory('Act Two').map(p => p.id);
+      useReckoningStore.getState().initGame(act2PerkIds);
       setCampaignStartTime(Date.now());
       setGameFlow('act2');
       return;
@@ -261,7 +284,7 @@ export default function App() {
         elapsedSec <= 120 ? 100 : 0;
     }
     const inv = useInventoryStore.getState();
-    const bonusCutApplied = timingBonus > 0 && inv.items.some(e => e.itemId === 'bonus-cut');
+    const bonusCutApplied = timingBonus > 0 && act1ActivePerkIds.includes('bonus-cut');
     if (bonusCutApplied) {
       timingBonus *= 2;
       inv.removeItem('bonus-cut');
@@ -272,8 +295,13 @@ export default function App() {
   };
 
   const handleContinueToAct2 = () => {
-    useReckoningStore.getState().initGame();
-    setGameFlow('act2');
+    const perks = getActPerksInInventory('Act Two');
+    if (perks.length > 0) {
+      setPerkModalConfig({ act: 'act2', perks });
+    } else {
+      useReckoningStore.getState().initGame([]);
+      setGameFlow('act2');
+    }
   };
 
   const handleCrackTheVaultsEnd = () => {
@@ -306,8 +334,31 @@ export default function App() {
   };
 
   const handleContinueToAct3 = () => {
-    useEscapeStore.getState().initGame();
-    setGameFlow('act3');
+    const perks = getActPerksInInventory('Act Three');
+    if (perks.length > 0) {
+      setPerkModalConfig({ act: 'act3', perks });
+    } else {
+      useEscapeStore.getState().initGame();
+      setGameFlow('act3');
+    }
+  };
+
+  const handlePerkModalApply = (selectedIds: string[]) => {
+    if (!perkModalConfig) return;
+    const { act } = perkModalConfig;
+    setPerkModalConfig(null);
+    if (act === 'act1') {
+      setAct1ActivePerkIds(selectedIds);
+      useSneakInStore.getState().initGame();
+      setGameFlow('act1');
+    } else if (act === 'act2') {
+      useReckoningStore.getState().initGame(selectedIds);
+      setGameFlow('act2');
+    } else if (act === 'act3') {
+      // Wire selectedIds into escapeStore.initGame when Act Three perks are added
+      useEscapeStore.getState().initGame();
+      setGameFlow('act3');
+    }
   };
 
   const handleAct3GameOver = (won: boolean) => {
@@ -587,6 +638,12 @@ export default function App() {
             </TouchableOpacity>
           </View>}
         </View>
+
+          <PerkSelectionModal
+            visible={perkModalConfig !== null}
+            perks={perkModalConfig?.perks ?? []}
+            onApply={handlePerkModalApply}
+          />
 
           <Modal
             visible={inventoryVisible}

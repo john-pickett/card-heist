@@ -47,7 +47,7 @@ export interface ReckoningState {
 }
 
 export interface ReckoningActions {
-  initGame: () => void;
+  initGame: (activePerkIds?: string[]) => void;
   flipCard: () => void;
   assignCard: (vaultId: 0 | 1 | 2 | 3) => void;
   chooseAceValue: (value: AceValue) => void;

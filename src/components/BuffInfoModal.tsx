@@ -23,7 +23,7 @@ export function BuffInfoModal({ visible, onClose, actTitle, buffList }: BuffInfo
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>Buffs — {actTitle}</Text>
+            <Text style={styles.title}>Tools and Perks — {actTitle}</Text>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={12}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
@@ -35,10 +35,10 @@ export function BuffInfoModal({ visible, onClose, actTitle, buffList }: BuffInfo
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.explainer}>
-              Tap a chip to use that buff during this act. Active buffs glow gold. Passive buffs activate automatically and always glow. Tap an active buff chip again to cancel it.
+              Tap a chip to use that item during this act. Active items glow gold. Tap an active item chip again to cancel it.
             </Text>
 
-            <Text style={styles.sectionHeading}>Your Buffs This Act</Text>
+            <Text style={styles.sectionHeading}>Your Items This Act</Text>
             {buffList.map(buff => (
               <View key={buff.initials} style={styles.buffRow}>
                 <View style={styles.initialsChip}>
