@@ -1,6 +1,6 @@
 {
   "name": "card-heist",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "main": "index.ts",
   "scripts": {
     "bump": "node bump-version.js && npm run commit:version",
