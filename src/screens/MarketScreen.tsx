@@ -167,7 +167,7 @@ export function MarketScreen() {
                               {item.type === 'tool' ? 'TOOL' : 'PERK'}
                             </Text>
                             {owned > 0 && (
-                              <Text style={styles.ownedLabel}>Owned: {owned}</Text>
+                              <Text style={styles.ownedLabel}>Qty: {owned}</Text>
                             )}
                           </View>
                         </View>
@@ -280,7 +280,7 @@ export function MarketScreen() {
                                     {item.type === 'tool' ? 'TOOL' : 'PERK'}
                                   </Text>
                                   {owned > 0 && (
-                                    <Text style={styles.ownedLabel}>Owned: {owned}</Text>
+                                    <Text style={styles.ownedLabel}>Qty: {owned}</Text>
                                   )}
                                 </View>
                               </View>
