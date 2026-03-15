@@ -18,6 +18,7 @@ import { GameOverScreen } from './src/screens/GameOverScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { HideoutScreen } from './src/screens/HideoutScreen';
+import { HideoutIntroScreen } from './src/screens/HideoutIntroScreen';
 import { BlackMarketIntroScreen } from './src/screens/BlackMarketIntroScreen';
 import { BlackMarketUnlockedScreen } from './src/screens/BlackMarketUnlockedScreen';
 import { MarketScreen } from './src/screens/MarketScreen';
@@ -33,6 +34,7 @@ import { useSneakInStore } from './src/store/sneakInStore';
 import { useSettingsStore } from './src/store/settingsStore';
 import {
   BLACK_MARKET_ENTRY_FEE,
+  HIDEOUT_PRICE,
   MARKET_ACT_ORDER,
   MARKET_ITEMS,
   MARKET_UNLOCK_HEISTS,
@@ -100,6 +102,8 @@ export default function App() {
   const setBlackMarketIntroSeen = useSettingsStore(s => s.setBlackMarketIntroSeen);
   const blackMarketUnlockedStorySeen = useSettingsStore(s => s.blackMarketUnlockedStorySeen);
   const setBlackMarketUnlockedStorySeen = useSettingsStore(s => s.setBlackMarketUnlockedStorySeen);
+  const hideoutPurchased = useSettingsStore(s => s.hideoutPurchased);
+  const setHideoutPurchased = useSettingsStore(s => s.setHideoutPurchased);
 
   const act1Bonus = act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
@@ -562,7 +566,22 @@ export default function App() {
       }
       return <MarketScreen />;
     }
-    if (activeTab === 'hideout') return <HideoutScreen />;
+    if (activeTab === 'hideout') {
+      if (!hideoutPurchased) {
+        return (
+          <HideoutIntroScreen
+            availableGold={availableGold}
+            price={HIDEOUT_PRICE}
+            onPurchase={() => {
+              if (availableGold < HIDEOUT_PRICE) return;
+              spendGold(HIDEOUT_PRICE);
+              setHideoutPurchased(true);
+            }}
+          />
+        );
+      }
+      return <HideoutScreen />;
+    }
     return renderHomeTab();
   };
 

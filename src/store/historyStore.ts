@@ -9,6 +9,7 @@ interface HistoryStore {
   spentGold: number;
   unlockedPremiumTiers: string[];
   recordHeist: (record: HeistRecord) => void;
+  addBonusGold: (amount: number) => void;
   spendGold: (amount: number) => void;
   unlockPremiumTier: (tierId: string) => void;
   clearHistory: () => void;
@@ -25,6 +26,7 @@ export const useHistoryStore = create(
         records: [...get().records, record],
         lifetimeGold: get().lifetimeGold + record.totalGold,
       }),
+      addBonusGold: (amount) => set({ lifetimeGold: get().lifetimeGold + amount }),
       spendGold: (amount) => set({ spentGold: get().spentGold + amount }),
       unlockPremiumTier: (tierId) => {
         if (!get().unlockedPremiumTiers.includes(tierId)) {

@@ -2,6 +2,7 @@ import { MarketItemDefinition } from '../types/market';
 
 export const MARKET_UNLOCK_HEISTS = __DEV__ ? 1 : 5;
 export const BLACK_MARKET_ENTRY_FEE = __DEV__ ? 1 : 2000;
+export const HIDEOUT_PRICE = __DEV__ ? 1 : 20000;
 export const PREMIUM_UNLOCK_TIER_1 = __DEV__ ? 1 : 2000;
 export const PREMIUM_UNLOCK_TIER_2 = __DEV__ ? 1 : 5000;
 
