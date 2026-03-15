@@ -593,7 +593,7 @@ export default function App() {
           <View style={styles.topAppBar}>
             <View style={styles.goldWrap}>
               <Text style={styles.goldLabel}>Gold</Text>
-              <Text style={styles.goldValue}>{availableGold}</Text>
+              <Text style={styles.goldValue}>{availableGold.toLocaleString()}</Text>
             </View>
 
             <TouchableOpacity

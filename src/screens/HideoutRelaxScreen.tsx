@@ -16,27 +16,28 @@ interface GameDef {
   price: number;
 }
 
+// TODO: Set these back to 1000, 5000, and 7500 before pushing to prod
 const GAMES: GameDef[] = [
   {
     id: 'pattern-recognition',
     label: 'Pattern Recognition',
     description:
       'Train your eyes, not just your instincts. Sixteen items from the job, paired and hidden. Find every match with the fewest wrong flips — quick hands, quiet mind.',
-    price: 1000,
+    price: __DEV__ ? 1 : 1,
   },
   {
     id: 'getaway',
     label: 'The Getaway',
     description:
       'Every card is a move. Read the suit, count the steps, find the exit before the net closes. One wrong turn burns a route and costs you time.',
-    price: 5000,
+    price: __DEV__ ? 1 : 1,
   },
   {
     id: 'drop',
     label: 'The Drop',
     description:
-      'A 52-card sortation test under shifting rules. Jacks, Queens, Kings, and Aces flip the grid live. Build a streak to trigger Escalation — then sort fast or lose a fuse.',
-    price: 7500,
+      'A 52-card sorting test under shifting rules. Jacks, Queens, Kings, and Aces flip the grid live. Build a streak to trigger Escalation — then sort fast or lose a fuse.',
+    price: __DEV__ ? 1 : 1,
   },
 ];
 
@@ -81,10 +82,10 @@ export function HideoutRelaxScreen({ onBack }: Props) {
 
       <View style={styles.titleRow}>
         <Text style={styles.title}>RELAX</Text>
-        <View style={styles.balancePill}>
+        {/* <View style={styles.balancePill}>
           <Text style={styles.balanceLabel}>Balance</Text>
           <Text style={styles.balanceValue}>{availableGold.toLocaleString()} ¢</Text>
-        </View>
+        </View> */}
       </View>
 
       <ScrollView contentContainerStyle={styles.gameList} showsVerticalScrollIndicator={false}>
