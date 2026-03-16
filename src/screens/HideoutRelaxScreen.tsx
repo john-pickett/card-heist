@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { HideoutSubBar } from '../components/HideoutSubBar';
 import theme from '../theme';
 import { useHistoryStore } from '../store/historyStore';
 import { useSettingsStore, type RelaxGameId } from '../store/settingsStore';
@@ -75,18 +76,7 @@ export function HideoutRelaxScreen({ onBack }: Props) {
 
   return (
     <View style={styles.screen}>
-      <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-        <Text style={styles.backArrow}>‹</Text>
-        <Text style={styles.backLabel}>Hideout</Text>
-      </TouchableOpacity>
-
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>RELAX</Text>
-        {/* <View style={styles.balancePill}>
-          <Text style={styles.balanceLabel}>Balance</Text>
-          <Text style={styles.balanceValue}>{availableGold.toLocaleString()} ¢</Text>
-        </View> */}
-      </View>
+      <HideoutSubBar title="RELAX" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.gameList} showsVerticalScrollIndicator={false}>
         {GAMES.map(game => {
@@ -143,37 +133,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgPrimary,
     paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.fourteen,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: theme.spacing.xl,
-    paddingVertical: theme.spacing.xs,
-  },
-  backArrow: {
-    color: theme.colors.greenPastel,
-    fontSize: theme.fontSizes.xxl,
-    fontWeight: theme.fontWeights.bold,
-    marginRight: theme.spacing.xs,
-    lineHeight: 28,
-  },
-  backLabel: {
-    color: theme.colors.greenPastel,
-    fontSize: theme.fontSizes.base,
-    fontWeight: theme.fontWeights.bold,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.xl,
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.black,
-    letterSpacing: 3,
   },
   balancePill: {
     backgroundColor: theme.colors.bgPanel,

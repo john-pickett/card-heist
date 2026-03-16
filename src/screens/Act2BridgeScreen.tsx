@@ -55,7 +55,7 @@ export function Act2BridgeScreen({
                   </Text>
                 </View>
                 <View style={styles.vaultRowRight}>
-                  {vr.result === 'exact' && (
+                  {vr.result === 'exact' && !vr.bishopApplied && (
                     <View style={[styles.resultBadge, styles.resultBadgeExact]}>
                       <Text style={styles.resultBadgeTextExact}>EXACT ×2</Text>
                     </View>

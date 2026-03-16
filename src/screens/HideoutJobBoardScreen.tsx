@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { HideoutSubBar } from '../components/HideoutSubBar';
 import theme from '../theme';
 
 interface Props {
@@ -9,12 +10,7 @@ interface Props {
 export function HideoutJobBoardScreen({ onBack }: Props) {
   return (
     <View style={styles.screen}>
-      <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-        <Text style={styles.backArrow}>‹</Text>
-        <Text style={styles.backLabel}>Hideout</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.title}>JOB BOARD</Text>
+      <HideoutSubBar title="JOB BOARD" onBack={onBack} />
 
       <View style={styles.placeholderCard}>
         <Text style={styles.placeholderBody}>
@@ -32,33 +28,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.fourteen,
     alignItems: 'center',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: theme.spacing.xl,
-    paddingVertical: theme.spacing.xs,
-  },
-  backArrow: {
-    color: theme.colors.greenPastel,
-    fontSize: theme.fontSizes.xxl,
-    fontWeight: theme.fontWeights.bold,
-    marginRight: theme.spacing.xs,
-    lineHeight: 28,
-  },
-  backLabel: {
-    color: theme.colors.greenPastel,
-    fontSize: theme.fontSizes.base,
-    fontWeight: theme.fontWeights.bold,
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.black,
-    letterSpacing: 3,
-    marginBottom: theme.spacing.xl,
-    textAlign: 'center',
   },
   placeholderCard: {
     width: '100%',

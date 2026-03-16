@@ -12,6 +12,7 @@ import { crewMembers } from '../data/crew';
 import { useCrewStore, isCrewAvailable } from '../store/crewStore';
 import { useHistoryStore } from '../store/historyStore';
 import { CrewMember, CrewMemberId } from '../types/crew';
+import { HideoutSubBar } from '../components/HideoutSubBar';
 import theme from '../theme';
 
 interface Props {
@@ -43,12 +44,7 @@ export function HideoutCrewScreen({ onBack }: Props) {
 
   return (
     <View style={styles.screen}>
-      <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-        <Text style={styles.backArrow}>‹</Text>
-        <Text style={styles.backLabel}>Hideout</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.title}>CREW</Text>
+      <HideoutSubBar title="CREW" onBack={onBack} />
 
       <ScrollView
         style={styles.list}
@@ -178,40 +174,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.bgPrimary,
     paddingTop: theme.spacing.fourteen,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: theme.spacing.xl,
-    paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.xl,
-  },
-  backArrow: {
-    color: theme.colors.greenPastel,
-    fontSize: theme.fontSizes.xxl,
-    fontWeight: theme.fontWeights.bold,
-    marginRight: theme.spacing.xs,
-    lineHeight: 28,
-  },
-  backLabel: {
-    color: theme.colors.greenPastel,
-    fontSize: theme.fontSizes.base,
-    fontWeight: theme.fontWeights.bold,
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.black,
-    letterSpacing: 3,
-    marginBottom: theme.spacing.xl,
-    textAlign: 'center',
   },
   list: {
     flex: 1,
   },
   listContent: {
-    paddingHorizontal: theme.spacing.xl,
     paddingBottom: theme.spacing.xxl,
     gap: theme.spacing.md,
   },

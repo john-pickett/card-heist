@@ -962,7 +962,7 @@ describe('vaultStore', () => {
 
     test('initGame with fuzzy-math in inventory sets fuzzyMathActive and removes item', () => {
       useInventoryStore.setState({ items: [{ itemId: 'fuzzy-math', quantity: 1 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['fuzzy-math']);
       const state = useReckoningStore.getState();
       expect(state.fuzzyMathActive).toBe(true);
       expect(useInventoryStore.getState().items.find(e => e.itemId === 'fuzzy-math')).toBeUndefined();
@@ -978,7 +978,7 @@ describe('vaultStore', () => {
 
     test('initGame with fuzzy-math qty=2 sets fuzzyMathActive and decrements quantity to 1', () => {
       useInventoryStore.setState({ items: [{ itemId: 'fuzzy-math', quantity: 2 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['fuzzy-math']);
       const state = useReckoningStore.getState();
       expect(state.fuzzyMathActive).toBe(true);
       const entry = useInventoryStore.getState().items.find(e => e.itemId === 'fuzzy-math');
@@ -1290,17 +1290,25 @@ describe('vaultStore', () => {
       expect(state.vaults[0].isBusted).toBe(false);
     });
 
+    test('initGame with fuzzy-math in inventory but not selected → fuzzyMathActive false, item not consumed', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'fuzzy-math', quantity: 1 }] });
+      useReckoningStore.getState().initGame([]);
+      const state = useReckoningStore.getState();
+      expect(state.fuzzyMathActive).toBe(false);
+      expect(useInventoryStore.getState().items.find(e => e.itemId === 'fuzzy-math')).toBeDefined();
+    });
+
     // ── second game reset ──────────────────────────────────────────────────
 
     test('initGame called second time after fuzzyMathActive game: item already consumed → fuzzyMathActive false', () => {
       // First game consumed the item
       useInventoryStore.setState({ items: [{ itemId: 'fuzzy-math', quantity: 1 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['fuzzy-math']);
       expect(useReckoningStore.getState().fuzzyMathActive).toBe(true);
       expect(useInventoryStore.getState().items.find(e => e.itemId === 'fuzzy-math')).toBeUndefined();
 
       // Second game — no more fuzzy-math
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['fuzzy-math']);
       expect(useReckoningStore.getState().fuzzyMathActive).toBe(false);
     });
   });
@@ -1319,9 +1327,18 @@ describe('vaultStore', () => {
       expect(state.offshoreAccountActive).toBe(false);
     });
 
+    test('initGame with offshore-account in inventory but not selected → 3 vaults, flag false, item not consumed', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'offshore-account', quantity: 1 }] });
+      useReckoningStore.getState().initGame([]);
+      const state = useReckoningStore.getState();
+      expect(state.vaults).toHaveLength(3);
+      expect(state.offshoreAccountActive).toBe(false);
+      expect(useInventoryStore.getState().items.find(e => e.itemId === 'offshore-account')).toBeDefined();
+    });
+
     test('initGame with offshore-account → 4 vaults, vault 3 target 42, flag true, item consumed', () => {
       useInventoryStore.setState({ items: [{ itemId: 'offshore-account', quantity: 1 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['offshore-account']);
       const state = useReckoningStore.getState();
       expect(state.vaults).toHaveLength(4);
       expect(state.vaults[3].target).toBe(42);
@@ -1418,7 +1435,7 @@ describe('vaultStore', () => {
 
     test('initGame with all-in → allInActive true, item consumed', () => {
       useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['all-in']);
       const state = useReckoningStore.getState();
       expect(state.allInActive).toBe(true);
       expect(useInventoryStore.getState().items.find(e => e.itemId === 'all-in')).toBeUndefined();
@@ -1432,9 +1449,17 @@ describe('vaultStore', () => {
       expect(useInventoryStore.getState().items).toHaveLength(1);
     });
 
+    test('initGame with all-in in inventory but not selected → allInActive false, item not consumed', () => {
+      useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }] });
+      useReckoningStore.getState().initGame([]);
+      const state = useReckoningStore.getState();
+      expect(state.allInActive).toBe(false);
+      expect(useInventoryStore.getState().items.find(e => e.itemId === 'all-in')).toBeDefined();
+    });
+
     test('initGame with all-in → 3 vaults, targets [26, 36, 42]', () => {
       useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['all-in']);
       const state = useReckoningStore.getState();
       expect(state.vaults).toHaveLength(3);
       expect(state.vaults.map(v => v.target)).toEqual([26, 36, 42]);
@@ -1442,7 +1467,7 @@ describe('vaultStore', () => {
 
     test('initGame with all-in + offshore-account → 4 vaults, targets [26, 36, 42, 84]', () => {
       useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }, { itemId: 'offshore-account', quantity: 1 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['all-in', 'offshore-account']);
       const state = useReckoningStore.getState();
       expect(state.vaults).toHaveLength(4);
       expect(state.vaults.map(v => v.target)).toEqual([26, 36, 42, 84]);
@@ -1612,12 +1637,12 @@ describe('vaultStore', () => {
 
     test('second initGame after all-in consumed: allInActive resets to false, targets back to [13, 18, 21]', () => {
       useInventoryStore.setState({ items: [{ itemId: 'all-in', quantity: 1 }] });
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['all-in']);
       expect(useReckoningStore.getState().allInActive).toBe(true);
       expect(useReckoningStore.getState().vaults.map(v => v.target)).toEqual([26, 36, 42]);
 
       // Second game — item already consumed
-      useReckoningStore.getState().initGame();
+      useReckoningStore.getState().initGame(['all-in']);
       const state = useReckoningStore.getState();
       expect(state.allInActive).toBe(false);
       expect(state.vaults).toHaveLength(3);

@@ -90,7 +90,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   initGame: (selectedPerkIds = []) => {
     const inventoryItems = useInventoryStore.getState().items;
     const owns = (id: string) => inventoryItems.some((e) => e.itemId === id);
-    const isSelected = (id: string) => selectedPerkIds.length === 0 || selectedPerkIds.includes(id);
+    const isSelected = (id: string) => selectedPerkIds.includes(id);
 
     const hasFuzzyMath = owns('fuzzy-math') && isSelected('fuzzy-math');
     if (hasFuzzyMath) {
