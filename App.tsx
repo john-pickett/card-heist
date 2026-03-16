@@ -109,6 +109,7 @@ export default function App() {
   const hideoutPurchased = useSettingsStore(s => s.hideoutPurchased);
   const setHideoutPurchased = useSettingsStore(s => s.setHideoutPurchased);
   const crewUnlockedIds = useCrewStore(s => s.unlockedIds);
+  const activeHeistCrew = useCrewStore(s => s.activeHeistCrew);
 
   const act1Bonus = act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
@@ -554,6 +555,7 @@ export default function App() {
             act2Record={act2Record}
             act2Gold={act2Score}
             act2VaultResults={act2VaultResults}
+            crewIds={activeHeistCrew}
             buffsUsed={usedBuffs}
             onPlayAgain={handlePlayAgain}
             onHome={handleReturnHome}

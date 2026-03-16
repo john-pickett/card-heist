@@ -3,6 +3,8 @@ import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { Act1Record, Act2Record } from '../types/history';
 import { MarketAct } from '../types/market';
 import { MARKET_ITEMS } from '../data/marketItems';
+import { crewMembers } from '../data/crew';
+import { CrewMemberId } from '../types/crew';
 import theme from '../theme';
 
 type Act2VaultResult = {
@@ -31,6 +33,7 @@ interface Props {
   act2Record: Act2Record | null;
   act2Gold: number;
   act2VaultResults: Act2VaultResult[];
+  crewIds: CrewMemberId[];
   buffsUsed: UsedBuff[];
   onPlayAgain: () => void;
   onHome: () => void;
@@ -76,6 +79,7 @@ export function GameOverScreen({
   act2Record,
   act2Gold,
   act2VaultResults,
+  crewIds,
   buffsUsed,
   onPlayAgain,
   onHome,
@@ -92,6 +96,9 @@ export function GameOverScreen({
     ? `${act1Time}${act1Medal(act1Record.elapsedMs, act1Record.timedOut)}`
     : act1Time;
   const act2GoldWithMedal = `${act2Gold}${act2GoldMedal(act2Gold)}`;
+  const crewNames = crewIds
+    .map(id => crewMembers.find(member => member.id === id)?.nickname)
+    .filter((name): name is string => !!name);
 
   const shareResults = async () => {
     const payload = [
@@ -101,6 +108,7 @@ export function GameOverScreen({
       `Escaped Police: ${won ? 'Yes ✅' : 'No 🚨'}`,
       `Act One Time: ${act1TimeWithMedal}`,
       `Act Two Gold: ${act2GoldWithMedal}`,
+      ...(crewNames.length > 0 ? [`Crew: ${crewNames.join(', ')}`] : []),
     ].join('\n');
 
     await Share.share({ message: payload });
@@ -128,6 +136,13 @@ export function GameOverScreen({
         <TouchableOpacity style={styles.copyButton} onPress={shareResults}>
           <Text style={styles.copyButtonText}>Share Results</Text>
         </TouchableOpacity>
+
+        {crewNames.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🤝 Crew On This Job</Text>
+            <Text style={styles.crewList}>{crewNames.join(', ')}</Text>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🧩 Act One: Sneak In</Text>
@@ -437,6 +452,11 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.textPrimary,
     backgroundColor: theme.colors.greenPrimary,
     marginBottom: theme.spacing.md,
+  },
+  crewList: {
+    color: theme.colors.text85,
+    fontSize: theme.fontSizes.base,
+    lineHeight: 22,
   },
   copyButtonText: {
     color: theme.colors.textPrimary,
