@@ -15,7 +15,7 @@ export const crewMembers: CrewMember[] = [
         fullName: 'Two-Tap Tico',
         nickname: 'Tico',
         flavorText: 'In and out before they know what hit them.',
-        bio: 'A former courier for a Lisbon crime syndicate, Tico developed a reputation for delivering — and disappearing — twice as fast as anyone expected. Nobody knows his real name. Nobody\'s asked twice.',
+        bio: 'A former courier for a Lisbon crime syndicate, Tico developed a reputation for delivering — and disappearing — twice as fast as anyone expected. Nobody knows her real name. Nobody\'s asked twice.',
         effect: '+50% Reward from Act One',
         cost: 5000
     },
