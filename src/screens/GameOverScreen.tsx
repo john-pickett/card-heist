@@ -28,6 +28,7 @@ interface Props {
   totalScore: number;
   totalGoldWon: number;
   won: boolean;
+  jinxApplied?: boolean;
   act1Record: Act1Record | null;
   act1Gold: number;
   act2Record: Act2Record | null;
@@ -74,6 +75,7 @@ export function GameOverScreen({
   totalScore,
   totalGoldWon,
   won,
+  jinxApplied,
   act1Record,
   act1Gold,
   act2Record,
@@ -130,7 +132,11 @@ export function GameOverScreen({
           <Text style={styles.panelLabel}>Heist payout</Text>
           <Text style={[styles.goldAmount, !won && styles.goldAmountRed]}>{totalGoldWon} gold</Text>
           <Text style={styles.panelNote}>
-            {won ? '🏆 100% kept' : `🧯 33% kept from ${totalScore} total potential`}
+            {won
+              ? '🏆 100% kept'
+              : jinxApplied
+                ? `🃏 80% kept from ${totalScore} total potential`
+                : `🧯 33% kept from ${totalScore} total potential`}
           </Text>
         </View>
         <TouchableOpacity style={styles.copyButton} onPress={shareResults}>
@@ -192,6 +198,12 @@ export function GameOverScreen({
             <Text style={styles.statLabel}>Escaped successfully</Text>
             <Text style={styles.statValue}>{won ? '✅ Yes' : '❌ No'}</Text>
           </View>
+          {!won && jinxApplied && (
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Jinx</Text>
+              <Text style={styles.statValue}>80% kept instead of 33%</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>

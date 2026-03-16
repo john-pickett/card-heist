@@ -426,9 +426,11 @@ export default function App() {
     if (!campaignStartTime || !act1Record || !act2Record) return;
     const escapeState = useEscapeStore.getState();
     const won = escapeState.phase === 'won';
-    const payoutGold = won ? totalScore : Math.round(totalScore * 0.33);
+    const jinxApplied = !won && useCrewStore.getState().activeHeistCrew.includes('jinx');
+    const payoutGold = won ? totalScore : Math.round(totalScore * (jinxApplied ? 0.80 : 0.33));
     const act3: Act3Record = {
       won,
+      jinxApplied,
       playerMelds: escapeState.playerMelds,
       playerSets: escapeState.playerSets,
       playerRuns: escapeState.playerRuns,
@@ -543,12 +545,14 @@ export default function App() {
           />
         );
       case 'act3-gameover':
-        const totalGoldWon = (act3Won ?? false) ? totalScore : Math.round(totalScore * 0.33);
+        const jinxApplied = !(act3Won ?? false) && activeHeistCrew.includes('jinx');
+        const totalGoldWon = (act3Won ?? false) ? totalScore : Math.round(totalScore * (jinxApplied ? 0.80 : 0.33));
         return (
           <GameOverScreen
             totalScore={totalScore}
             won={!!act3Won}
             totalGoldWon={totalGoldWon}
+            jinxApplied={jinxApplied}
             runNumber={currentRunNumber}
             act1Record={act1Record}
             act1Gold={act1Bonus}

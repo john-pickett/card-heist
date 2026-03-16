@@ -32,6 +32,7 @@ export interface Act2Record {
 
 export interface Act3Record {
   won: boolean;
+  jinxApplied?: boolean;
   playerMelds: number;
   playerSets: number;
   playerRuns: number;

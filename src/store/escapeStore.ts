@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createDeck, shuffleDeck } from '../data/deck';
 import { Card, Rank } from '../types/card';
+import { useCrewStore } from './crewStore';
 import {
   ESCAPE_EXIT_POSITION,
   ESCAPE_POLICE_ALERT_THRESHOLD,
@@ -106,6 +107,62 @@ function drawCardsWithReshuffle(
   };
 }
 
+// When Fingers McGee is in the crew, guarantee every draw results in a meld in hand.
+// Shuffles available cards until a meld-giving combination is found (up to 100 attempts).
+function drawWithMeldGuarantee(
+  deck: EscapeCard[],
+  remaining: EscapeCard[],
+  count: number,
+  outOfPlay: EscapeCard[]
+): { newHand: EscapeCard[]; newDeck: EscapeCard[]; newOutOfPlay: EscapeCard[]; reshuffled: boolean } {
+  // Fast path: remaining already has a meld regardless of what we draw
+  if (hasAnyMeld(remaining)) {
+    return drawCardsWithReshuffle(deck, remaining, count, outOfPlay);
+  }
+
+  if (deck.length >= count) {
+    // Try shuffling the deck to find a meld-giving draw
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const shuffledDeck = [...deck];
+      for (let i = shuffledDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledDeck[i], shuffledDeck[j]] = [shuffledDeck[j], shuffledDeck[i]];
+      }
+      const drawn = shuffledDeck.slice(0, count);
+      if (hasAnyMeld([...remaining, ...drawn])) {
+        return {
+          newHand: [...remaining, ...drawn],
+          newDeck: shuffledDeck.slice(count),
+          newOutOfPlay: outOfPlay,
+          reshuffled: false,
+        };
+      }
+    }
+  }
+
+  // Combined pool fallback: deck empty or deck shuffles exhausted
+  const pool = [...deck, ...outOfPlay];
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const shuffledPool = [...pool];
+    for (let i = shuffledPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledPool[i], shuffledPool[j]] = [shuffledPool[j], shuffledPool[i]];
+    }
+    const drawn = shuffledPool.slice(0, count);
+    if (hasAnyMeld([...remaining, ...drawn])) {
+      return {
+        newHand: [...remaining, ...drawn],
+        newDeck: shuffledPool.slice(count),
+        newOutOfPlay: [],
+        reshuffled: true,
+      };
+    }
+  }
+
+  // Ultimate fallback — shouldn't occur in normal gameplay with a 52-card deck
+  return drawCardsWithReshuffle(deck, remaining, count, outOfPlay);
+}
+
 function applyPoliceNoiseAlert(
   policeAlertLevel: number,
   policePosition: number,
@@ -153,6 +210,7 @@ const INITIAL_STATE: EscapeState = {
   lastPlayerAction: null,
   pendingPoliceAlertAction: null,
   smokeBombActive: false,
+  fingersActive: false,
 };
 
 export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => ({
@@ -168,11 +226,13 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     } while (!hasAnyMeld(openingHand));
     const playerHand = sortEscapeHand(openingHand);
     const deck = cards.slice(8);
+    const fingersActive = useCrewStore.getState().activeHeistCrew.includes('fingers');
     set({
       ...INITIAL_STATE,
       deck,
       playerHand,
       policeHand: [],
+      fingersActive,
     });
   },
 
@@ -201,6 +261,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       turnsPlayed,
       policeAlertLevel,
       policePosition,
+      fingersActive,
     } = get();
     if (phase !== 'player_turn') return;
 
@@ -215,7 +276,9 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const remaining = playerHand.filter(ec => !selectedIds.includes(ec.instanceId));
     const drawCount = 8 - remaining.length;
     const newOutOfPlayBeforeDraw = [...outOfPlay, ...selectedCards];
-    const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
+    const { newHand, newDeck, newOutOfPlay, reshuffled } = fingersActive
+      ? drawWithMeldGuarantee(deck, remaining, drawCount, newOutOfPlayBeforeDraw)
+      : drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
     const sortedHand = sortEscapeHand(newHand);
     const advance = selectedCards.length === 4 ? 2 : 1;
     const newPosition = playerPosition - advance;
@@ -282,6 +345,7 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
       playerPosition,
       turnsPlayed,
       policeAlertLevel,
+      fingersActive,
     } = get();
     if (phase !== 'player_turn') return;
     if (selectedIds.length === 0) return;
@@ -290,7 +354,9 @@ export const useEscapeStore = create<EscapeState & EscapeActions>((set, get) => 
     const remaining = playerHand.filter(ec => !selectedIds.includes(ec.instanceId));
     const drawCount = selectedIds.length;
     const newOutOfPlayBeforeDraw = [...outOfPlay, ...discarded];
-    const { newHand, newDeck, newOutOfPlay, reshuffled } = drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
+    const { newHand, newDeck, newOutOfPlay, reshuffled } = fingersActive
+      ? drawWithMeldGuarantee(deck, remaining, drawCount, newOutOfPlayBeforeDraw)
+      : drawCardsWithReshuffle(deck, remaining, drawCount, newOutOfPlayBeforeDraw);
     const sortedHand = sortEscapeHand(newHand);
 
     const newDiscardCount = playerDiscardCount + 1;

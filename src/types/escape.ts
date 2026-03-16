@@ -53,6 +53,7 @@ export interface EscapeState {
   lastPlayerAction: string | null;
   pendingPoliceAlertAction: string | null;
   smokeBombActive: boolean;
+  fingersActive: boolean;
 }
 
 export interface EscapeActions {
