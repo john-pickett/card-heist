@@ -121,6 +121,25 @@ function buildGame(): { targets: number[]; hand: SneakInCard[]; solution: SneakI
   }
 }
 
+function computeKnucklesHints(
+  hand: SneakInCard[],
+  solution: SneakInSolutionEntry[]
+): Partial<Record<AreaId, SneakInCard>> {
+  const hints: Partial<Record<AreaId, SneakInCard>> = {};
+  for (let i = 0; i < 4; i++) {
+    const entry = solution[i];
+    if (!entry) continue;
+    for (const rankVal of entry.cards) {
+      const match = hand.find(sc => parseInt(sc.card.rank, 10) === rankVal);
+      if (match) {
+        hints[i as AreaId] = match;
+        break;
+      }
+    }
+  }
+  return hints;
+}
+
 function makeAreas(targets: number[]): SneakInArea[] {
   return ([0, 1, 2, 3] as AreaId[]).map(i => ({
     id: i,
@@ -148,9 +167,11 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   insideTipHint: null,
   blueprintHint: null,
   freezeUntilMs: null,
+  knucklesHints: null,
 
-  initGame: () => {
+  initGame: (activeCrewIds: string[] = []) => {
     const { targets, hand, solution } = buildGame();
+    const knucklesActive = activeCrewIds.includes('knuckles');
     set({
       phase: 'idle',
       hand,
@@ -165,6 +186,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       insideTipHint: null,
       blueprintHint: null,
       freezeUntilMs: null,
+      knucklesHints: knucklesActive ? computeKnucklesHints(hand, solution) : null,
     });
   },
 

@@ -237,11 +237,12 @@ export default function App() {
   };
 
   const proceedAfterCrewSelection = () => {
+    const activeCrewIds = useCrewStore.getState().activeHeistCrew;
     const perks = getActPerksInInventory('Act One');
     if (perks.length > 0) {
       setPerkModalConfig({ act: 'act1', perks });
     } else {
-      useSneakInStore.getState().initGame();
+      useSneakInStore.getState().initGame(activeCrewIds);
       setGameFlow('act1');
     }
   };
@@ -372,7 +373,7 @@ export default function App() {
     setPerkModalConfig(null);
     if (act === 'act1') {
       setAct1ActivePerkIds(selectedIds);
-      useSneakInStore.getState().initGame();
+      useSneakInStore.getState().initGame(useCrewStore.getState().activeHeistCrew);
       setGameFlow('act1');
     } else if (act === 'act2') {
       useReckoningStore.getState().initGame(selectedIds);

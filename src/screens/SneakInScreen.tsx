@@ -159,6 +159,7 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
   const timeBonusMs = useSneakInStore(s => s.timeBonusMs);
   const insideTipHint = useSneakInStore(s => s.insideTipHint);
   const blueprintHint = useSneakInStore(s => s.blueprintHint);
+  const knucklesHints = useSneakInStore(s => s.knucklesHints);
   const freezeUntilMs = useSneakInStore(s => s.freezeUntilMs);
   const moveCard = useSneakInStore(s => s.moveCard);
   const returnAreaToHand = useSneakInStore(s => s.returnAreaToHand);
@@ -537,6 +538,22 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
                         </Text>
                         <Text style={[styles.hintGhostSuit, RED_SUITS.has(insideTipHint.card.card.suit) && styles.hintGhostTextRed]}>
                           {SUIT_SYMBOL[insideTipHint.card.card.suit]}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {knucklesHints?.[area.id] != null &&
+                    area.isUnlocked &&
+                    !area.isSolved &&
+                    insideTipHint?.areaId !== area.id && (
+                    <View style={styles.hintGhostOverlay} pointerEvents="none">
+                      <View style={[styles.hintGhostCard, styles.hintGhostCardGold]}>
+                        <Text style={[styles.hintGhostRank, RED_SUITS.has(knucklesHints[area.id]!.card.suit) && styles.hintGhostTextRed]}>
+                          {knucklesHints[area.id]!.card.rank}
+                        </Text>
+                        <Text style={[styles.hintGhostSuit, RED_SUITS.has(knucklesHints[area.id]!.card.suit) && styles.hintGhostTextRed]}>
+                          {SUIT_SYMBOL[knucklesHints[area.id]!.card.suit]}
                         </Text>
                       </View>
                     </View>

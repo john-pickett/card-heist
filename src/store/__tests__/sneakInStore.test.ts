@@ -39,6 +39,7 @@ function resetSneakInStore(hand: SneakInCard[], areas: SneakInArea[]): void {
     insideTipHint: null,
     blueprintHint: null,
     freezeUntilMs: null,
+    knucklesHints: null,
   });
 }
 
@@ -846,5 +847,104 @@ describe('sneakInStore', () => {
     state = useSneakInStore.getState();
     expect(state.selectedCard).toBeNull();
     expect(state.hand.map(c => c.instanceId).sort()).toEqual(['h1', 'h2']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Knuckles crew member — knucklesHints
+// ---------------------------------------------------------------------------
+
+describe('Knuckles crew — knucklesHints', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    resetSneakInStore([], [
+      makeArea(0, 8, true),
+      makeArea(1, 10, false),
+      makeArea(2, 12, false),
+      makeArea(3, 14, false),
+    ]);
+  });
+
+  test('initGame without crew sets knucklesHints to null', () => {
+    useSneakInStore.getState().initGame();
+    expect(useSneakInStore.getState().knucklesHints).toBeNull();
+  });
+
+  test('initGame with empty crew array sets knucklesHints to null', () => {
+    useSneakInStore.getState().initGame([]);
+    expect(useSneakInStore.getState().knucklesHints).toBeNull();
+  });
+
+  test('initGame with knuckles sets knucklesHints to a non-null object', () => {
+    useSneakInStore.getState().initGame(['knuckles']);
+    expect(useSneakInStore.getState().knucklesHints).not.toBeNull();
+  });
+
+  test('initGame with knuckles produces a hint for all 4 areas', () => {
+    useSneakInStore.getState().initGame(['knuckles']);
+    const { knucklesHints } = useSneakInStore.getState();
+    expect(knucklesHints).not.toBeNull();
+    expect(Object.keys(knucklesHints!).length).toBe(4);
+    for (let i = 0; i < 4; i++) {
+      expect(knucklesHints![i as AreaId]).toBeDefined();
+    }
+  });
+
+  test('each hint card rank matches a card in the solution for that area', () => {
+    useSneakInStore.getState().initGame(['knuckles']);
+    const { knucklesHints, solution } = useSneakInStore.getState();
+    expect(knucklesHints).not.toBeNull();
+    expect(solution).not.toBeNull();
+    for (let i = 0; i < 4; i++) {
+      const hint = knucklesHints![i as AreaId];
+      expect(hint).toBeDefined();
+      const hintRank = parseInt(hint!.card.rank, 10);
+      expect(solution![i].cards).toContain(hintRank);
+    }
+  });
+
+  test('each hint card instanceId is present in the hand', () => {
+    useSneakInStore.getState().initGame(['knuckles']);
+    const { knucklesHints, hand } = useSneakInStore.getState();
+    expect(knucklesHints).not.toBeNull();
+    const handIds = hand.map(c => c.instanceId);
+    for (let i = 0; i < 4; i++) {
+      const hint = knucklesHints![i as AreaId];
+      expect(hint).toBeDefined();
+      expect(handIds).toContain(hint!.instanceId);
+    }
+  });
+
+  test('knuckles active with other crew IDs still sets hints correctly', () => {
+    useSneakInStore.getState().initGame(['jinx', 'knuckles', 'tico']);
+    const { knucklesHints } = useSneakInStore.getState();
+    expect(knucklesHints).not.toBeNull();
+    expect(Object.keys(knucklesHints!).length).toBe(4);
+  });
+
+  test('initGame with knuckles then initGame without resets knucklesHints to null', () => {
+    useSneakInStore.getState().initGame(['knuckles']);
+    expect(useSneakInStore.getState().knucklesHints).not.toBeNull();
+    useSneakInStore.getState().initGame();
+    expect(useSneakInStore.getState().knucklesHints).toBeNull();
+  });
+
+  test('knucklesHints are computed from the same hand returned in state', () => {
+    // Verifies no cross-game contamination: hints reference cards from the current hand
+    useSneakInStore.getState().initGame(['knuckles']);
+    const state1 = useSneakInStore.getState();
+    const ids1 = Object.values(state1.knucklesHints!).map(c => c!.instanceId);
+
+    useSneakInStore.getState().initGame(['knuckles']);
+    const state2 = useSneakInStore.getState();
+    const ids2 = Object.values(state2.knucklesHints!).map(c => c!.instanceId);
+
+    // Each hint's instanceId must be in its own heist's hand
+    for (const id of ids1) {
+      expect(state1.hand.map(c => c.instanceId)).toContain(id);
+    }
+    for (const id of ids2) {
+      expect(state2.hand.map(c => c.instanceId)).toContain(id);
+    }
   });
 });

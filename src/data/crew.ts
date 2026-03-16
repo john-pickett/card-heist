@@ -8,7 +8,7 @@ export const crewMembers: CrewMember[] = [
         flavorText: 'Slow and steady wins the race.',
         bio: 'An old-school enforcer who spent twenty years as a vault door installer before switching sides. Nobody reads a lock like a man who built them.',
         effect: 'Show one card from each area.',
-        cost: 2500
+        cost: 5000
     },
     {
         id: 'tico',

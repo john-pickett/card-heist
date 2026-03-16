@@ -64,10 +64,11 @@ export interface SneakInState {
   insideTipHint: InsideTipHint | null;
   blueprintHint: BlueprintHint | null;
   freezeUntilMs: number | null;
+  knucklesHints: Partial<Record<AreaId, SneakInCard>> | null;
 }
 
 export interface SneakInActions {
-  initGame: () => void;
+  initGame: (activeCrewIds?: string[]) => void;
   moveCard: (card: SneakInCard, from: CardSource, to: CardSource) => void;
   selectCard: (card: SneakInCard, source: CardSource) => void;
   deselect: () => void;
