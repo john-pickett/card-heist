@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createDeck, shuffleDeck } from '../data/deck';
 import { Card, Rank } from '../types/card';
 import { useInventoryStore } from './inventoryStore';
+import { useCrewStore } from './crewStore';
 import {
   AceValue,
   PendingAce,
@@ -27,10 +28,15 @@ function effectiveTarget(target: number, fuzzyMathActive: boolean): number {
   return target + (fuzzyMathActive ? 3 : 0);
 }
 
-function vaultScore(vault: Vault, allInActive: boolean): number {
+function isInExactZone(sum: number, target: number, deadlockActive: boolean): boolean {
+  const lower = deadlockActive ? target - 3 : target;
+  return sum >= lower && sum <= target;
+}
+
+function vaultScore(vault: Vault, allInActive: boolean, deadlockActive: boolean): number {
   if (vault.isBusted) return 0;
   const multiplier = allInActive ? 2 : 1;
-  if (vault.sum === vault.target) return vault.sum * 2 * 10 * multiplier;
+  if (isInExactZone(vault.sum, vault.target, deadlockActive)) return vault.sum * 2 * 10 * multiplier;
   return vault.sum * 10 * multiplier;
 }
 
@@ -73,29 +79,31 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   busts: 0,
   aceOnes: 0,
   aceElevens: 0,
+  firstExactVaultId: null,
   preBuffPhase: null,
   switchSource: null,
   fuzzyMathActive: false,
+  deadlockActive: false,
   offshoreAccountActive: false,
   allInActive: false,
 
-  initGame: (activePerkIds: string[] = []) => {
+  initGame: () => {
     const inventoryItems = useInventoryStore.getState().items;
     const owns = (id: string) => inventoryItems.some((e) => e.itemId === id);
-    const isActive = (id: string) => activePerkIds.includes(id);
 
-    const hasFuzzyMath = owns('fuzzy-math') && isActive('fuzzy-math');
+    const hasFuzzyMath = owns('fuzzy-math');
     if (hasFuzzyMath) {
       useInventoryStore.getState().removeItem('fuzzy-math');
     }
-    const hasOffshore = owns('offshore-account') && isActive('offshore-account');
+    const hasOffshore = owns('offshore-account');
     if (hasOffshore) {
       useInventoryStore.getState().removeItem('offshore-account');
     }
-    const hasAllIn = owns('all-in') && isActive('all-in');
+    const hasAllIn = owns('all-in');
     if (hasAllIn) {
       useInventoryStore.getState().removeItem('all-in');
     }
+    const hasDeadlock = useCrewStore.getState().activeHeistCrew.includes('deadlock');
     const shuffled = shuffleDeck(createDeck());
     set({
       phase: 'dealing',
@@ -109,9 +117,11 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       busts: 0,
       aceOnes: 0,
       aceElevens: 0,
+      firstExactVaultId: null,
       preBuffPhase: null,
       switchSource: null,
       fuzzyMathActive: hasFuzzyMath,
+      deadlockActive: hasDeadlock,
       offshoreAccountActive: hasOffshore,
       allInActive: hasAllIn,
     });
@@ -132,7 +142,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   },
 
   assignCard: (vaultId: 0 | 1 | 2 | 3) => {
-    const { currentCard, currentInstanceId, vaults, phase, exactHits, busts, fuzzyMathActive } = get();
+    const { currentCard, currentInstanceId, vaults, phase, exactHits, busts, fuzzyMathActive, deadlockActive, firstExactVaultId } = get();
     if (phase !== 'assigning' || !currentCard || !currentInstanceId) return;
 
     const vault = vaults[vaultId];
@@ -157,7 +167,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     const newSum = computeSum(newCards);
     const threshold = effectiveTarget(vault.target, fuzzyMathActive);
     const isBusted = newSum > threshold;
-    const isExactHit = !isBusted && newSum === vault.target;
+    const isExactHit = !isBusted && isInExactZone(newSum, vault.target, deadlockActive);
 
     const updatedVault: Vault = {
       ...vault,
@@ -175,13 +185,14 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       phase: 'dealing',
       exactHits: isExactHit ? exactHits + 1 : exactHits,
       busts: isBusted ? busts + 1 : busts,
+      firstExactVaultId: isExactHit && firstExactVaultId === null ? vaultId : firstExactVaultId,
     });
 
     checkGameEnd(get, set, newVaults);
   },
 
   chooseAceValue: (value: AceValue) => {
-    const { pendingAce, vaults, exactHits, busts, aceOnes, aceElevens, fuzzyMathActive } = get();
+    const { pendingAce, vaults, exactHits, busts, aceOnes, aceElevens, fuzzyMathActive, deadlockActive, firstExactVaultId } = get();
     if (!pendingAce) return;
 
     const { card, instanceId, targetVaultId } = pendingAce;
@@ -197,7 +208,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     const newSum = computeSum(newCards);
     const threshold = effectiveTarget(vault.target, fuzzyMathActive);
     const isBusted = newSum > threshold;
-    const isExactHit = !isBusted && newSum === vault.target;
+    const isExactHit = !isBusted && isInExactZone(newSum, vault.target, deadlockActive);
 
     const updatedVault: Vault = {
       ...vault,
@@ -218,6 +229,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       busts: isBusted ? busts + 1 : busts,
       aceOnes: value === 1 ? aceOnes + 1 : aceOnes,
       aceElevens: value === 11 ? aceElevens + 1 : aceElevens,
+      firstExactVaultId: isExactHit && firstExactVaultId === null ? targetVaultId : firstExactVaultId,
     });
 
     checkGameEnd(get, set, newVaults);
@@ -247,7 +259,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   },
 
   completeSwitchMove: (fromVaultId: 0 | 1 | 2 | 3, instanceId: string, toVaultId: 0 | 1 | 2 | 3) => {
-    const { phase, vaults, preBuffPhase, exactHits, busts, fuzzyMathActive } = get();
+    const { phase, vaults, preBuffPhase, exactHits, busts, fuzzyMathActive, deadlockActive, firstExactVaultId } = get();
     if (phase !== 'switch') return;
     if (fromVaultId === toVaultId) return;
 
@@ -264,13 +276,13 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     const newFromSum = computeSum(newFromCards);
     const fromThreshold = effectiveTarget(fromVault.target, fuzzyMathActive);
     const newFromBusted = newFromSum > fromThreshold;
-    const newFromExactHit = !newFromBusted && newFromSum === fromVault.target;
+    const newFromExactHit = !newFromBusted && isInExactZone(newFromSum, fromVault.target, deadlockActive);
 
     const newToCards = [...toVault.cards, movingCardEntry];
     const newToSum = computeSum(newToCards);
     const toThreshold = effectiveTarget(toVault.target, fuzzyMathActive);
     const toIsBusted = newToSum > toThreshold;
-    const toIsExactHit = !toIsBusted && newToSum === toVault.target;
+    const toIsExactHit = !toIsBusted && isInExactZone(newToSum, toVault.target, deadlockActive);
 
     const updatedFromVault: Vault = {
       ...fromVault,
@@ -301,6 +313,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
       switchSource: null,
       exactHits: toIsExactHit ? exactHits + 1 : exactHits,
       busts: toIsBusted ? busts + 1 : busts,
+      firstExactVaultId: toIsExactHit && firstExactVaultId === null ? toVaultId : firstExactVaultId,
     });
 
     checkGameEnd(get, set, newVaults);
@@ -318,7 +331,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   },
 
   burnVaultCard: (vaultId: 0 | 1 | 2 | 3, instanceId: string) => {
-    const { phase, vaults, preBuffPhase, fuzzyMathActive } = get();
+    const { phase, vaults, preBuffPhase, fuzzyMathActive, deadlockActive } = get();
     if (phase !== 'burn') return;
 
     const vault = vaults[vaultId];
@@ -329,7 +342,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     const newSum = computeSum(newCards);
     const threshold = effectiveTarget(vault.target, fuzzyMathActive);
     const newBusted = newSum > threshold;
-    const newExactHit = !newBusted && newSum === vault.target;
+    const newExactHit = !newBusted && isInExactZone(newSum, vault.target, deadlockActive);
 
     const updatedVault: Vault = {
       ...vault,
@@ -370,7 +383,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   },
 
   completeDoubleAgent: (vaultId: 0 | 1 | 2 | 3, instanceId: string) => {
-    const { vaults, preBuffPhase, fuzzyMathActive } = get();
+    const { vaults, preBuffPhase, fuzzyMathActive, deadlockActive } = get();
     const vault = vaults[vaultId];
     const cardIdx = vault.cards.findIndex((vc) => vc.instanceId === instanceId);
     if (cardIdx === -1) return;
@@ -386,7 +399,7 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
     const newSum = computeSum(newCards);
     const threshold = effectiveTarget(vault.target, fuzzyMathActive);
     const isBusted = newSum > threshold;
-    const isStood = !isBusted && newSum === vault.target;
+    const isStood = !isBusted && isInExactZone(newSum, vault.target, deadlockActive);
 
     const newVaults = vaults.map((v) =>
       v.id === vaultId ? { ...v, cards: newCards, sum: newSum, isBusted, isStood } : v
@@ -402,12 +415,12 @@ function checkGameEnd(
   set: (partial: Partial<ReckoningStore>) => void,
   vaults: Vault[]
 ) {
-  const { deck, allInActive } = get();
+  const { deck, allInActive, deadlockActive } = get();
   const allTerminal = vaults.every(isTerminal);
   const deckEmpty = deck.length === 0;
 
   if (allTerminal || deckEmpty) {
-    const finalScore = vaults.reduce((sum, v) => sum + vaultScore(v, allInActive), 0);
+    const finalScore = vaults.reduce((sum, v) => sum + vaultScore(v, allInActive, deadlockActive), 0);
     set({ phase: 'done', finalScore });
   }
 }

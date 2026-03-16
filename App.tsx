@@ -337,21 +337,44 @@ export default function App() {
   const handleCrackTheVaultsEnd = () => {
     const state = useReckoningStore.getState();
     const score = state.finalScore ?? 0;
+
+    const activeCrewIds = useCrewStore.getState().activeHeistCrew;
+    const bishopActive = activeCrewIds.includes('bishop');
+    const allInMult = state.allInActive ? 2 : 1;
+    let bishopBonus = 0;
+    let bishopApplied = false;
+
     const vaultBreakdown: Act2VaultResult[] = state.vaults.map(vault => {
-      const result = vault.isBusted ? 'busted' : vault.sum === vault.target ? 'exact' : 'under';
-      const gold = vault.isBusted ? 0 : vault.sum === vault.target ? vault.sum * 2 * 10 : vault.sum * 10;
+      const isExact = state.deadlockActive
+        ? vault.sum >= vault.target - 3 && vault.sum <= vault.target
+        : vault.sum === vault.target;
+      const result = vault.isBusted ? 'busted' : isExact ? 'exact' : 'under';
+      const baseGold = vault.isBusted ? 0 : isExact ? vault.sum * 2 * 10 : vault.sum * 10;
+      let gold = baseGold;
+      let vaultBishopApplied = false;
+
+      if (bishopActive && !bishopApplied && result === 'exact' && vault.id === state.firstExactVaultId) {
+        gold = baseGold * 4;
+        bishopBonus = baseGold * allInMult * 3;
+        bishopApplied = true;
+        vaultBishopApplied = true;
+      }
+
       return {
         id: vault.id + 1,
         target: vault.target,
         sum: vault.sum,
         result,
         gold,
+        bishopApplied: vaultBishopApplied,
       };
     });
-    setAct2Score(score);
+
+    const finalAct2Score = score + bishopBonus;
+    setAct2Score(finalAct2Score);
     setAct2VaultResults(vaultBreakdown);
     setAct2Record({
-      score,
+      score: finalAct2Score,
       exactHits: state.exactHits,
       busts: state.busts,
       aceOnes: state.aceOnes,
@@ -359,6 +382,8 @@ export default function App() {
       allInActive: state.allInActive,
       offshoreAccountActive: state.offshoreAccountActive,
       fuzzyMathActive: state.fuzzyMathActive,
+      deadlockActive: state.deadlockActive,
+      bishopApplied,
     });
     setGameFlow('act2-bridge');
   };

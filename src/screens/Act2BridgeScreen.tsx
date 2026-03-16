@@ -60,6 +60,11 @@ export function Act2BridgeScreen({
                       <Text style={styles.resultBadgeTextExact}>EXACT ×2</Text>
                     </View>
                   )}
+                  {vr.bishopApplied && (
+                    <View style={[styles.resultBadge, styles.resultBadgeBishop]}>
+                      <Text style={styles.resultBadgeTextBishop}>BISHOP ×4</Text>
+                    </View>
+                  )}
                   {vr.result === 'busted' && (
                     <View style={[styles.resultBadge, styles.resultBadgeBust]}>
                       <Text style={styles.resultBadgeTextBust}>BUST</Text>
@@ -82,6 +87,27 @@ export function Act2BridgeScreen({
                 </View>
               </View>
             ))}
+          </View>
+        )}
+
+        {/* Crew bonuses panel */}
+        {(act2Record?.bishopApplied || act2Record?.deadlockActive) && (
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>CREW BONUSES</Text>
+            {act2Record?.bishopApplied && (
+              <View style={styles.buffRow}>
+                <Text style={styles.buffIcon}>♟</Text>
+                <Text style={styles.buffLabel}>The Bishop</Text>
+                <Text style={styles.buffDesc}>First perfect crack ×4</Text>
+              </View>
+            )}
+            {act2Record?.deadlockActive && (
+              <View style={styles.buffRow}>
+                <Text style={styles.buffIcon}>🔓</Text>
+                <Text style={styles.buffLabel}>Deadlock Danny</Text>
+                <Text style={styles.buffDesc}>Perfect crack zone −3</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -284,6 +310,17 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.bold,
+    letterSpacing: 0.5,
+  },
+  resultBadgeBishop: {
+    backgroundColor: 'rgba(160,100,220,0.15)',
+    borderWidth: 1,
+    borderColor: '#a064dc',
+  },
+  resultBadgeTextBishop: {
+    color: '#a064dc',
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.black,
     letterSpacing: 0.5,
   },
   vaultGold: {

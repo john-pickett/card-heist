@@ -14,6 +14,7 @@ export interface Act2VaultResult {
   sum: number;
   result: 'exact' | 'busted' | 'under';
   gold: number;
+  bishopApplied?: boolean;
 }
 
 export interface Act2Record {
@@ -25,6 +26,8 @@ export interface Act2Record {
   allInActive: boolean;
   offshoreAccountActive: boolean;
   fuzzyMathActive: boolean;
+  deadlockActive: boolean;
+  bishopApplied: boolean;
 }
 
 export interface Act3Record {

@@ -34,6 +34,8 @@ function makeRecord(overrides: Partial<HeistRecord> = {}): HeistRecord {
       allInActive: false,
       offshoreAccountActive: false,
       fuzzyMathActive: false,
+      deadlockActive: false,
+      bishopApplied: false,
     },
     act3: {
       won: true,
@@ -154,17 +156,17 @@ describe('computeStats', () => {
     const records: HeistRecord[] = [
       makeRecord({
         id: 'a',
-        act2: { score: 20, exactHits: 1, busts: 0, aceOnes: 0, aceElevens: 1, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false },
+        act2: { score: 20, exactHits: 1, busts: 0, aceOnes: 0, aceElevens: 1, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false, deadlockActive: false, bishopApplied: false },
         act3: { won: true, playerMelds: 2, playerSets: 1, playerRuns: 1, playerCardsDrawn: 5, policeMelds: 0, policeCardsDrawn: 2, turnsPlayed: 7 },
       }),
       makeRecord({
         id: 'b',
-        act2: { score: 40, exactHits: 0, busts: 2, aceOnes: 2, aceElevens: 0, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false },
+        act2: { score: 40, exactHits: 0, busts: 2, aceOnes: 2, aceElevens: 0, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false, deadlockActive: false, bishopApplied: false },
         act3: { won: false, playerMelds: 4, playerSets: 2, playerRuns: 2, playerCardsDrawn: 9, policeMelds: 2, policeCardsDrawn: 4, turnsPlayed: 10 },
       }),
       makeRecord({
         id: 'c',
-        act2: { score: 10, exactHits: 3, busts: 1, aceOnes: 1, aceElevens: 1, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false },
+        act2: { score: 10, exactHits: 3, busts: 1, aceOnes: 1, aceElevens: 1, allInActive: false, offshoreAccountActive: false, fuzzyMathActive: false, deadlockActive: false, bishopApplied: false },
         act3: null,
       }),
     ];

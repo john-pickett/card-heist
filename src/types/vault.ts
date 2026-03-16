@@ -39,15 +39,17 @@ export interface ReckoningState {
   busts: number;
   aceOnes: number;
   aceElevens: number;
+  firstExactVaultId: 0 | 1 | 2 | 3 | null;
   preBuffPhase: 'dealing' | 'assigning' | null;
   switchSource: { vaultId: 0 | 1 | 2 | 3; instanceId: string } | null;
   fuzzyMathActive: boolean;
+  deadlockActive: boolean;
   offshoreAccountActive: boolean;
   allInActive: boolean;
 }
 
 export interface ReckoningActions {
-  initGame: (activePerkIds?: string[]) => void;
+  initGame: () => void;
   flipCard: () => void;
   assignCard: (vaultId: 0 | 1 | 2 | 3) => void;
   chooseAceValue: (value: AceValue) => void;
