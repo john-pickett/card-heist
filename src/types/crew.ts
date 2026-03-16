@@ -1,3 +1,5 @@
+import { ImageSourcePropType } from 'react-native';
+
 export type CrewMemberId = 'knuckles' | 'tico' | 'bishop' | 'deadlock' | 'fingers' | 'jinx';
 
 export interface CrewMember {
@@ -8,4 +10,5 @@ export interface CrewMember {
   bio: string;
   effect: string;
   cost: number;
+  imageSource: ImageSourcePropType;
 }
