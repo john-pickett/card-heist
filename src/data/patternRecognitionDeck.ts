@@ -1,9 +1,9 @@
 export const PATTERN_RECOGNITION_REWARDS = {
-  ELITE_GOLD: 100,       // ≤ ELITE_THRESHOLD false attempts
-  SOLID_GOLD: 50,        // ≤ SOLID_THRESHOLD false attempts
-  BASE_GOLD: 25,         // > SOLID_THRESHOLD false attempts
-  ELITE_THRESHOLD: 4,
-  SOLID_THRESHOLD: 8,
+  ELITE_GOLD: 300,       // ≤ ELITE_THRESHOLD false attempts
+  SOLID_GOLD: 150,        // ≤ SOLID_THRESHOLD false attempts
+  BASE_GOLD: 100,         // > SOLID_THRESHOLD false attempts
+  ELITE_THRESHOLD: 5,
+  SOLID_THRESHOLD: 10,
 } as const;
 
 export interface HeistItem {
