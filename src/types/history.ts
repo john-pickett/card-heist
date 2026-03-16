@@ -1,8 +1,10 @@
 export interface Act1Record {
   elapsedMs: number | null; // null = timeout
   timedOut: boolean;
-  timingBonus: number; // final bonus after any bonus-cut multiplier
+  baseBonus: number; // raw timing bonus before any multipliers
+  timingBonus: number; // final bonus after bonus-cut and/or Tico multipliers
   bonusCutApplied: boolean;
+  ticoApplied: boolean; // was Two-Tap Tico active?
   totalMoves: number;
 }
 

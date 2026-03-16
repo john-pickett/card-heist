@@ -19,8 +19,10 @@ function makeRecord(overrides: Partial<HeistRecord> = {}): HeistRecord {
     act1: {
       elapsedMs: 14000,
       timedOut: false,
+      baseBonus: 50,
       timingBonus: 50,
       bonusCutApplied: false,
+      ticoApplied: false,
       totalMoves: 10,
     },
     act2: {
@@ -125,12 +127,12 @@ describe('computeStats', () => {
 
   test('computes act1 timing tiers and timeout counters at boundaries', () => {
     const records: HeistRecord[] = [
-      makeRecord({ id: 'e', act1: { elapsedMs: 15000, timedOut: false, timingBonus: 50, bonusCutApplied: false, totalMoves: 1 } }),
-      makeRecord({ id: 's', act1: { elapsedMs: 30000, timedOut: false, timingBonus: 40, bonusCutApplied: false, totalMoves: 2 } }),
-      makeRecord({ id: 'g', act1: { elapsedMs: 60000, timedOut: false, timingBonus: 25, bonusCutApplied: false, totalMoves: 3 } }),
-      makeRecord({ id: 'so', act1: { elapsedMs: 90000, timedOut: false, timingBonus: 15, bonusCutApplied: false, totalMoves: 4 } }),
-      makeRecord({ id: 'nb', act1: { elapsedMs: 90001, timedOut: false, timingBonus: 10, bonusCutApplied: false, totalMoves: 5 } }),
-      makeRecord({ id: 'to', act1: { elapsedMs: null, timedOut: true, timingBonus: 0, bonusCutApplied: false, totalMoves: 6 } }),
+      makeRecord({ id: 'e', act1: { elapsedMs: 15000, timedOut: false, baseBonus: 50, timingBonus: 50, bonusCutApplied: false, ticoApplied: false, totalMoves: 1 } }),
+      makeRecord({ id: 's', act1: { elapsedMs: 30000, timedOut: false, baseBonus: 40, timingBonus: 40, bonusCutApplied: false, ticoApplied: false, totalMoves: 2 } }),
+      makeRecord({ id: 'g', act1: { elapsedMs: 60000, timedOut: false, baseBonus: 25, timingBonus: 25, bonusCutApplied: false, ticoApplied: false, totalMoves: 3 } }),
+      makeRecord({ id: 'so', act1: { elapsedMs: 90000, timedOut: false, baseBonus: 15, timingBonus: 15, bonusCutApplied: false, ticoApplied: false, totalMoves: 4 } }),
+      makeRecord({ id: 'nb', act1: { elapsedMs: 90001, timedOut: false, baseBonus: 10, timingBonus: 10, bonusCutApplied: false, ticoApplied: false, totalMoves: 5 } }),
+      makeRecord({ id: 'to', act1: { elapsedMs: null, timedOut: true, baseBonus: 0, timingBonus: 0, bonusCutApplied: false, ticoApplied: false, totalMoves: 6 } }),
     ];
 
     const stats = computeStats(records);

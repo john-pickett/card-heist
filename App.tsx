@@ -307,14 +307,20 @@ export default function App() {
         elapsedSec <= 90 ? 150 :
         elapsedSec <= 120 ? 100 : 0;
     }
+    const baseBonus = timingBonus;
     const inv = useInventoryStore.getState();
     const bonusCutApplied = timingBonus > 0 && act1ActivePerkIds.includes('bonus-cut');
     if (bonusCutApplied) {
       timingBonus *= 2;
       inv.removeItem('bonus-cut');
     }
+    const activeCrewIds = useCrewStore.getState().activeHeistCrew;
+    const ticoApplied = timingBonus > 0 && activeCrewIds.includes('tico');
+    if (ticoApplied) {
+      timingBonus = Math.round(timingBonus * 1.5);
+    }
     setAct1TimeBonus(timingBonus);
-    setAct1Record({ elapsedMs, timedOut, timingBonus, bonusCutApplied, totalMoves: state.totalMoves });
+    setAct1Record({ elapsedMs, timedOut, baseBonus, timingBonus, bonusCutApplied, ticoApplied, totalMoves: state.totalMoves });
     setGameFlow('act1-bridge');
   };
 
@@ -474,8 +480,10 @@ export default function App() {
           <Act1BridgeScreen
             elapsedMs={act1Record?.elapsedMs ?? null}
             timedOut={act1Record?.timedOut ?? false}
+            baseBonus={act1Record?.baseBonus ?? 0}
             timingBonus={act1Record?.timingBonus ?? 0}
             bonusCutApplied={act1Record?.bonusCutApplied ?? false}
+            ticoApplied={act1Record?.ticoApplied ?? false}
             cumulativeGold={act1Bonus}
             onContinue={handleContinueToAct2}
           />

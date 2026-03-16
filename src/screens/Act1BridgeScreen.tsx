@@ -37,13 +37,15 @@ const GRADE_COLORS: Record<TimingGrade, string> = {
 interface Props {
   elapsedMs: number | null;
   timedOut: boolean;
+  baseBonus: number;
   timingBonus: number;
   bonusCutApplied: boolean;
+  ticoApplied: boolean;
   cumulativeGold: number;
   onContinue: () => void;
 }
 
-export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, bonusCutApplied, cumulativeGold, onContinue }: Props) {
+export function Act1BridgeScreen({ elapsedMs, timedOut, baseBonus, timingBonus, bonusCutApplied, ticoApplied, cumulativeGold, onContinue }: Props) {
   const rating = getTimingRating(elapsedMs ?? 0, timedOut);
   const solution = useSneakInStore(s => s.solution);
   const areas = useSneakInStore(s => s.areas);
@@ -68,16 +70,24 @@ export function Act1BridgeScreen({ elapsedMs, timedOut, timingBonus, bonusCutApp
           <Text style={[styles.perfGrade, { color: GRADE_COLORS[rating.grade] }]}>
             {rating.label}
           </Text>
-          {bonusCutApplied ? (
+          {(bonusCutApplied || ticoApplied) ? (
             <View style={styles.bonusCutBreakdown}>
               <View style={styles.bonusCutRow}>
                 <Text style={styles.bonusCutLabel}>Base bonus</Text>
-                <Text style={styles.bonusCutValue}>+{timingBonus / 2} gold</Text>
+                <Text style={styles.bonusCutValue}>+{baseBonus} gold</Text>
               </View>
-              <View style={styles.bonusCutRow}>
-                <Text style={styles.bonusCutLabel}>💰 Bonus Cut</Text>
-                <Text style={styles.bonusCutMultiplier}>×2</Text>
-              </View>
+              {bonusCutApplied && (
+                <View style={styles.bonusCutRow}>
+                  <Text style={styles.bonusCutLabel}>💰 Bonus Cut</Text>
+                  <Text style={styles.bonusCutMultiplier}>×2</Text>
+                </View>
+              )}
+              {ticoApplied && (
+                <View style={styles.bonusCutRow}>
+                  <Text style={styles.bonusCutLabel}>🎯 Two-Tap Tico</Text>
+                  <Text style={styles.bonusCutMultiplier}>×1.5</Text>
+                </View>
+              )}
               <View style={[styles.bonusCutRow, styles.bonusCutTotalRow]}>
                 <Text style={styles.bonusCutTotalLabel}>Total bonus</Text>
                 <Text style={styles.bonusCutTotal}>+{timingBonus} gold</Text>

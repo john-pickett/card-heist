@@ -5,7 +5,7 @@ export const crewMembers: CrewMember[] = [
         id: 'knuckles',
         fullName: 'Knuckles Moran',
         nickname: 'Knuckles',
-        flavorText: 'Slow and steady wins the race.',
+        flavorText: 'Inside information is the best kind.',
         bio: 'An old-school enforcer who spent twenty years as a vault door installer before switching sides. Nobody reads a lock like a man who built them.',
         effect: 'Show one card from each area.',
         cost: 5000
