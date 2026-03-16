@@ -87,19 +87,20 @@ export const useReckoningStore = create<ReckoningStore>((set, get) => ({
   offshoreAccountActive: false,
   allInActive: false,
 
-  initGame: () => {
+  initGame: (selectedPerkIds = []) => {
     const inventoryItems = useInventoryStore.getState().items;
     const owns = (id: string) => inventoryItems.some((e) => e.itemId === id);
+    const isSelected = (id: string) => selectedPerkIds.length === 0 || selectedPerkIds.includes(id);
 
-    const hasFuzzyMath = owns('fuzzy-math');
+    const hasFuzzyMath = owns('fuzzy-math') && isSelected('fuzzy-math');
     if (hasFuzzyMath) {
       useInventoryStore.getState().removeItem('fuzzy-math');
     }
-    const hasOffshore = owns('offshore-account');
+    const hasOffshore = owns('offshore-account') && isSelected('offshore-account');
     if (hasOffshore) {
       useInventoryStore.getState().removeItem('offshore-account');
     }
-    const hasAllIn = owns('all-in');
+    const hasAllIn = owns('all-in') && isSelected('all-in');
     if (hasAllIn) {
       useInventoryStore.getState().removeItem('all-in');
     }

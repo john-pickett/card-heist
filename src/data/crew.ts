@@ -46,7 +46,7 @@ export const crewMembers: CrewMember[] = [
         fullName: 'Fingers McGee',
         nickname: 'Fingers',
         flavorText: 'Luck isn\'t random if you know how to find it.',
-        bio: 'Three casinos banned for life. Two charges that mysteriously never stuck. One heist that should have been his last — except somehow it wasn\'t. Fingers has walked away from situations that would make hardened veterans retire. He doesn\'t explain it. He just grins.',
+        bio: 'Banned for life from at least three casinos. Two charges that mysteriously never stuck. One heist that should have been his last — except somehow it wasn\'t. Fingers has walked away from situations that would make hardened veterans retire. He doesn\'t explain it. He just grins.',
         effect: 'Extremely lucky. Extremely.',
         cost: 10000,
         imageSource: require('../../assets/images/crew/fingers.png')
