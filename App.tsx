@@ -26,6 +26,8 @@ import { VaultScreen } from './src/screens/VaultScreen';
 import { DevelopmentScreen } from './src/screens/DevelopmentScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SneakInScreen } from './src/screens/SneakInScreen';
+import { useCrewStore } from './src/store/crewStore';
+import { CrewMemberId } from './src/types/crew';
 import { useEscapeStore } from './src/store/escapeStore';
 import { useHistoryStore } from './src/store/historyStore';
 import { useInventoryStore } from './src/store/inventoryStore';
@@ -40,6 +42,7 @@ import {
   MARKET_UNLOCK_HEISTS,
 } from './src/data/marketItems';
 import { MarketAct, MarketItemDefinition } from './src/types/market';
+import { CrewSelectionModal } from './src/components/CrewSelectionModal';
 import { PerkSelectionModal } from './src/components/PerkSelectionModal';
 import {
   DEFAULT_TUTORIALS,
@@ -89,6 +92,7 @@ export default function App() {
     act: 'act1' | 'act2' | 'act3';
     perks: MarketItemDefinition[];
   } | null>(null);
+  const [crewModalVisible, setCrewModalVisible] = useState(false);
   const [act1ActivePerkIds, setAct1ActivePerkIds] = useState<string[]>([]);
 
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
@@ -104,6 +108,7 @@ export default function App() {
   const setBlackMarketUnlockedStorySeen = useSettingsStore(s => s.setBlackMarketUnlockedStorySeen);
   const hideoutPurchased = useSettingsStore(s => s.hideoutPurchased);
   const setHideoutPurchased = useSettingsStore(s => s.setHideoutPurchased);
+  const crewUnlockedIds = useCrewStore(s => s.unlockedIds);
 
   const act1Bonus = act1TimeBonus;
   const totalScore = act1Bonus + act2Score;
@@ -224,6 +229,14 @@ export default function App() {
     setDevLaunchAct(null);
     setHeistStartInventory(toInventoryCounts(useInventoryStore.getState().items));
     setCampaignStartTime(Date.now());
+    if (useCrewStore.getState().unlockedIds.length > 0) {
+      setCrewModalVisible(true);
+    } else {
+      proceedAfterCrewSelection();
+    }
+  };
+
+  const proceedAfterCrewSelection = () => {
     const perks = getActPerksInInventory('Act One');
     if (perks.length > 0) {
       setPerkModalConfig({ act: 'act1', perks });
@@ -231,6 +244,12 @@ export default function App() {
       useSneakInStore.getState().initGame();
       setGameFlow('act1');
     }
+  };
+
+  const handleCrewModalApply = (selectedIds: CrewMemberId[]) => {
+    useCrewStore.getState().setActiveHeistCrew(selectedIds);
+    setCrewModalVisible(false);
+    proceedAfterCrewSelection();
   };
 
   const handleLaunchActForTesting = (act: 'act1' | 'act2' | 'act3') => {
@@ -396,6 +415,7 @@ export default function App() {
       durationMs: Date.now() - campaignStartTime,
     };
     useHistoryStore.getState().recordHeist(record);
+    useCrewStore.getState().recordHeistEnd();
   };
 
   const resetCampaignState = () => {
@@ -657,6 +677,11 @@ export default function App() {
             </TouchableOpacity>
           </View>}
         </View>
+
+          <CrewSelectionModal
+            visible={crewModalVisible}
+            onApply={handleCrewModalApply}
+          />
 
           <PerkSelectionModal
             visible={perkModalConfig !== null}
