@@ -27,15 +27,17 @@ export function SettingsScreen({ onResetTutorials, onOpenHistory, onOpenDevelopm
     <View style={styles.screen}>
       <Text style={styles.title}>SETTINGS</Text>
 
-      <TouchableOpacity
-        style={styles.navButton}
-        onPress={onOpenHistory}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.navButtonText}>Heist Results</Text>
-      </TouchableOpacity>
-
       <View style={styles.panel}>
+        <Text style={styles.settingTitle}>Heist Results</Text>
+        <Text style={styles.settingDesc}>
+          Review your past heists, scores, and lifetime gold earned across every run.
+        </Text>
+        <TouchableOpacity style={styles.resetBtn} onPress={onOpenHistory}>
+          <Text style={styles.resetBtnText}>View History</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.panel, styles.panelSpaced]}>
         <Text style={styles.settingTitle}>Sound Effects</Text>
         <View style={styles.toggleRow}>
           <Text style={styles.settingDesc}>

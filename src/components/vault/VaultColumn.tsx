@@ -109,6 +109,7 @@ interface VaultColumnProps {
   onStand: () => void;
   fuzzyMathActive?: boolean;
   offshoreAccountActive?: boolean;
+  deadlockActive?: boolean;
   isSwitchMode?: boolean;
   isBurnMode?: boolean;
   isDoubleAgentMode?: boolean;
@@ -135,6 +136,7 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
       onStand,
       fuzzyMathActive,
       offshoreAccountActive,
+      deadlockActive,
       isSwitchMode,
       isBurnMode,
       isDoubleAgentMode,
@@ -148,9 +150,13 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
   ) => {
     const isTerminal = vault.isBusted || vault.isStood;
     const isExact = !vault.isBusted && vault.sum === vault.target;
+    const isDeadlockCracked = !!deadlockActive && !vault.isBusted && vault.isStood
+      && vault.sum >= vault.target - 3 && vault.sum <= vault.target;
 
     const sumColor = vault.isBusted
       ? theme.colors.errorRed
+      : isDeadlockCracked
+      ? theme.colors.deadlockViolet
       : isExact
       ? theme.colors.gold
       : vault.sum >= vault.target - 2
@@ -166,8 +172,8 @@ export const VaultColumn = React.forwardRef<View, VaultColumnProps>(
           styles.column,
           isAssignable && styles.columnAssignable,
           isDragTarget && styles.columnDragTarget,
-          isExact && styles.columnExact,
-          isTerminal && !isExact && styles.columnTerminal,
+          isDeadlockCracked ? styles.columnDeadlock : isExact && styles.columnExact,
+          isTerminal && !isExact && !isDeadlockCracked && styles.columnTerminal,
           isBurnMode && styles.columnBurnMode,
           isSwitchMode && !vault.isStood && !vault.isBusted && styles.columnSwitchMode,
           isDoubleAgentMode && styles.columnDoubleAgentMode,
@@ -339,6 +345,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 4,
+  },
+  columnDeadlock: {
+    borderColor: theme.colors.deadlockViolet,
+    borderWidth: 2,
+    shadowColor: theme.colors.deadlockViolet,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+    elevation: 5,
   },
   columnTerminal: {
     opacity: 0.72,

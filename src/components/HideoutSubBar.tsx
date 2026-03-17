@@ -5,14 +5,15 @@ import theme from '../theme';
 interface Props {
   title: string;
   onBack: () => void;
+  backLabel?: string;
 }
 
-export function HideoutSubBar({ title, onBack }: Props) {
+export function HideoutSubBar({ title, onBack, backLabel = 'Hideout' }: Props) {
   return (
     <View style={styles.bar}>
       <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
         <Text style={styles.backArrow}>‹</Text>
-        <Text style={styles.backLabel}>Hideout</Text>
+        <Text style={styles.backLabel}>{backLabel}</Text>
       </TouchableOpacity>
       {/* Absolutely positioned so it centres across the full bar width */}
       <View style={styles.titleWrap} pointerEvents="none">

@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { HideoutSubBar } from '../components/HideoutSubBar';
 import { computeStats, useHistoryStore } from '../store/historyStore';
 import theme from '../theme';
 
@@ -60,12 +61,7 @@ export function HistoryScreen({ onBack }: Props) {
   if (records.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.headerTitle}>HEIST DOSSIER</Text>
-        {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.85}>
-            <Text style={styles.backButtonText}>Back to Settings</Text>
-          </TouchableOpacity>
-        )}
+        {onBack && <HideoutSubBar title="History" onBack={onBack} backLabel="Settings" />}
         <Text style={styles.emptyText}>No heists on record yet.</Text>
         <Text style={styles.emptySubText}>Complete a campaign to see your stats.</Text>
       </View>
@@ -74,12 +70,7 @@ export function HistoryScreen({ onBack }: Props) {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.headerTitle}>HEIST DOSSIER</Text>
-      {onBack && (
-        <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.85}>
-          <Text style={styles.backButtonText}>Back to Settings</Text>
-        </TouchableOpacity>
-      )}
+      {onBack && <HideoutSubBar title="History" onBack={onBack} backLabel="Settings" />}
       <Text style={styles.headerSub}>{overall.totalHeists} heist{overall.totalHeists !== 1 ? 's' : ''} on record</Text>
 
       <Section title="Campaign Overview">
@@ -132,9 +123,6 @@ export function HistoryScreen({ onBack }: Props) {
         <StatRow label="Best match run (one game)" value={act3.mostMelds} />
         <StatRow label="Most cards drawn (one game)" value={act3.mostCardsDrawn} />
         <View style={styles.divider} />
-        <StatRow label="Police matches" value={act3.totalPoliceMelds} />
-        <StatRow label="Police cards drawn" value={act3.totalPoliceCardsDrawn} />
-        <View style={styles.divider} />
         <StatRow label="Total turns" value={act3.totalTurns} />
         <StatRow label="Average turns/run" value={act3.avgTurns !== null ? act3.avgTurns.toFixed(1) : '—'} />
       </Section>
@@ -159,34 +147,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     gap: theme.spacing.lg,
   },
-  headerTitle: {
-    color: VALUE_COLOR,
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.black,
-    letterSpacing: 3,
-    textAlign: 'center',
-    marginBottom: theme.spacing.xs,
-  },
   headerSub: {
     color: LABEL_COLOR,
-    fontSize: theme.fontSizes.md,
+    fontSize: theme.fontSizes.lg,
     textAlign: 'center',
     marginBottom: theme.spacing.xs,
-  },
-  backButton: {
-    alignSelf: 'center',
-    backgroundColor: theme.colors.bgPanel,
-    borderWidth: theme.borderWidths.thin,
-    borderColor: theme.colors.borderLight,
-    borderRadius: theme.radii.md,
-    paddingVertical: theme.spacing.ten,
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
-  },
-  backButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.heavy,
   },
   emptyContainer: {
     flex: 1,

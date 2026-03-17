@@ -15,6 +15,7 @@ const theme = {
     orange: '#e67e22',
     errorRed: '#e74c3c',
     successTeal: '#1abc9c',
+    deadlockViolet: '#7b5ea7',
     goldBright: '#ffe033',
     greenPastel: '#95d5b2',
     greenSoft: '#74c69d',

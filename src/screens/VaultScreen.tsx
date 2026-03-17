@@ -108,6 +108,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const fuzzyMathActive = useReckoningStore((s) => s.fuzzyMathActive);
   const offshoreAccountActive = useReckoningStore((s) => s.offshoreAccountActive);
   const allInActive = useReckoningStore((s) => s.allInActive);
+  const deadlockActive = useReckoningStore((s) => s.deadlockActive);
   const busts = useReckoningStore((s) => s.busts);
 
   const initGame = useReckoningStore((s) => s.initGame);
@@ -490,6 +491,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         if (fuzzyMathActive) chips.push({ id: 'fuzzy-math', icon: '🧮', initials: 'FM', isActive: true, isPassive: true, isDisabled: false });
         if (offshoreAccountActive) chips.push({ id: 'offshore-account', icon: '🏝️', initials: 'OA', isActive: true, isPassive: true, isDisabled: false });
         if (allInActive) chips.push({ id: 'all-in', icon: '🎰', initials: 'AI', isActive: true, isPassive: true, isDisabled: false });
+        if (deadlockActive) chips.push({ id: 'deadlock', icon: '🔐', initials: 'DD', isActive: true, isPassive: true, isDisabled: false, isDeadlock: true });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>
@@ -519,6 +521,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
               onStand={() => standVault(vault.id)}
               fuzzyMathActive={fuzzyMathActive}
               offshoreAccountActive={offshoreAccountActive}
+              deadlockActive={deadlockActive}
               isSwitchMode={phase === 'switch'}
               isBurnMode={phase === 'burn'}
               isDoubleAgentMode={phase === 'double-agent'}
