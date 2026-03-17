@@ -261,16 +261,16 @@ export function PatternRecognitionGame({ onBack }: Props) {
           <View style={styles.tierCard}>
             <Text style={styles.tierTitle}>Reward Tiers</Text>
             <View style={styles.tierRow}>
-              <Text style={styles.tierGold}>100 gold</Text>
-              <Text style={styles.tierDesc}>4 or fewer false attempts</Text>
+              <Text style={styles.tierGold}>{ PATTERN_RECOGNITION_REWARDS.ELITE_GOLD } gold</Text>
+              <Text style={styles.tierDesc}>{ PATTERN_RECOGNITION_REWARDS.ELITE_THRESHOLD } or fewer false attempts</Text>
             </View>
             <View style={styles.tierRow}>
-              <Text style={styles.tierSilver}>50 gold</Text>
-              <Text style={styles.tierDesc}>8 or fewer false attempts</Text>
+              <Text style={styles.tierSilver}>{ PATTERN_RECOGNITION_REWARDS.SOLID_GOLD } gold</Text>
+              <Text style={styles.tierDesc}>{ PATTERN_RECOGNITION_REWARDS.SOLID_THRESHOLD } or fewer false attempts</Text>
             </View>
             <View style={styles.tierRow}>
-              <Text style={styles.tierBronze}>25 gold</Text>
-              <Text style={styles.tierDesc}>9 or more false attempts</Text>
+              <Text style={styles.tierBronze}>{ PATTERN_RECOGNITION_REWARDS.BASE_GOLD } gold</Text>
+              <Text style={styles.tierDesc}>{ PATTERN_RECOGNITION_REWARDS.SOLID_THRESHOLD + 1 } or more false attempts</Text>
             </View>
           </View>
         </ScrollView>
