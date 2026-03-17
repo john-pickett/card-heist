@@ -10,7 +10,7 @@ type HideoutView = 'home' | 'relax' | 'crew' | 'job-board';
 const BUTTONS: { id: HideoutView; label: string; subtitle: string }[] = [
   { id: 'relax', label: 'Relax', subtitle: 'Take the edge off between runs' },
   { id: 'crew', label: 'Crew', subtitle: 'Hire and manage your crew' },
-  { id: 'job-board', label: 'Job Board', subtitle: 'Scope out what\'s coming next' },
+  // { id: 'job-board', label: 'Job Board', subtitle: 'Scope out what\'s coming next' },
 ];
 
 export function HideoutScreen() {

@@ -26,20 +26,20 @@ const GAMES: GameDef[] = [
       'Train your eyes, not just your instincts. Sixteen items from the job, paired and hidden. Find every match with the fewest wrong flips — quick hands, quiet mind.',
     price: __DEV__ ? 1 : 1,
   },
-  {
-    id: 'getaway',
-    label: 'The Getaway',
-    description:
-      'Every card is a move. Read the suit, count the steps, find the exit before the net closes. One wrong turn burns a route and costs you time.',
-    price: __DEV__ ? 1 : 1,
-  },
-  {
-    id: 'drop',
-    label: 'The Drop',
-    description:
-      'A 52-card sorting test under shifting rules. Jacks, Queens, Kings, and Aces flip the grid live. Build a streak to trigger Escalation — then sort fast or lose a fuse.',
-    price: __DEV__ ? 1 : 1,
-  },
+  // {
+  //   id: 'getaway',
+  //   label: 'The Getaway',
+  //   description:
+  //     'Every card is a move. Read the suit, count the steps, find the exit before the net closes. One wrong turn burns a route and costs you time.',
+  //   price: __DEV__ ? 1 : 1,
+  // },
+  // {
+  //   id: 'drop',
+  //   label: 'The Drop',
+  //   description:
+  //     'A 52-card sorting test under shifting rules. Jacks, Queens, Kings, and Aces flip the grid live. Build a streak to trigger Escalation — then sort fast or lose a fuse.',
+  //   price: __DEV__ ? 1 : 1,
+  // },
 ];
 
 interface Props {
