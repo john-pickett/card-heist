@@ -5,7 +5,7 @@ import { useCrewStore, isCrewAvailable } from '../store/crewStore';
 import { CrewMemberId } from '../types/crew';
 import theme from '../theme';
 
-const MAX_CREW = 3;
+const MAX_CREW = 2;
 
 interface Props {
   visible: boolean;
@@ -15,6 +15,7 @@ interface Props {
 export function CrewSelectionModal({ visible, onApply }: Props) {
   const unlockedIds = useCrewStore(s => s.unlockedIds);
   const consecutiveHeists = useCrewStore(s => s.consecutiveHeists);
+  const restHeistsRemaining = useCrewStore(s => s.restHeistsRemaining);
   const [selectedIds, setSelectedIds] = useState<CrewMemberId[]>([]);
 
   const unlockedMembers = crewMembers.filter(m => unlockedIds.includes(m.id));
@@ -46,7 +47,7 @@ export function CrewSelectionModal({ visible, onApply }: Props) {
       <View style={styles.card}>
         <Text style={styles.title}>Assemble Your Crew</Text>
         <Text style={styles.subtitle}>
-          Choose up to {MAX_CREW} crew members. Resting members need a heist off.
+          Choose up to {MAX_CREW} crew members. Crew need 2 heists off after working back-to-back.
         </Text>
 
         <ScrollView
@@ -82,7 +83,14 @@ export function CrewSelectionModal({ visible, onApply }: Props) {
                     </Text>
                     {!available && (
                       <View style={styles.restingBadge}>
-                        <Text style={styles.restingBadgeText}>Resting</Text>
+                        <Text style={styles.restingBadgeText}>
+                          {(() => {
+                            const restLeft = restHeistsRemaining[member.id] ?? 0;
+                            if (restLeft === 1) return 'Resting (1 heist)';
+                            if (restLeft >= 2) return 'Resting (2 heists)';
+                            return 'Resting';
+                          })()}
+                        </Text>
                       </View>
                     )}
                   </View>

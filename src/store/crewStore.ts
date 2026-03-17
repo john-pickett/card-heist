@@ -6,6 +6,7 @@ import { CrewMemberId } from '../types/crew';
 interface CrewStore {
   unlockedIds: CrewMemberId[];
   consecutiveHeists: Record<string, number>;
+  restHeistsRemaining: Record<string, number>;
   lastHeistCrew: CrewMemberId[];
   activeHeistCrew: CrewMemberId[];
 
@@ -19,6 +20,7 @@ export const useCrewStore = create(
     (set, get) => ({
       unlockedIds: [],
       consecutiveHeists: {},
+      restHeistsRemaining: {},
       lastHeistCrew: [],
       activeHeistCrew: [],
 
@@ -32,24 +34,40 @@ export const useCrewStore = create(
       },
 
       recordHeistEnd: () => {
-        const { unlockedIds, activeHeistCrew, consecutiveHeists } = get();
-        const updated: Record<string, number> = { ...consecutiveHeists };
+        const { unlockedIds, activeHeistCrew, consecutiveHeists, restHeistsRemaining } = get();
+        const updatedStreaks: Record<string, number> = { ...consecutiveHeists };
+        const updatedRest: Record<string, number>    = { ...restHeistsRemaining };
 
         for (const id of unlockedIds) {
           const wasActive = activeHeistCrew.includes(id);
-          const currentCount = updated[id] ?? 0;
+          const streak    = updatedStreaks[id] ?? 0;
+          const restLeft  = updatedRest[id]   ?? 0;
 
           if (wasActive) {
-            updated[id] = currentCount + 1;
-          } else if (currentCount >= 2) {
-            // Was resting, skipped this heist — reset
-            updated[id] = 0;
+            const newStreak = streak + 1;
+            updatedStreaks[id] = newStreak;
+            if (newStreak >= 2) {
+              updatedRest[id] = 2; // must rest for 2 heists
+            }
+          } else {
+            // Any heist where crew is not taken counts as a rest heist
+            if (restLeft > 0) {
+              // Currently in mandatory rest — decrement counter
+              const newRestLeft = restLeft - 1;
+              updatedRest[id] = newRestLeft;
+              if (newRestLeft === 0) {
+                updatedStreaks[id] = 0; // fully rested, reset streak
+              }
+            } else {
+              // Not resting — voluntary skip resets streak
+              updatedStreaks[id] = 0;
+            }
           }
-          // If not active and not resting, count stays (partial streak preserved)
         }
 
         set({
-          consecutiveHeists: updated,
+          consecutiveHeists:   updatedStreaks,
+          restHeistsRemaining: updatedRest,
           lastHeistCrew: activeHeistCrew,
           activeHeistCrew: [],
         });

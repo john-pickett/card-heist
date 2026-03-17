@@ -22,6 +22,7 @@ interface Props {
 export function HideoutCrewScreen({ onBack }: Props) {
   const unlockedIds = useCrewStore(s => s.unlockedIds);
   const consecutiveHeists = useCrewStore(s => s.consecutiveHeists);
+  const restHeistsRemaining = useCrewStore(s => s.restHeistsRemaining);
   const purchaseCrew = useCrewStore(s => s.purchaseCrew);
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
   const spentGold = useHistoryStore(s => s.spentGold);
@@ -36,9 +37,11 @@ export function HideoutCrewScreen({ onBack }: Props) {
   }
 
   function getStatusLabel(id: CrewMemberId): string {
-    const count = consecutiveHeists[id] ?? 0;
-    if (count >= 2) return 'Resting';
-    if (count === 1) return 'Available — 1 heist in';
+    const streak   = consecutiveHeists[id]     ?? 0;
+    const restLeft = restHeistsRemaining[id]   ?? 0;
+    if (streak >= 2 && restLeft === 1) return 'Resting — 1 heist';
+    if (streak >= 2)                   return 'Resting — 2 heists';
+    if (streak === 1)                  return 'Available — 1 of 2 used';
     return 'Available';
   }
 
