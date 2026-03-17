@@ -28,6 +28,7 @@ export function HideoutCrewScreen({ onBack }: Props) {
   const spentGold = useHistoryStore(s => s.spentGold);
   const spendGold = useHistoryStore(s => s.spendGold);
   const [selectedMember, setSelectedMember] = useState<CrewMember | null>(null);
+  const [infoVisible, setInfoVisible] = useState(false);
 
   const availableGold = lifetimeGold - spentGold;
 
@@ -47,7 +48,15 @@ export function HideoutCrewScreen({ onBack }: Props) {
 
   return (
     <View style={styles.screen}>
-      <HideoutSubBar title="CREW" onBack={onBack} />
+      <HideoutSubBar
+        title="CREW"
+        onBack={onBack}
+        rightElement={
+          <TouchableOpacity onPress={() => setInfoVisible(true)} hitSlop={12} activeOpacity={0.7}>
+            <Text style={styles.infoIcon}>ⓘ</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.list}
@@ -116,6 +125,63 @@ export function HideoutCrewScreen({ onBack }: Props) {
         </View>
       </ScrollView>
 
+      {/* Crew info modal */}
+      <Modal
+        visible={infoVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInfoVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalTopBar}>
+              <View style={styles.modalHeaderText}>
+                <Text style={styles.modalEyebrow}>About</Text>
+                <Text style={styles.modalTitle}>How Crew Works</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setInfoVisible(false)}
+                hitSlop={12}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.infoModalContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.infoSection}>
+                <Text style={styles.infoSectionTitle}>Before Each Heist</Text>
+                <Text style={styles.infoSectionBody}>
+                  Before you head out, you can bring up to 2 crew members with you. Each one has a unique specialty that kicks in automatically at different points in the job — no extra steps required.
+                </Text>
+              </View>
+              <View style={styles.infoSection}>
+                <Text style={styles.infoSectionTitle}>Passive Benefits</Text>
+                <Text style={styles.infoSectionBody}>
+                  You don't need to do anything special to use your crew. If they're on the job, their effect happens on its own. Just pick who you want and head in.
+                </Text>
+              </View>
+              <View style={styles.infoSection}>
+                <Text style={styles.infoSectionTitle}>Taking a Break</Text>
+                <Text style={styles.infoSectionBody}>
+                  Crew can pull a few jobs back-to-back, but if you rely on the same person too often they'll need a couple of heists off to recharge. A little variety goes a long way.
+                </Text>
+              </View>
+              <View style={styles.infoSection}>
+                <Text style={styles.infoSectionTitle}>Hiring New Crew</Text>
+                <Text style={styles.infoSectionBody}>
+                  New crew members can be recruited right here using gold earned from completed heists. Tap any card to read their full dossier before you commit.
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Dossier modal */}
       <Modal
         visible={selectedMember !== null}
         transparent
@@ -431,5 +497,28 @@ const styles = StyleSheet.create({
     color: theme.colors.text85,
     fontSize: theme.fontSizes.base,
     lineHeight: 23,
+  },
+  infoIcon: {
+    color: theme.colors.text60,
+    fontSize: theme.fontSizes.subtitle,
+  },
+  infoModalContent: {
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
+    gap: theme.spacing.lg,
+  },
+  infoSection: {
+    gap: theme.spacing.xs,
+  },
+  infoSectionTitle: {
+    color: theme.colors.gold,
+    fontSize: theme.fontSizes.base,
+    fontWeight: theme.fontWeights.black,
+    letterSpacing: 0.5,
+  },
+  infoSectionBody: {
+    color: theme.colors.text85,
+    fontSize: theme.fontSizes.base,
+    lineHeight: 22,
   },
 });

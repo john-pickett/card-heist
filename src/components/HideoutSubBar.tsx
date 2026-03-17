@@ -6,9 +6,10 @@ interface Props {
   title: string;
   onBack: () => void;
   backLabel?: string;
+  rightElement?: React.ReactNode;
 }
 
-export function HideoutSubBar({ title, onBack, backLabel = 'Hideout' }: Props) {
+export function HideoutSubBar({ title, onBack, backLabel = 'Hideout', rightElement }: Props) {
   return (
     <View style={styles.bar}>
       <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
@@ -19,6 +20,11 @@ export function HideoutSubBar({ title, onBack, backLabel = 'Hideout' }: Props) {
       <View style={styles.titleWrap} pointerEvents="none">
         <Text style={styles.title}>{title}</Text>
       </View>
+      {rightElement && (
+        <View style={styles.rightSlot}>
+          {rightElement}
+        </View>
+      )}
     </View>
   );
 }
@@ -51,6 +57,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rightSlot: {
+    marginLeft: 'auto',
+    paddingVertical: theme.spacing.xs,
   },
   title: {
     color: theme.colors.textPrimary,

@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.forty,
+    paddingTop: theme.spacing.fourteen,
     paddingBottom: theme.spacing.xxl,
     alignItems: 'center',
   },
