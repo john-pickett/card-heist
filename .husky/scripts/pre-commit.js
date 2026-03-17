@@ -61,9 +61,7 @@ const TAG_COLOR = {
 // --- Helpers ----------------------------------------------------------------
 
 function getStagedFiles() {
-  const output = execSync("git diff --cached --name-only --diff-filter=ACM", {
-    encoding: "utf8",
-  });
+  const output = execSync("git ls-files", { encoding: "utf8" });
   return output.trim().split("\n").filter(Boolean);
 }
 
