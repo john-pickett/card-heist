@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Running pre-commit checks..."
+node .husky/scripts/pre-commit.js
