@@ -25,6 +25,7 @@ import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import { BuffChipBar, BuffChip } from '../components/BuffChipBar';
 import { BuffInfoModal, BuffInfo } from '../components/BuffInfoModal';
 import { MARKET_ITEMS } from '../data/marketItems';
+import { crewMembers } from '../data/crew';
 import theme from '../theme';
 
 const SUIT_SYMBOL: Record<string, string> = {
@@ -498,6 +499,16 @@ export function EscapeScreen({
         const buffList: BuffInfo[] = MARKET_ITEMS
           .filter(item => ['false-trail', 'smoke-bomb', 'ex-machina'].includes(item.id) && (ownedQtys[item.id] ?? 0) > 0)
           .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect }));
+        const CREW_CHIPS: { id: 'fingers' | 'jinx'; icon: string; initials: string }[] = [
+          { id: 'fingers', icon: '🤞', initials: 'FG' },
+          { id: 'jinx',    icon: '🍀', initials: 'JX' },
+        ];
+        CREW_CHIPS.forEach(({ id, icon, initials }) => {
+          if (activeHeistCrew.includes(id)) {
+            const member = crewMembers.find(c => c.id === id)!;
+            buffList.push({ icon, initials, name: member.nickname, effect: member.effect, isPassive: true });
+          }
+        });
         return <BuffInfoModal visible actTitle="Escape" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
       })()}
       <EscapeDiscardModal

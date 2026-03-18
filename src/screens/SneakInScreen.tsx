@@ -22,6 +22,7 @@ import { SneakInHelpModal } from '../components/SneakInHelpModal';
 import { BuffChipBar, BuffChip } from '../components/BuffChipBar';
 import { BuffInfoModal, BuffInfo } from '../components/BuffInfoModal';
 import { MARKET_ITEMS } from '../data/marketItems';
+import { crewMembers } from '../data/crew';
 import { useCardSound } from '../hooks/useCardSound';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import theme from '../theme';
@@ -741,6 +742,16 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
         const buffList: BuffInfo[] = MARKET_ITEMS
           .filter(item => ACT_ONE_IDS.includes(item.id) && ownedIds.has(item.id))
           .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect, isPassive: PASSIVE_IDS.has(item.id) }));
+        const CREW_CHIPS: { id: 'knuckles' | 'tico'; icon: string; initials: string }[] = [
+          { id: 'knuckles', icon: '🤜', initials: 'KN' },
+          { id: 'tico',     icon: '⏱️', initials: 'TC' },
+        ];
+        CREW_CHIPS.forEach(({ id, icon, initials }) => {
+          if (activeHeistCrew.includes(id)) {
+            const member = crewMembers.find(c => c.id === id)!;
+            buffList.push({ icon, initials, name: member.nickname, effect: member.effect, isPassive: true });
+          }
+        });
         return <BuffInfoModal visible actTitle="Sneak In" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
       })()}
 

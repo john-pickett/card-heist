@@ -22,6 +22,7 @@ import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
 import { BuffChipBar, BuffChip } from '../components/BuffChipBar';
 import { BuffInfoModal, BuffInfo } from '../components/BuffInfoModal';
 import { MARKET_ITEMS } from '../data/marketItems';
+import { crewMembers } from '../data/crew';
 import { VaultCard } from '../types/vault';
 import theme from '../theme';
 
@@ -772,6 +773,16 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         const buffList: BuffInfo[] = MARKET_ITEMS
           .filter(item => ACT_TWO_IDS.includes(item.id) && (ownedActiveIds.has(item.id) || passiveActive.has(item.id)))
           .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect, isPassive: PASSIVE_IDS.has(item.id) }));
+        const CREW_CHIPS: { id: 'deadlock' | 'bishop'; icon: string; initials: string; show: boolean }[] = [
+          { id: 'bishop',   icon: '♟️', initials: 'BP', show: activeHeistCrew.includes('bishop') },
+          { id: 'deadlock', icon: '🔐', initials: 'DD', show: deadlockActive },
+        ];
+        CREW_CHIPS.forEach(({ id, icon, initials, show }) => {
+          if (show) {
+            const member = crewMembers.find(c => c.id === id)!;
+            buffList.push({ icon, initials, name: member.nickname, effect: member.effect, isPassive: true });
+          }
+        });
         return <BuffInfoModal visible actTitle="Vaults" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;
       })()}
       {showTutorial && (
