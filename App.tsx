@@ -93,7 +93,6 @@ export default function App() {
     perks: MarketItemDefinition[];
   } | null>(null);
   const [crewModalVisible, setCrewModalVisible] = useState(false);
-  const [act1ActivePerkIds, setAct1ActivePerkIds] = useState<string[]>([]);
 
   const lifetimeGold = useHistoryStore(s => s.lifetimeGold);
   const spentGold = useHistoryStore(s => s.spentGold);
@@ -262,8 +261,7 @@ export default function App() {
 
     if (act === 'act1') {
       const act1PerkIds = getActPerksInInventory('Act One').map(p => p.id);
-      setAct1ActivePerkIds(act1PerkIds);
-      useSneakInStore.getState().initGame();
+      useSneakInStore.getState().initGame([], act1PerkIds);
       setCampaignStartTime(Date.now());
       setGameFlow('act1');
       return;
@@ -310,7 +308,7 @@ export default function App() {
     }
     const baseBonus = timingBonus;
     const inv = useInventoryStore.getState();
-    const bonusCutApplied = timingBonus > 0 && act1ActivePerkIds.includes('bonus-cut');
+    const bonusCutApplied = timingBonus > 0 && useSneakInStore.getState().bonusCutActive;
     if (bonusCutApplied) {
       timingBonus *= 2;
       inv.removeItem('bonus-cut');
@@ -404,8 +402,7 @@ export default function App() {
     const { act } = perkModalConfig;
     setPerkModalConfig(null);
     if (act === 'act1') {
-      setAct1ActivePerkIds(selectedIds);
-      useSneakInStore.getState().initGame(useCrewStore.getState().activeHeistCrew);
+      useSneakInStore.getState().initGame(useCrewStore.getState().activeHeistCrew, selectedIds);
       setGameFlow('act1');
     } else if (act === 'act2') {
       useReckoningStore.getState().initGame(selectedIds);

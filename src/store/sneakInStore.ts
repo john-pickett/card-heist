@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createDeck, shuffleDeck } from '../data/deck';
 import { Rank } from '../types/card';
+import { useInventoryStore } from './inventoryStore';
 import {
   AREA_LABELS,
   AreaId,
@@ -168,10 +169,15 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
   blueprintHint: null,
   freezeUntilMs: null,
   knucklesHints: null,
+  bonusCutActive: false,
 
-  initGame: (activeCrewIds: string[] = []) => {
+  initGame: (activeCrewIds: string[] = [], selectedPerkIds: string[] = []) => {
     const { targets, hand, solution } = buildGame();
     const knucklesActive = activeCrewIds.includes('knuckles');
+    const inventoryItems = useInventoryStore.getState().items;
+    const owns = (id: string) => inventoryItems.some(e => e.itemId === id);
+    const isSelected = (id: string) => selectedPerkIds.includes(id);
+    const bonusCutActive = owns('bonus-cut') && isSelected('bonus-cut');
     set({
       phase: 'idle',
       hand,
@@ -187,6 +193,7 @@ export const useSneakInStore = create<SneakInStore>((set, get) => ({
       blueprintHint: null,
       freezeUntilMs: null,
       knucklesHints: knucklesActive ? computeKnucklesHints(hand, solution) : null,
+      bonusCutActive,
     });
   },
 

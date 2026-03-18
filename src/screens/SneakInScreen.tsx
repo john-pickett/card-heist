@@ -179,7 +179,7 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
   const timeFreezeQty = inventoryItems.find(e => e.itemId === 'time-freeze')?.quantity ?? 0;
   const blueprintQty = inventoryItems.find(e => e.itemId === 'peek-blueprint')?.quantity ?? 0;
   const quickFingersQty = inventoryItems.find(e => e.itemId === 'quick-fingers')?.quantity ?? 0;
-  const bonusCutQty = inventoryItems.find(e => e.itemId === 'bonus-cut')?.quantity ?? 0;
+  const bonusCutActive = useSneakInStore(s => s.bonusCutActive);
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [buffInfoVisible, setBuffInfoVisible] = useState(false);
@@ -397,7 +397,7 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
         if (timeFreezeQty > 0) chips.push({ id: 'time-freeze', icon: '🧊', initials: 'TF', isActive: false, isPassive: false, isDisabled: isFrozen, onPress: () => { if (!isFrozen) { activateTimeFreeze(); removeItem('time-freeze'); } } });
         if (blueprintQty > 0) chips.push({ id: 'peek-blueprint', icon: '🗺️', initials: 'PB', isActive: pickingBlueprintArea, isPassive: false, isDisabled: false, onPress: () => setPickingBlueprintArea(v => !v) });
         if (quickFingersQty > 0) chips.push({ id: 'quick-fingers', icon: '🖐️', initials: 'QF', isActive: pickingQuickFingersArea, isPassive: false, isDisabled: false, onPress: () => setPickingQuickFingersArea(v => !v) });
-        if (bonusCutQty > 0) chips.push({ id: 'bonus-cut', icon: '💰', initials: 'BC', isActive: true, isPassive: true, isDisabled: false });
+        if (bonusCutActive) chips.push({ id: 'bonus-cut', icon: '💰', initials: 'BC', isActive: true, isPassive: true, isDisabled: false });
         if (activeHeistCrew.includes('knuckles')) chips.push({ id: 'knuckles', icon: '🤜', initials: 'KN', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
         if (activeHeistCrew.includes('tico')) chips.push({ id: 'tico', icon: '⏱️', initials: 'TC', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
         if (chips.length === 0) return null;

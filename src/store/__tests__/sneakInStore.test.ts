@@ -1,6 +1,7 @@
 import { Rank, Suit } from '../../types/card';
 import { AreaId, SneakInArea, SneakInCard } from '../../types/sneakin';
 import { useSneakInStore } from '../sneakInStore';
+import { useInventoryStore } from '../inventoryStore';
 
 function makeCard(rank: Rank, id: string, suit: Suit = 'spades'): SneakInCard {
   return {
@@ -40,6 +41,7 @@ function resetSneakInStore(hand: SneakInCard[], areas: SneakInArea[]): void {
     blueprintHint: null,
     freezeUntilMs: null,
     knucklesHints: null,
+    bonusCutActive: false,
   });
 }
 
@@ -946,5 +948,36 @@ describe('Knuckles crew — knucklesHints', () => {
     for (const id of ids2) {
       expect(state2.hand.map(c => c.instanceId)).toContain(id);
     }
+  });
+
+  // ── bonus-cut perk selection ──────────────────────────────────────────────
+
+  test('initGame with bonus-cut in inventory and selected → bonusCutActive true', () => {
+    useInventoryStore.setState({ items: [{ itemId: 'bonus-cut', quantity: 1 }] });
+    useSneakInStore.getState().initGame([], ['bonus-cut']);
+    expect(useSneakInStore.getState().bonusCutActive).toBe(true);
+  });
+
+  test('initGame with bonus-cut in inventory but not selected → bonusCutActive false, item not consumed', () => {
+    useInventoryStore.setState({ items: [{ itemId: 'bonus-cut', quantity: 1 }] });
+    useSneakInStore.getState().initGame([], []);
+    expect(useSneakInStore.getState().bonusCutActive).toBe(false);
+    expect(useInventoryStore.getState().items.find(e => e.itemId === 'bonus-cut')?.quantity).toBe(1);
+  });
+
+  test('initGame without bonus-cut in inventory → bonusCutActive false', () => {
+    useInventoryStore.setState({ items: [] });
+    useSneakInStore.getState().initGame([], ['bonus-cut']);
+    expect(useSneakInStore.getState().bonusCutActive).toBe(false);
+  });
+
+  test('initGame resets bonusCutActive to false when starting a new game without selection', () => {
+    useInventoryStore.setState({ items: [{ itemId: 'bonus-cut', quantity: 1 }] });
+    useSneakInStore.getState().initGame([], ['bonus-cut']);
+    expect(useSneakInStore.getState().bonusCutActive).toBe(true);
+    // Simulate item being consumed externally, then new game without selection
+    useInventoryStore.setState({ items: [] });
+    useSneakInStore.getState().initGame([], []);
+    expect(useSneakInStore.getState().bonusCutActive).toBe(false);
   });
 });
