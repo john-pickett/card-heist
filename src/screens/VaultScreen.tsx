@@ -767,12 +767,11 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
       {buffInfoVisible && (() => {
         const ACT_TWO_IDS = ['inside-switch', 'burn-evidence', 'double-agent', 'fuzzy-math', 'offshore-account', 'all-in'];
         const INITIALS: Record<string, string> = { 'inside-switch': 'IS', 'burn-evidence': 'BE', 'double-agent': 'DA', 'fuzzy-math': 'FM', 'offshore-account': 'OA', 'all-in': 'AI' };
-        const PASSIVE_IDS = new Set(['fuzzy-math', 'offshore-account', 'all-in']);
         const passiveActive = new Set(['fuzzy-math', 'offshore-account', 'all-in'].filter(id => (id === 'fuzzy-math' ? fuzzyMathActive : id === 'offshore-account' ? offshoreAccountActive : allInActive)));
         const ownedActiveIds = new Set(inventoryItems.filter(e => e.quantity > 0).map(e => e.itemId));
         const buffList: BuffInfo[] = MARKET_ITEMS
           .filter(item => ACT_TWO_IDS.includes(item.id) && (ownedActiveIds.has(item.id) || passiveActive.has(item.id)))
-          .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect, isPassive: PASSIVE_IDS.has(item.id) }));
+          .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect, label: item.type === 'perk' ? 'perk' as const : undefined }));
         const CREW_CHIPS: { id: 'deadlock' | 'bishop'; icon: string; initials: string; show: boolean }[] = [
           { id: 'bishop',   icon: '♟️', initials: 'BP', show: activeHeistCrew.includes('bishop') },
           { id: 'deadlock', icon: '🔐', initials: 'DD', show: deadlockActive },
@@ -780,7 +779,7 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         CREW_CHIPS.forEach(({ id, icon, initials, show }) => {
           if (show) {
             const member = crewMembers.find(c => c.id === id)!;
-            buffList.push({ icon, initials, name: member.nickname, effect: member.effect, isPassive: true });
+            buffList.push({ icon, initials, name: member.nickname, effect: member.effect, label: 'crew' });
           }
         });
         return <BuffInfoModal visible actTitle="Vaults" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;

@@ -506,7 +506,7 @@ export function EscapeScreen({
         CREW_CHIPS.forEach(({ id, icon, initials }) => {
           if (activeHeistCrew.includes(id)) {
             const member = crewMembers.find(c => c.id === id)!;
-            buffList.push({ icon, initials, name: member.nickname, effect: member.effect, isPassive: true });
+            buffList.push({ icon, initials, name: member.nickname, effect: member.effect, label: 'crew' });
           }
         });
         return <BuffInfoModal visible actTitle="Escape" buffList={buffList} onClose={() => setBuffInfoVisible(false)} />;

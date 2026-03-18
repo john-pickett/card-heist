@@ -7,7 +7,7 @@ export interface BuffInfo {
   initials: string;
   name: string;
   effect: string;
-  isPassive?: boolean;
+  label?: 'perk' | 'crew';
 }
 
 interface BuffInfoModalProps {
@@ -48,7 +48,7 @@ export function BuffInfoModal({ visible, onClose, actTitle, buffList }: BuffInfo
                 <View style={styles.buffInfo}>
                   <Text style={styles.buffName}>
                     {buff.name}
-                    {buff.isPassive ? <Text style={styles.passiveLabel}> (passive)</Text> : null}
+                    {buff.label ? <Text style={styles.passiveLabel}> ({buff.label})</Text> : null}
                   </Text>
                   <Text style={styles.buffEffect}>{buff.effect}</Text>
                 </View>
