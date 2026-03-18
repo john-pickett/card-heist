@@ -14,6 +14,7 @@ import { EscapeDiscardModal } from '../components/EscapeDiscardModal';
 import { EscapeHelpModal } from '../components/EscapeHelpModal';
 import { useEscapeStore } from '../store/escapeStore';
 import { useInventoryStore } from '../store/inventoryStore';
+import { useCrewStore } from '../store/crewStore';
 import { useSettingsStore } from '../store/settingsStore';
 import {
   ESCAPE_EXIT_POSITION,
@@ -74,6 +75,8 @@ export function EscapeScreen({
     activateSmokeBomb,
     activateExMachina,
   } = useEscapeStore();
+
+  const activeHeistCrew = useCrewStore(s => s.activeHeistCrew);
 
   const falseTrailQty = useInventoryStore(
     s => s.items.find(i => i.itemId === 'false-trail')?.quantity ?? 0,
@@ -290,6 +293,8 @@ export function EscapeScreen({
         if (falseTrailQty > 0) chips.push({ id: 'false-trail', icon: '🧭', initials: 'FT', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateFalseTrail(); removeItem('false-trail'); } });
         if (smokeBombQty > 0) chips.push({ id: 'smoke-bomb', icon: '💨', initials: 'SB', isActive: smokeBombActive, isPassive: false, isDisabled: !isPlayerTurn || smokeBombActive, onPress: () => { activateSmokeBomb(); removeItem('smoke-bomb'); } });
         if (exMachinaQty > 0) chips.push({ id: 'ex-machina', icon: '🪄', initials: 'EM', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateExMachina(); removeItem('ex-machina'); } });
+        if (activeHeistCrew.includes('fingers')) chips.push({ id: 'fingers', icon: '🤞', initials: 'FG', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
+        if (activeHeistCrew.includes('jinx')) chips.push({ id: 'jinx', icon: '🍀', initials: 'JX', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>

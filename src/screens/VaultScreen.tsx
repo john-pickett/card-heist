@@ -15,6 +15,7 @@ import { ReckoningHelpModal } from '../components/vault/VaultHelpModal';
 import { VaultColumn } from '../components/vault/VaultColumn';
 import { useReckoningStore } from '../store/vaultStore';
 import { useInventoryStore } from '../store/inventoryStore';
+import { useCrewStore } from '../store/crewStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useCardSound } from '../hooks/useCardSound';
 import { ActTutorialOverlay } from '../components/ActTutorialOverlay';
@@ -125,6 +126,9 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
   const activateDoubleAgent = useReckoningStore((s) => s.activateDoubleAgent);
   const cancelDoubleAgent = useReckoningStore((s) => s.cancelDoubleAgent);
   const completeDoubleAgent = useReckoningStore((s) => s.completeDoubleAgent);
+
+  // Crew
+  const activeHeistCrew = useCrewStore((s) => s.activeHeistCrew);
 
   // Inventory
   const inventoryItems = useInventoryStore((s) => s.items);
@@ -491,7 +495,8 @@ export function VaultScreen({ onGameEnd, showTutorial, onDismissTutorial }: Vaul
         if (fuzzyMathActive) chips.push({ id: 'fuzzy-math', icon: '🧮', initials: 'FM', isActive: true, isPassive: true, isDisabled: false });
         if (offshoreAccountActive) chips.push({ id: 'offshore-account', icon: '🏝️', initials: 'OA', isActive: true, isPassive: true, isDisabled: false });
         if (allInActive) chips.push({ id: 'all-in', icon: '🎰', initials: 'AI', isActive: true, isPassive: true, isDisabled: false });
-        if (deadlockActive) chips.push({ id: 'deadlock', icon: '🔐', initials: 'DD', isActive: true, isPassive: true, isDisabled: false, isDeadlock: true });
+        if (deadlockActive) chips.push({ id: 'deadlock', icon: '🔐', initials: 'DD', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
+        if (activeHeistCrew.includes('bishop')) chips.push({ id: 'bishop', icon: '♟️', initials: 'BP', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>

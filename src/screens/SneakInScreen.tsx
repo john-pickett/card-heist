@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSneakInStore } from '../store/sneakInStore';
 import { useInventoryStore } from '../store/inventoryStore';
+import { useCrewStore } from '../store/crewStore';
 import {
   AreaId,
   AREA_ICONS,
@@ -166,6 +167,8 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
   const returnAllToHand = useSneakInStore(s => s.returnAllToHand);
   const timeoutGame = useSneakInStore(s => s.timeoutGame);
   const { activateFalseAlarm, activateInsideTip, clearInsideTipHint, activatePeekBlueprint, clearBlueprintHint, activateTimeFreeze, endTimeFreeze, activateQuickFingers } = useSneakInStore.getState();
+
+  const activeHeistCrew = useCrewStore(s => s.activeHeistCrew);
 
   const inventoryItems = useInventoryStore(s => s.items);
   const { removeItem } = useInventoryStore.getState();
@@ -394,6 +397,8 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
         if (blueprintQty > 0) chips.push({ id: 'peek-blueprint', icon: '🗺️', initials: 'PB', isActive: pickingBlueprintArea, isPassive: false, isDisabled: false, onPress: () => setPickingBlueprintArea(v => !v) });
         if (quickFingersQty > 0) chips.push({ id: 'quick-fingers', icon: '🖐️', initials: 'QF', isActive: pickingQuickFingersArea, isPassive: false, isDisabled: false, onPress: () => setPickingQuickFingersArea(v => !v) });
         if (bonusCutQty > 0) chips.push({ id: 'bonus-cut', icon: '💰', initials: 'BC', isActive: true, isPassive: true, isDisabled: false });
+        if (activeHeistCrew.includes('knuckles')) chips.push({ id: 'knuckles', icon: '🤜', initials: 'KN', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
+        if (activeHeistCrew.includes('tico')) chips.push({ id: 'tico', icon: '⏱️', initials: 'TC', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>

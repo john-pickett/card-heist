@@ -9,7 +9,7 @@ export interface BuffChip {
   isActive: boolean;
   isPassive: boolean;
   isDisabled: boolean;
-  isDeadlock?: boolean;
+  isCrew?: boolean;
   onPress?: () => void;
 }
 
@@ -33,7 +33,7 @@ export function BuffChipBar({ chips, onInfoPress }: BuffChipBarProps) {
               activeOpacity={tappable ? 0.7 : 1}
               style={[
                 styles.chip,
-                chip.isDeadlock ? styles.chipDeadlock : chip.isActive && styles.chipActive,
+                chip.isCrew ? styles.chipCrew : chip.isActive && styles.chipActive,
                 chip.isDisabled && !chip.isActive && styles.chipDisabled,
               ]}
             >
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     elevation: 8,
   },
-  chipDeadlock: {
+  chipCrew: {
     borderColor: theme.colors.deadlockViolet,
     backgroundColor: 'rgba(123,94,167,0.18)',
     shadowColor: theme.colors.deadlockViolet,
