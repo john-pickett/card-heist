@@ -739,7 +739,11 @@ export function SneakInScreen({ onGameEnd, onCancelHeist, showTutorial, onDismis
         const INITIALS: Record<string, string> = { 'inside-tip': 'IT', 'false-alarm': 'FA', 'time-freeze': 'TF', 'peek-blueprint': 'PB', 'quick-fingers': 'QF', 'bonus-cut': 'BC' };
         const ownedIds = new Set(inventoryItems.filter(e => e.quantity > 0).map(e => e.itemId));
         const buffList: BuffInfo[] = MARKET_ITEMS
-          .filter(item => ACT_ONE_IDS.includes(item.id) && ownedIds.has(item.id))
+          .filter(item =>
+            ACT_ONE_IDS.includes(item.id) &&
+            ownedIds.has(item.id) &&
+            (item.type !== 'perk' || bonusCutActive)
+          )
           .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect, label: item.type === 'perk' ? 'perk' as const : undefined }));
         const CREW_CHIPS: { id: 'knuckles' | 'tico'; icon: string; initials: string }[] = [
           { id: 'knuckles', icon: '🤜', initials: 'KN' },
