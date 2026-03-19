@@ -30,7 +30,7 @@ export const crewMembers: CrewMember[] = [
         flavorText: 'Every move counts. Make the first one matter.',
         bio: 'Rumored to be a disgraced chess grandmaster turned safecracker, The Bishop never wastes a move. His real name appears in no database, but three unsolved jobs across Vienna all share one signature: a single bishop chess piece left on the empty vault floor.',
         effect: 'If the first break goes his way, Bishop turns momentum into profit.',
-        summary: 'First perfect cracks hits 4x',
+        summary: 'First perfect vault crack hits 4x',
         cost: __DEV__ ? 1 : 7500, // 7500
         imageSource: require('../../assets/images/crew/bishop.png')
     },

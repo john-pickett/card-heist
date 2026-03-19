@@ -11,6 +11,7 @@ interface Props {
   cumulativeGold: number;
   vaultResults: Act2VaultResult[];
   act2Record: Act2Record | null;
+  crewIds: CrewMemberId[];
   onContinue: () => void;
 }
 
@@ -20,6 +21,7 @@ export function Act2BridgeScreen({
   cumulativeGold,
   vaultResults,
   act2Record,
+  crewIds,
   onContinue,
 }: Props) {
   const anyBuffActive =
@@ -83,12 +85,7 @@ export function Act2BridgeScreen({
           </View>
         )}
 
-        <CrewBonusesPanel
-          crewIds={[
-            ...(act2Record?.bishopApplied ? ['bishop' as CrewMemberId] : []),
-            ...(act2Record?.deadlockActive ? ['deadlock' as CrewMemberId] : []),
-          ]}
-        />
+        <CrewBonusesPanel crewIds={crewIds} />
 
         <View style={styles.storyBox}>
           <Text style={styles.storyTitle}>The vaults are open.</Text>

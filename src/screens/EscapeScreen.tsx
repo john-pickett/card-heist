@@ -294,8 +294,8 @@ export function EscapeScreen({
         if (falseTrailQty > 0) chips.push({ id: 'false-trail', icon: '🧭', initials: 'FT', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateFalseTrail(); removeItem('false-trail'); } });
         if (smokeBombQty > 0) chips.push({ id: 'smoke-bomb', icon: '💨', initials: 'SB', isActive: smokeBombActive, isPassive: false, isDisabled: !isPlayerTurn || smokeBombActive, onPress: () => { activateSmokeBomb(); removeItem('smoke-bomb'); } });
         if (exMachinaQty > 0) chips.push({ id: 'ex-machina', icon: '🪄', initials: 'EM', isActive: false, isPassive: false, isDisabled: !isPlayerTurn, onPress: () => { activateExMachina(); removeItem('ex-machina'); } });
-        if (activeHeistCrew.includes('fingers')) chips.push({ id: 'fingers', icon: '🤞', initials: 'FG', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
-        if (activeHeistCrew.includes('jinx')) chips.push({ id: 'jinx', icon: '🍀', initials: 'JX', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
+        if (activeHeistCrew.includes('fingers')) chips.push({ id: 'fingers', icon: '🍀', initials: 'FG', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
+        if (activeHeistCrew.includes('jinx')) chips.push({ id: 'jinx', icon: '🃏', initials: 'JX', isActive: true, isPassive: true, isDisabled: false, isCrew: true });
         if (chips.length === 0) return null;
         return (
           <View style={styles.buffChipBarWrapper}>
@@ -500,8 +500,8 @@ export function EscapeScreen({
           .filter(item => ['false-trail', 'smoke-bomb', 'ex-machina'].includes(item.id) && (ownedQtys[item.id] ?? 0) > 0)
           .map(item => ({ icon: item.icon, initials: INITIALS[item.id], name: item.title, effect: item.effect }));
         const CREW_CHIPS: { id: 'fingers' | 'jinx'; icon: string; initials: string }[] = [
-          { id: 'fingers', icon: '🤞', initials: 'FG' },
-          { id: 'jinx',    icon: '🍀', initials: 'JX' },
+          { id: 'fingers', icon: '🍀', initials: 'FG' },
+          { id: 'jinx',    icon: '🃏', initials: 'JX' },
         ];
         CREW_CHIPS.forEach(({ id, icon, initials }) => {
           if (activeHeistCrew.includes(id)) {

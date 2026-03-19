@@ -126,14 +126,22 @@ function computeKnucklesHints(
   hand: SneakInCard[],
   solution: SneakInSolutionEntry[]
 ): Partial<Record<AreaId, SneakInCard>> {
+  // Randomly select 2 of the 4 area indices via Fisher-Yates shuffle
+  const indices = [0, 1, 2, 3] as AreaId[];
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  const selected = indices.slice(0, 2);
+
   const hints: Partial<Record<AreaId, SneakInCard>> = {};
-  for (let i = 0; i < 4; i++) {
+  for (const i of selected) {
     const entry = solution[i];
     if (!entry) continue;
     for (const rankVal of entry.cards) {
       const match = hand.find(sc => parseInt(sc.card.rank, 10) === rankVal);
       if (match) {
-        hints[i as AreaId] = match;
+        hints[i] = match;
         break;
       }
     }

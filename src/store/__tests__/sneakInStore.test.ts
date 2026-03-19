@@ -882,14 +882,11 @@ describe('Knuckles crew — knucklesHints', () => {
     expect(useSneakInStore.getState().knucklesHints).not.toBeNull();
   });
 
-  test('initGame with knuckles produces a hint for all 4 areas', () => {
+  test('initGame with knuckles produces hints for exactly 2 areas', () => {
     useSneakInStore.getState().initGame(['knuckles']);
     const { knucklesHints } = useSneakInStore.getState();
     expect(knucklesHints).not.toBeNull();
-    expect(Object.keys(knucklesHints!).length).toBe(4);
-    for (let i = 0; i < 4; i++) {
-      expect(knucklesHints![i as AreaId]).toBeDefined();
-    }
+    expect(Object.keys(knucklesHints!).length).toBe(2);
   });
 
   test('each hint card rank matches a card in the solution for that area', () => {
@@ -897,11 +894,11 @@ describe('Knuckles crew — knucklesHints', () => {
     const { knucklesHints, solution } = useSneakInStore.getState();
     expect(knucklesHints).not.toBeNull();
     expect(solution).not.toBeNull();
-    for (let i = 0; i < 4; i++) {
-      const hint = knucklesHints![i as AreaId];
+    for (const [areaKey, hint] of Object.entries(knucklesHints!)) {
+      const areaIdx = parseInt(areaKey, 10);
       expect(hint).toBeDefined();
       const hintRank = parseInt(hint!.card.rank, 10);
-      expect(solution![i].cards).toContain(hintRank);
+      expect(solution![areaIdx].cards).toContain(hintRank);
     }
   });
 
@@ -910,8 +907,7 @@ describe('Knuckles crew — knucklesHints', () => {
     const { knucklesHints, hand } = useSneakInStore.getState();
     expect(knucklesHints).not.toBeNull();
     const handIds = hand.map(c => c.instanceId);
-    for (let i = 0; i < 4; i++) {
-      const hint = knucklesHints![i as AreaId];
+    for (const hint of Object.values(knucklesHints!)) {
       expect(hint).toBeDefined();
       expect(handIds).toContain(hint!.instanceId);
     }
@@ -921,7 +917,7 @@ describe('Knuckles crew — knucklesHints', () => {
     useSneakInStore.getState().initGame(['jinx', 'knuckles', 'tico']);
     const { knucklesHints } = useSneakInStore.getState();
     expect(knucklesHints).not.toBeNull();
-    expect(Object.keys(knucklesHints!).length).toBe(4);
+    expect(Object.keys(knucklesHints!).length).toBe(2);
   });
 
   test('initGame with knuckles then initGame without resets knucklesHints to null', () => {
@@ -948,6 +944,21 @@ describe('Knuckles crew — knucklesHints', () => {
     for (const id of ids2) {
       expect(state2.hand.map(c => c.instanceId)).toContain(id);
     }
+  });
+
+  test('hinted areas vary across multiple games (randomness check)', () => {
+    // Run 30 games and collect the sets of hinted area indices.
+    // If the selection were fixed, every run would produce the same pair.
+    // The probability of 30 consecutive identical pairs is astronomically small.
+    const seenPairs = new Set<string>();
+    for (let run = 0; run < 30; run++) {
+      useSneakInStore.getState().initGame(['knuckles']);
+      const { knucklesHints } = useSneakInStore.getState();
+      const key = Object.keys(knucklesHints!).sort().join(',');
+      seenPairs.add(key);
+    }
+    // Expect at least 2 distinct pairs across 30 runs
+    expect(seenPairs.size).toBeGreaterThan(1);
   });
 
   // ── bonus-cut perk selection ──────────────────────────────────────────────

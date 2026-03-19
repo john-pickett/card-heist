@@ -45,8 +45,8 @@ describe('BuffChip interface', () => {
       { id: 'tico',     icon: '⏱️', initials: 'TC', isActive: true, isPassive: true, isDisabled: false, isCrew: true },
       { id: 'bishop',   icon: '♟️', initials: 'BP', isActive: true, isPassive: true, isDisabled: false, isCrew: true },
       { id: 'deadlock', icon: '🔐', initials: 'DD', isActive: true, isPassive: true, isDisabled: false, isCrew: true },
-      { id: 'fingers',  icon: '🤞', initials: 'FG', isActive: true, isPassive: true, isDisabled: false, isCrew: true },
-      { id: 'jinx',     icon: '🍀', initials: 'JX', isActive: true, isPassive: true, isDisabled: false, isCrew: true },
+      { id: 'fingers',  icon: '🍀', initials: 'FG', isActive: true, isPassive: true, isDisabled: false, isCrew: true },
+      { id: 'jinx',     icon: '🃏', initials: 'JX', isActive: true, isPassive: true, isDisabled: false, isCrew: true },
     ];
 
     crewChips.forEach(chip => {

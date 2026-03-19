@@ -708,9 +708,7 @@ export default function App() {
             timingBonus={act1Record?.timingBonus ?? 0}
             bonusCutApplied={act1Record?.bonusCutApplied ?? false}
             ticoApplied={act1Record?.ticoApplied ?? false}
-            crewIds={activeHeistCrew.filter(id =>
-              id === 'knuckles' || (id === 'tico' && (act1Record?.ticoApplied ?? false))
-            )}
+            crewIds={activeHeistCrew.filter(id => id === 'knuckles' || id === 'tico')}
             cumulativeGold={act1Bonus}
             onContinue={handleContinueToAct2}
           />
@@ -731,6 +729,7 @@ export default function App() {
             cumulativeGold={totalScore}
             vaultResults={act2VaultResults}
             act2Record={act2Record}
+            crewIds={activeHeistCrew.filter(id => id === 'bishop' || id === 'deadlock')}
             onContinue={handleContinueToAct3}
           />
         );
