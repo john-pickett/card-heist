@@ -9,6 +9,7 @@ export interface CrewMember {
   flavorText: string;
   bio: string;
   effect: string;
+  summary: string;
   cost: number;
   imageSource: ImageSourcePropType;
 }

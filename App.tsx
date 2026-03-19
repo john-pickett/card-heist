@@ -26,6 +26,7 @@ import { VaultScreen } from './src/screens/VaultScreen';
 import { DevelopmentScreen } from './src/screens/DevelopmentScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SneakInScreen } from './src/screens/SneakInScreen';
+import { crewMembers } from './src/data/crew';
 import { useCrewStore } from './src/store/crewStore';
 import { CrewMemberId } from './src/types/crew';
 import { useEscapeStore } from './src/store/escapeStore';
@@ -56,7 +57,7 @@ import theme from './src/theme';
 
 type Tab = 'home' | 'market' | 'hideout' | 'settings';
 type GameFlow = 'home' | 'act1' | 'act1-bridge' | 'act2' | 'act2-bridge' | 'act3' | 'act3-gameover';
-type DevLaunchAct = 'act1' | 'act2' | 'act3' | null;
+type DevLaunchTarget = 'act1' | 'act2' | 'act3' | 'act1-summary' | 'act2-summary' | 'gameover' | null;
 type UsedBuff = {
   itemId: string;
   icon: string;
@@ -64,12 +65,157 @@ type UsedBuff = {
   act: MarketAct;
   quantity: number;
 };
+type DevSummaryData = {
+  crewIds: CrewMemberId[];
+  buffsUsed: UsedBuff[];
+  jinxApplied: boolean;
+};
 
 function toInventoryCounts(items: InventoryEntry[]): Record<string, number> {
   return items.reduce<Record<string, number>>((acc, entry) => {
     acc[entry.itemId] = entry.quantity;
     return acc;
   }, {});
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomBool(probability = 0.5): boolean {
+  return Math.random() < probability;
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = randomInt(0, i);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function sampleSize<T>(items: T[], count: number): T[] {
+  return shuffle(items).slice(0, Math.max(0, Math.min(count, items.length)));
+}
+
+function getBaseAct1Bonus(elapsedMs: number | null, timedOut: boolean): number {
+  if (timedOut || elapsedMs === null) return 0;
+  const elapsedSec = Math.floor(elapsedMs / 1000);
+  if (elapsedSec <= 15) return 500;
+  if (elapsedSec <= 30) return 400;
+  if (elapsedSec <= 60) return 250;
+  if (elapsedSec <= 90) return 150;
+  if (elapsedSec <= 120) return 100;
+  return 0;
+}
+
+function buildRandomAct1Record(): Act1Record {
+  const timedOut = randomBool(0.14);
+  const elapsedMs = timedOut ? null : randomInt(12_000, 118_000);
+  const baseBonus = getBaseAct1Bonus(elapsedMs, timedOut);
+  const bonusCutApplied = baseBonus > 0 && randomBool(0.25);
+  const ticoApplied = baseBonus > 0 && randomBool(0.2);
+  let timingBonus = baseBonus;
+  if (bonusCutApplied) timingBonus *= 2;
+  if (ticoApplied) timingBonus = Math.round(timingBonus * 1.5);
+
+  return {
+    elapsedMs,
+    timedOut,
+    baseBonus,
+    timingBonus,
+    bonusCutApplied,
+    ticoApplied,
+    totalMoves: randomInt(6, 18),
+  };
+}
+
+function buildRandomAct2Summary() {
+  const offshoreAccountActive = randomBool(0.28);
+  const allInActive = randomBool(0.24);
+  const fuzzyMathActive = randomBool(0.22);
+  const deadlockActive = randomBool(0.24);
+  const vaultCount = offshoreAccountActive ? 4 : 3;
+  const exactVaultIndex = randomBool(0.75) ? randomInt(0, vaultCount - 1) : -1;
+  let bishopApplied = randomBool(0.25) && exactVaultIndex >= 0;
+
+  const vaultResults: Act2VaultResult[] = Array.from({ length: vaultCount }, (_, index) => {
+    const baseTarget = offshoreAccountActive && index === vaultCount - 1 ? 42 : randomInt(16, 21);
+    const target = allInActive ? baseTarget * 2 : baseTarget;
+
+    let result: Act2VaultResult['result'];
+    if (index === exactVaultIndex) {
+      result = 'exact';
+    } else {
+      const roll = Math.random();
+      result = roll < 0.25 ? 'busted' : roll < 0.7 ? 'under' : 'exact';
+    }
+
+    let sum: number;
+    if (result === 'exact') {
+      const exactFloor = deadlockActive ? Math.max(1, target - 3) : target;
+      sum = randomInt(exactFloor, target);
+    } else if (result === 'under') {
+      sum = randomInt(Math.max(1, target - 9), Math.max(1, target - 1));
+    } else {
+      sum = randomInt(target + 1, target + (fuzzyMathActive ? 8 : 6));
+    }
+
+    const baseGold = result === 'busted' ? 0 : result === 'exact' ? sum * 20 : sum * 10;
+    const applyBishop = bishopApplied && index === exactVaultIndex;
+    const gold = applyBishop ? baseGold * 2 : baseGold;
+
+    return {
+      id: index + 1,
+      target,
+      sum,
+      result,
+      gold,
+      bishopApplied: applyBishop,
+    };
+  });
+
+  if (!vaultResults.some(vault => vault.bishopApplied)) {
+    bishopApplied = false;
+  }
+
+  const score = vaultResults.reduce((sum, vault) => sum + vault.gold, 0);
+
+  return {
+    vaultResults,
+    act2Record: {
+      score,
+      exactHits: vaultResults.filter(vault => vault.result === 'exact').length,
+      busts: vaultResults.filter(vault => vault.result === 'busted').length,
+      aceOnes: randomInt(0, 3),
+      aceElevens: randomInt(0, 3),
+      allInActive,
+      offshoreAccountActive,
+      fuzzyMathActive,
+      deadlockActive,
+      bishopApplied,
+    } as Act2Record,
+    act2Gold: score,
+  };
+}
+
+function buildRandomCrew(requiredIds: CrewMemberId[] = []): CrewMemberId[] {
+  const uniqueRequired = [...new Set(requiredIds)];
+  const optionalIds = crewMembers.map(member => member.id).filter(id => !uniqueRequired.includes(id));
+  const extraCount = randomInt(0, Math.max(0, 3 - uniqueRequired.length));
+  return shuffle([...uniqueRequired, ...sampleSize(optionalIds, extraCount)]);
+}
+
+function buildRandomBuffsUsed(): UsedBuff[] {
+  const count = randomInt(0, 4);
+  return sampleSize(MARKET_ITEMS, count).map(item => ({
+    itemId: item.id,
+    icon: item.icon,
+    title: item.title,
+    act: item.act,
+    quantity: randomInt(1, 2),
+  }));
 }
 
 export default function App() {
@@ -84,7 +230,8 @@ export default function App() {
   const [tutorialsSeen, setTutorialsSeen] = useState<TutorialSeen>(DEFAULT_TUTORIALS);
   const [tutorialsReady, setTutorialsReady] = useState(false);
   const [inventoryVisible, setInventoryVisible] = useState(false);
-  const [devLaunchAct, setDevLaunchAct] = useState<DevLaunchAct>(null);
+  const [devLaunchAct, setDevLaunchAct] = useState<DevLaunchTarget>(null);
+  const [devSummaryData, setDevSummaryData] = useState<DevSummaryData | null>(null);
   const [act3Won, setAct3Won] = useState<boolean | null>(null);
   const [act2VaultResults, setAct2VaultResults] = useState<Act2VaultResult[]>([]);
   const [heistStartInventory, setHeistStartInventory] = useState<Record<string, number> | null>(null);
@@ -227,6 +374,7 @@ export default function App() {
 
   const handleStartGame = () => {
     setDevLaunchAct(null);
+    setDevSummaryData(null);
     setHeistStartInventory(toInventoryCounts(useInventoryStore.getState().items));
     setCampaignStartTime(Date.now());
     if (useCrewStore.getState().unlockedIds.length > 0) {
@@ -253,8 +401,9 @@ export default function App() {
     proceedAfterCrewSelection();
   };
 
-  const handleLaunchActForTesting = (act: 'act1' | 'act2' | 'act3') => {
+  const handleLaunchActForTesting = (act: 'act1' | 'act2' | 'act3' | 'act1-summary' | 'act2-summary' | 'gameover') => {
     setDevLaunchAct(act);
+    setDevSummaryData(null);
     setActiveTab('home');
     resetCampaignState();
     setHeistStartInventory(toInventoryCounts(useInventoryStore.getState().items));
@@ -272,6 +421,55 @@ export default function App() {
       useReckoningStore.getState().initGame(act2PerkIds);
       setCampaignStartTime(Date.now());
       setGameFlow('act2');
+      return;
+    }
+
+    if (act === 'act1-summary') {
+      const randomAct1Record = buildRandomAct1Record();
+      setCampaignStartTime(Date.now() - randomInt(60_000, 7 * 60_000));
+      setAct1TimeBonus(randomAct1Record.timingBonus);
+      setAct1Record(randomAct1Record);
+      setGameFlow('act1-bridge');
+      return;
+    }
+
+    if (act === 'act2-summary') {
+      const randomAct1Record = buildRandomAct1Record();
+      const randomAct2Summary = buildRandomAct2Summary();
+      setCampaignStartTime(Date.now() - randomInt(2 * 60_000, 10 * 60_000));
+      setAct1TimeBonus(randomAct1Record.timingBonus);
+      setAct1Record(randomAct1Record);
+      setAct2Score(randomAct2Summary.act2Gold);
+      setAct2Record(randomAct2Summary.act2Record);
+      setAct2VaultResults(randomAct2Summary.vaultResults);
+      setGameFlow('act2-bridge');
+      return;
+    }
+
+    if (act === 'gameover') {
+      const randomAct1Record = buildRandomAct1Record();
+      const randomAct2Summary = buildRandomAct2Summary();
+      const won = randomBool(0.55);
+      const jinxApplied = !won && randomBool(0.35);
+      const requiredCrew: CrewMemberId[] = [];
+      if (randomAct1Record.ticoApplied) requiredCrew.push('tico');
+      if (randomAct2Summary.act2Record.bishopApplied) requiredCrew.push('bishop');
+      if (randomAct2Summary.act2Record.deadlockActive) requiredCrew.push('deadlock');
+      if (jinxApplied) requiredCrew.push('jinx');
+
+      setCampaignStartTime(Date.now() - randomInt(3 * 60_000, 14 * 60_000));
+      setAct1TimeBonus(randomAct1Record.timingBonus);
+      setAct1Record(randomAct1Record);
+      setAct2Score(randomAct2Summary.act2Gold);
+      setAct2Record(randomAct2Summary.act2Record);
+      setAct2VaultResults(randomAct2Summary.vaultResults);
+      setAct3Won(won);
+      setDevSummaryData({
+        crewIds: buildRandomCrew(requiredCrew),
+        buffsUsed: buildRandomBuffsUsed(),
+        jinxApplied,
+      });
+      setGameFlow('act3-gameover');
       return;
     }
 
@@ -459,6 +657,7 @@ export default function App() {
     setAct3Won(null);
     setAct2VaultResults([]);
     setHeistStartInventory(null);
+    setDevSummaryData(null);
   };
 
   const handlePlayAgain = () => {
@@ -542,7 +741,8 @@ export default function App() {
           />
         );
       case 'act3-gameover':
-        const jinxApplied = !(act3Won ?? false) && activeHeistCrew.includes('jinx');
+        const summaryCrewIds = devSummaryData?.crewIds ?? activeHeistCrew;
+        const jinxApplied = devSummaryData?.jinxApplied ?? (!(act3Won ?? false) && activeHeistCrew.includes('jinx'));
         const totalGoldWon = (act3Won ?? false) ? totalScore : Math.round(totalScore * (jinxApplied ? 0.80 : 0.33));
         return (
           <GameOverScreen
@@ -556,8 +756,8 @@ export default function App() {
             act2Record={act2Record}
             act2Gold={act2Score}
             act2VaultResults={act2VaultResults}
-            crewIds={activeHeistCrew}
-            buffsUsed={usedBuffs}
+            crewIds={summaryCrewIds}
+            buffsUsed={devSummaryData?.buffsUsed ?? usedBuffs}
             onPlayAgain={handlePlayAgain}
             onHome={handleReturnHome}
           />

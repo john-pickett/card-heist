@@ -6,7 +6,7 @@ import theme from '../theme';
 interface Props {
   onBack: () => void;
   onResetHeistData: () => Promise<void>;
-  onLaunchAct: (act: 'act1' | 'act2' | 'act3') => void;
+  onLaunchAct: (act: 'act1' | 'act2' | 'act3' | 'act1-summary' | 'act2-summary' | 'gameover') => void;
 }
 
 type SimPreset = 100 | 1000 | 10000;
@@ -86,6 +86,25 @@ export function DevelopmentScreen({ onBack, onResetHeistData, onLaunchAct }: Pro
           </TouchableOpacity>
           <TouchableOpacity style={styles.jumpBtn} onPress={() => onLaunchAct('act3')}>
             <Text style={styles.resetBtnText}>Act 3</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={[styles.panel, styles.panelSpaced]}>
+        <Text style={styles.settingTitle}>Jump to Summary</Text>
+        <Text style={styles.settingDesc}>
+          Open summary and game over screens with fresh randomized data for quick UI checks.
+        </Text>
+
+        <View style={styles.jumpColumn}>
+          <TouchableOpacity style={styles.jumpBtn} onPress={() => onLaunchAct('act1-summary')}>
+            <Text style={styles.resetBtnText}>Act 1 Summary</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.jumpBtn} onPress={() => onLaunchAct('act2-summary')}>
+            <Text style={styles.resetBtnText}>Act 2 Summary</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.jumpBtn} onPress={() => onLaunchAct('gameover')}>
+            <Text style={styles.resetBtnText}>Game Over</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -290,6 +309,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: s.sm,
     flexWrap: 'wrap',
+  },
+  jumpColumn: {
+    gap: s.sm,
   },
   jumpBtn: {
     backgroundColor: c.bgDeep,
