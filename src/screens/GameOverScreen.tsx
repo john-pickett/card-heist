@@ -5,6 +5,7 @@ import { MarketAct } from '../types/market';
 import { MARKET_ITEMS } from '../data/marketItems';
 import { crewMembers } from '../data/crew';
 import { CrewMemberId } from '../types/crew';
+import { CrewBonusesPanel } from '../components/CrewBonusesPanel';
 import theme from '../theme';
 
 type Act2VaultResult = {
@@ -143,12 +144,7 @@ export function GameOverScreen({
           <Text style={styles.copyButtonText}>Share Results</Text>
         </TouchableOpacity>
 
-        {crewNames.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🤝 Crew On This Job</Text>
-            <Text style={styles.crewList}>{crewNames.join(', ')}</Text>
-          </View>
-        )}
+        <CrewBonusesPanel crewIds={crewIds} />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🧩 Act One: Sneak In</Text>

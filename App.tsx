@@ -708,6 +708,9 @@ export default function App() {
             timingBonus={act1Record?.timingBonus ?? 0}
             bonusCutApplied={act1Record?.bonusCutApplied ?? false}
             ticoApplied={act1Record?.ticoApplied ?? false}
+            crewIds={activeHeistCrew.filter(id =>
+              id === 'knuckles' || (id === 'tico' && (act1Record?.ticoApplied ?? false))
+            )}
             cumulativeGold={act1Bonus}
             onContinue={handleContinueToAct2}
           />

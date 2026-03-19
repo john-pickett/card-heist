@@ -1,6 +1,8 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Act2Record, Act2VaultResult } from '../types/history';
+import { CrewMemberId } from '../types/crew';
+import { CrewBonusesPanel } from '../components/CrewBonusesPanel';
 import theme from '../theme';
 
 interface Props {
@@ -81,6 +83,13 @@ export function Act2BridgeScreen({
           </View>
         )}
 
+        <CrewBonusesPanel
+          crewIds={[
+            ...(act2Record?.bishopApplied ? ['bishop' as CrewMemberId] : []),
+            ...(act2Record?.deadlockActive ? ['deadlock' as CrewMemberId] : []),
+          ]}
+        />
+
         <View style={styles.storyBox}>
           <Text style={styles.storyTitle}>The vaults are open.</Text>
           <Text style={styles.storyText}>
@@ -89,27 +98,6 @@ export function Act2BridgeScreen({
             One clean getaway keeps the haul. One mistake leaves it behind.
           </Text>
         </View>
-
-        {/* Crew bonuses panel */}
-        {(act2Record?.bishopApplied || act2Record?.deadlockActive) && (
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>CREW BONUSES</Text>
-            {act2Record?.bishopApplied && (
-              <View style={styles.buffRow}>
-                <Text style={styles.buffIcon}>♟</Text>
-                <Text style={styles.buffLabel}>The Bishop</Text>
-                <Text style={styles.buffDesc}>First perfect crack ×4</Text>
-              </View>
-            )}
-            {act2Record?.deadlockActive && (
-              <View style={styles.buffRow}>
-                <Text style={styles.buffIcon}>🔓</Text>
-                <Text style={styles.buffLabel}>Deadlock Danny</Text>
-                <Text style={styles.buffDesc}>Perfect crack zone −3</Text>
-              </View>
-            )}
-          </View>
-        )}
 
         {/* Active buffs panel */}
         {anyBuffActive && (

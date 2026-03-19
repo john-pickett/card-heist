@@ -45,6 +45,8 @@ coverage
 
 # build artifacts
 builds/
+*.ipa
+*.apk
 
 # creds
 credentials.json

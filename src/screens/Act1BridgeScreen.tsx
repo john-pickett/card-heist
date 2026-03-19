@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import theme from '../theme';
 import { SneakInSolutionModal } from '../components/SneakInSolutionModal';
+import { CrewBonusesPanel } from '../components/CrewBonusesPanel';
 import { useSneakInStore } from '../store/sneakInStore';
+import { CrewMemberId } from '../types/crew';
 
 type TimingGrade = 'excellent' | 'superb' | 'great' | 'solid' | 'notbad' | 'timeout';
 type TimingRating = { grade: TimingGrade; label: string; bonus: number };
@@ -41,11 +43,12 @@ interface Props {
   timingBonus: number;
   bonusCutApplied: boolean;
   ticoApplied: boolean;
+  crewIds: CrewMemberId[];
   cumulativeGold: number;
   onContinue: () => void;
 }
 
-export function Act1BridgeScreen({ elapsedMs, timedOut, baseBonus, timingBonus, bonusCutApplied, ticoApplied, cumulativeGold, onContinue }: Props) {
+export function Act1BridgeScreen({ elapsedMs, timedOut, baseBonus, timingBonus, bonusCutApplied, ticoApplied, crewIds, cumulativeGold, onContinue }: Props) {
   const rating = getTimingRating(elapsedMs ?? 0, timedOut);
   const solution = useSneakInStore(s => s.solution);
   const areas = useSneakInStore(s => s.areas);
@@ -99,6 +102,8 @@ export function Act1BridgeScreen({ elapsedMs, timedOut, baseBonus, timingBonus, 
             </Text>
           )}
         </View>
+
+        <CrewBonusesPanel crewIds={crewIds} />
 
         <View style={styles.storyBox}>
           <Text style={styles.storyTitle}>You are inside the bank.</Text>
