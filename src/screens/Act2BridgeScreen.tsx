@@ -33,15 +33,6 @@ export function Act2BridgeScreen({
         <Text style={styles.heading}>ACT 2 COMPLETE</Text>
         <Text style={styles.subheading}>CRACK THE VAULTS</Text>
 
-        <View style={styles.storyBox}>
-          <Text style={styles.storyTitle}>The vaults are open.</Text>
-          <Text style={styles.storyText}>
-            Cash is in hand and alarms are waking up the city. You are carrying{' '}
-            <Text style={styles.storyGold}>{cumulativeGold} gold</Text> into the final stretch.
-            One clean getaway keeps the haul. One mistake leaves it behind.
-          </Text>
-        </View>
-
         {/* Per-vault breakdown */}
         {vaultResults.length > 0 && (
           <View style={styles.panel}>
@@ -89,6 +80,15 @@ export function Act2BridgeScreen({
             ))}
           </View>
         )}
+
+        <View style={styles.storyBox}>
+          <Text style={styles.storyTitle}>The vaults are open.</Text>
+          <Text style={styles.storyText}>
+            Cash is in hand and alarms are waking up the city. You are carrying{' '}
+            <Text style={styles.storyGold}>{cumulativeGold} gold</Text> into the final stretch.
+            One clean getaway keeps the haul. One mistake leaves it behind.
+          </Text>
+        </View>
 
         {/* Crew bonuses panel */}
         {(act2Record?.bishopApplied || act2Record?.deadlockActive) && (
