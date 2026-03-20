@@ -2,7 +2,7 @@
   "expo": {
     "name": "Bank Heist",
     "slug": "bank-heist",
-    "version": "1.0.34",
+    "version": "1.0.35",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "10034"
+      "buildNumber": "10035"
     },
     "android": {
       "adaptiveIcon": {
@@ -31,7 +31,7 @@
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "package": "com.fiveamsoftware.cardheist",
-      "versionCode": 10034
+      "versionCode": 10035
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -39,11 +39,6 @@
     "plugins": [
       "expo-audio",
       "expo-asset"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "4accf77f-a54a-4e5c-9ce4-871ba9dbfc3e"
-      }
-    }
+    ]
   }
 }
