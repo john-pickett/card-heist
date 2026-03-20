@@ -1,5 +1,5 @@
 {
-  "name": "card-heist",
+  "name": "bank-heist",
   "version": "1.0.30",
   "main": "index.ts",
   "scripts": {

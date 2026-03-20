@@ -105,7 +105,7 @@ export function GameOverScreen({
 
   const shareResults = async () => {
     const payload = [
-      '🏦 Card Heist',
+      '🏦 Bank Heist',
       `Run #${runNumber}`,
       `Total Gold Won: ${totalGoldWon}`,
       `Escaped Police: ${won ? 'Yes ✅' : 'No 🚨'}`,

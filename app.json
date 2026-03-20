@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Card Heist",
-    "slug": "card-heist",
+    "name": "Bank Heist",
+    "slug": "bank-heist",
     "version": "1.0.30",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
