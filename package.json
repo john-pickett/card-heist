@@ -1,6 +1,6 @@
 {
   "name": "bank-heist",
-  "version": "1.0.35",
+  "version": "1.0.36",
   "main": "index.ts",
   "scripts": {
     "bump": "node bump-version.js && npm run commit:version",
